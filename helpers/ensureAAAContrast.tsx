@@ -1,24 +1,11 @@
 import { hexToRgb, getContrastRatio } from './colorUtils';
 import {
   AAA_MIN,
-  AA_SMALL_MIN,
-  MAX_CONTRAST_TINTS as CFG_MAX_TINTS,
-  MAX_CONTRAST_SHADES as CFG_MAX_SHADES,
   NEAR_BLACK_HEX,
   NEAR_WHITE_HEX,
   NEAR_BLACK_RGB,
   NEAR_WHITE_RGB,
 } from './config';
-
-// Contrast threshold variables (centralized; adjust as desired)
-export const AAA_MIN_CONTRAST = AAA_MIN; // AAA (small text) configurable
-export const AA_SMALL_TEXT_MIN_CONTRAST = AA_SMALL_MIN; // AA (small text) configurable
-
-export const BLACK_TEXT_MIN_CONTRAST = AAA_MIN_CONTRAST; // near-black targeting AAA
-export const WHITE_TEXT_MIN_CONTRAST = AAA_MIN_CONTRAST; // near-white targeting AAA
-// Maximum desired contrast caps (not a WCAG rule; UX comfort guideline)
-export const MAX_RECOMMENDED_CONTRAST_TINTS = CFG_MAX_TINTS;
-export const MAX_RECOMMENDED_CONTRAST_SHADES = CFG_MAX_SHADES;
 
 // Overlay colors to be applied on the background to enhance contrast (should never be needed, used for error trapping)
 const DARK_OVERLAY = 'rgba(0, 0, 0, 0.55)'; // For light backgrounds
@@ -46,11 +33,11 @@ export const ensureAAAContrast = (backgroundColor: string): ContrastSolution => 
   const contrastWithNearBlack = getContrastRatio(backgroundRgb, NEAR_BLACK_RGB);
 
   // Prefer the text color that meets its required threshold
-  if (contrastWithNearWhite >= WHITE_TEXT_MIN_CONTRAST) {
+  if (contrastWithNearWhite >= AAA_MIN) {
     return { textColor: NEAR_WHITE_HEX };
   }
 
-  if (contrastWithNearBlack >= BLACK_TEXT_MIN_CONTRAST) {
+  if (contrastWithNearBlack >= AAA_MIN) {
     return { textColor: NEAR_BLACK_HEX };
   }
 
