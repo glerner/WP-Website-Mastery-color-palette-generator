@@ -1,0 +1,90 @@
+.section {
+  margin-bottom: var(--spacing-12);
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: var(--spacing-3);
+}
+
+.sectionDescription {
+  color: var(--muted-foreground);
+  margin-bottom: var(--spacing-6);
+  line-height: 1.5;
+}
+
+.variationsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-4);
+}
+
+@media (min-width: 640px) {
+  .variationsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .variationsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.variationCard {
+  background-color: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: var(--spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.variationHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.variationName {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.variationDescription {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+  font-family: var(--font-family-monospace);
+}
+
+.colorSwatches {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: center;
+}
+
+.colorSwatch {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--shadow);
+}
+
+.colorLabel {
+  font-weight: 600;
+  font-size: 0.875rem;
+  font-family: var(--font-family-monospace);
+  /* Color is now set dynamically via ensureAAAContrast */
+}

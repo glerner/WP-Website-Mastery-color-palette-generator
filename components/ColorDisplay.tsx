@@ -1,0 +1,228 @@
+import * as React from 'react';
+import { Badge } from './Badge';
+import { Skeleton } from './Skeleton';
+import { PaletteWithVariations } from '../helpers/types';
+import { ensureAAAContrast, AAA_MIN_CONTRAST, AA_SMALL_TEXT_MIN_CONTRAST } from '../helpers/ensureAAAContrast';
+import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_WHITE_RGB, NEAR_BLACK_RGB } from '../helpers/config';
+import { hexToRgb, getContrastRatio, luminance, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_SHADES } from '../helpers/colorUtils';
+import styles from './ColorDisplay.module.css';
+
+interface ColorDisplayProps {
+  palette: PaletteWithVariations;
+  isLoading: boolean;
+}
+
+const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
+  const solution = ensureAAAContrast(colorHex);
+  const bg = hexToRgb(colorHex);
+  const textIsWhite = solution.textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase();
+  const textRgb = textIsWhite ? NEAR_WHITE_RGB : NEAR_BLACK_RGB;
+  const ratio = getContrastRatio(bg, textRgb);
+
+  const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN_CONTRAST ? 'AAA' : ratio >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+  const variant: 'success' | 'warning' | 'destructive' =
+    level === 'AAA' ? 'success' : level === 'AA' ? 'warning' : 'destructive';
+
+  return (
+    <div className={styles.contrastInfo}>
+      <div className={styles.contrastRow}>
+        {solution.overlayColor && (
+          <span className={styles.overlayTag}>overlay</span>
+        )}
+        <Badge variant={variant}>
+          {level} {ratio.toFixed(2)}
+        </Badge>
+      </div>
+    </div>
+  );
+};
+
+const VariationBlock = ({ variation }: { variation: any }) => {
+  const contrastSolution = ensureAAAContrast(variation.hex);
+  const bg = hexToRgb(variation.hex);
+  const textIsWhite = contrastSolution.textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase();
+  const textRgb = textIsWhite ? NEAR_WHITE_RGB : NEAR_BLACK_RGB;
+  const ratio = getContrastRatio(bg, textRgb);
+  const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN_CONTRAST ? 'AAA' : ratio >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+  const hsl = hexToHslString(variation.hex, true);
+  const y = luminance(...Object.values(hexToRgb(variation.hex)) as [number, number, number]);
+
+  const badgeBg = textIsWhite ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
+  
+  return (
+    <div className={styles.variationBlock} style={{ backgroundColor: variation.hex }}>
+      {contrastSolution.overlayColor && (
+        <div className={styles.overlay} style={{ backgroundColor: contrastSolution.overlayColor }} />
+      )}
+      {/* In-swatch contrast badge */}
+      <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor, background: badgeBg }}>
+        {level} {ratio.toFixed(2)}
+      </div>
+      <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
+        <div className={styles.variationHeader}>
+          <span className={styles.variationName}>{variation.name}</span>
+          <div className={styles.variationCodesContainer}>
+            <div className={styles.variationCodes}>
+              {/* Remove hex to reduce clutter. Keep HSL + Y to match strips */}
+              <span className={styles.variationHsl}>{hsl}</span>
+              <span className={styles.variationY}>Y {y.toFixed(3)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ColorCard = ({ color, name }: { color: any; name: string }) => {
+  const ordered = React.useMemo(() => {
+    const order: Record<string, number> = { lighter: 0, light: 1, dark: 2, darker: 3 };
+    return [...(color.variations || [])].sort((a, b) => (order[a.step] ?? 99) - (order[b.step] ?? 99));
+  }, [color.variations]);
+
+  // Compute palette-level gap warnings
+  const gaps = React.useMemo(() => {
+    const byStep: Record<string, any> = Object.fromEntries(ordered.map(v => [v.step, v]));
+    const yOf = (v: any | undefined) => v ? luminance(...Object.values(hexToRgb(v.hex)) as [number, number, number]) : undefined;
+    const yLighter = yOf(byStep.lighter);
+    const yLight = yOf(byStep.light);
+    const yDarker = yOf(byStep.darker);
+    const yDark = yOf(byStep.dark);
+    const tintGap = (yLighter != null && yLight != null) ? (yLighter - yLight) : undefined;
+    const shadeGap = (yDark != null && yDarker != null) ? (yDark - yDarker) : undefined;
+    return { tintGap, shadeGap };
+  }, [ordered]);
+  return (
+    <div className={styles.colorCard}>
+      <div className={styles.variationsContainer}>
+        <div className={styles.variationHeader} style={{ padding: '4px 0' }}>
+          <span className={styles.variationName}>{name}</span>
+        </div>
+        {gaps.tintGap != null && gaps.tintGap < MIN_DELTA_LUM_TINTS && (
+          <div style={{
+            margin: '4px 0',
+            padding: '6px 8px',
+            borderRadius: '8px',
+            background: 'var(--surface-strong, #fef3c7)',
+            color: 'var(--foreground, #7a5d00)',
+            border: '1px solid var(--border, #f59e0b)'
+          }}>
+            {name} lighter vs light gap {gaps.tintGap.toFixed(3)} is below the minimum {MIN_DELTA_LUM_TINTS.toFixed(2)}.
+          </div>
+        )}
+        {ordered.map((variation: any) => (
+          <VariationBlock key={variation.name} variation={variation} />
+        ))}
+        {gaps.shadeGap != null && gaps.shadeGap < MIN_DELTA_LUM_SHADES && (
+          <div style={{
+            margin: '4px 0',
+            padding: '6px 8px',
+            borderRadius: '8px',
+            background: 'var(--surface-strong, #fef3c7)',
+            color: 'var(--foreground, #7a5d00)',
+            border: '1px solid var(--border, #f59e0b)'
+          }}>
+            {name} dark vs darker gap {gaps.shadeGap.toFixed(3)} is below the minimum {MIN_DELTA_LUM_SHADES.toFixed(2)}.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+function pickVariation(color: any, step: 'lighter' | 'light' | 'dark' | 'darker') {
+  return color.variations.find((v: any) => v.step === step) ?? color.variations[0];
+}
+
+const SemanticBlock = ({
+  color,
+  name,
+  step,
+}: {
+  color: any;
+  name: string;
+  step: 'lighter' | 'light' | 'dark' | 'darker';
+}) => {
+  const v = pickVariation(color, step);
+  // Force the display name to the semantic token rather than base-color-step
+  const variation = { ...v, name: `${name}` };
+  return <VariationBlock variation={variation} />;
+};
+
+// Helpers
+function hexToHslString(hex: string, oneDecimal: boolean = false): string {
+  const { r, g, b } = hexToRgb(hex);
+  const r1 = r / 255, g1 = g / 255, b1 = b / 255;
+  const max = Math.max(r1, g1, b1), min = Math.min(r1, g1, b1);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r1: h = (g1 - b1) / d + (g1 < b1 ? 6 : 0); break;
+      case g1: h = (b1 - r1) / d + 2; break;
+      case b1: h = (r1 - g1) / d + 4; break;
+    }
+    h /= 6;
+  }
+  const Hn = h * 360;
+  const Sn = s * 100;
+  const Ln = l * 100;
+  const H = oneDecimal ? Hn.toFixed(1) : Math.round(Hn).toString();
+  const S = oneDecimal ? Sn.toFixed(1) : Math.round(Sn).toString();
+  const L = oneDecimal ? Ln.toFixed(1) : Math.round(Ln).toString();
+  return `hsl(${H}, ${S}%, ${L}%)`;
+}
+
+const LoadingSkeleton = () => (
+  <div className={styles.colorCard}>
+    <Skeleton style={{ borderRadius: 'var(--radius-md)', padding: 'var(--spacing-6) var(--spacing-4)' }} />
+    <div className={styles.variationsContainer}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} style={{ borderRadius: 'var(--radius-md)', padding: 'var(--spacing-4)' }} />
+      ))}
+    </div>
+  </div>
+);
+
+export const ColorDisplay = ({ palette, isLoading }: ColorDisplayProps) => {
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>Color Palette</h2>
+      <div className={styles.paletteGrid}>
+        {isLoading ? (
+          <>
+            <LoadingSkeleton />
+            <LoadingSkeleton />
+            <LoadingSkeleton />
+            <LoadingSkeleton />
+          </>
+        ) : (
+          <>
+            <ColorCard color={palette.primary} name="Primary" />
+            <ColorCard color={palette.secondary} name="Secondary" />
+            <ColorCard color={palette.tertiary} name="Tertiary" />
+            <ColorCard color={palette.accent} name="Accent" />
+          </>
+        )}
+      </div>
+      
+      <h3 className={styles.semanticTitle}>Semantic Colors</h3>
+      <div className={styles.semanticContainer}>
+        {isLoading ? (
+          <>
+            <LoadingSkeleton />
+            <LoadingSkeleton />
+            <LoadingSkeleton />
+          </>
+        ) : (
+          <>
+            <SemanticBlock color={palette.error} name="Error" step="dark" />
+            <SemanticBlock color={palette.warning} name="Warning" step="lighter" />
+            <SemanticBlock color={palette.success} name="Success" step="dark" />
+          </>
+        )}
+      </div>
+    </section>
+  );
+};

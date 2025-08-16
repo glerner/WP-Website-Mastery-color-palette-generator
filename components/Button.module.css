@@ -1,0 +1,248 @@
+@layer base {
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    font-family: var(--font-family-base);
+    font-weight: 500;
+    border-radius: var(--radius);
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      background-color var(--animation-duration-fast) ease,
+      border-color var(--animation-duration-fast) ease,
+      color var(--animation-duration-fast) ease,
+      box-shadow var(--animation-duration-fast) ease;
+    outline: none;
+    border: 1px solid transparent;
+    position: relative;
+  }
+
+  /* Focus styles - high contrast for accessibility */
+  .button:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--primary);
+    outline: none;
+  }
+
+  /* Size variants - ensuring proper touch targets */
+  .sm {
+    height: 1.5rem;
+    padding: 0 var(--spacing-2);
+    font-size: 0.875rem;
+  }
+
+  .md {
+    height: 2.5rem;
+    padding: 0 var(--spacing-3);
+    font-size: 0.9375rem;
+  }
+
+  .lg {
+    height: 3rem;
+    padding: 0 var(--spacing-4);
+    font-size: 1rem;
+    border-radius: var(--radius-md);
+  }
+
+  /* Icon button sizes */
+  .icon,
+  .icon-md {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+  }
+
+  .icon-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+  }
+
+  .icon-lg {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border-radius: var(--radius-md);
+  }
+
+  /* Icon sizing */
+  .button svg {
+    flex-shrink: 0;
+  }
+
+  .sm svg,
+  .icon-sm svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .md svg,
+  .icon svg,
+  .icon-md svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .lg svg,
+  .icon-lg svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  /* Primary - White text on solid brand color (high contrast) */
+  .primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+    --spinner-color: var(--primary-foreground);
+  }
+
+  .primary:hover {
+    background-color: color-mix(in srgb, var(--primary), black 10%);
+    border-color: color-mix(in srgb, var(--primary), black 10%);
+  }
+
+  .primary:active {
+    background-color: color-mix(in srgb, var(--primary), black 15%);
+    border-color: color-mix(in srgb, var(--primary), black 15%);
+  }
+
+  /* Secondary - Secondary color text on very light secondary tint background */
+  .secondary {
+    background-color: color-mix(in srgb, var(--secondary), white 92%);
+    color: var(--secondary);
+    border-color: transparent;
+    --spinner-color: var(--secondary);
+  }
+
+  .secondary:hover {
+    background-color: color-mix(in srgb, var(--secondary), white 85%);
+  }
+
+  .secondary:active {
+    background-color: color-mix(in srgb, var(--secondary), white 80%);
+  }
+
+  /* Destructive - White text on solid red (high contrast) */
+  .destructive {
+    background-color: var(--error);
+    color: var(--error-foreground);
+    border-color: var(--error);
+    --spinner-color: var(--error-foreground);
+  }
+
+  .destructive:hover {
+    background-color: color-mix(in srgb, var(--error), black 10%);
+    border-color: color-mix(in srgb, var(--error), black 10%);
+  }
+
+  .destructive:active {
+    background-color: color-mix(in srgb, var(--error), black 15%);
+    border-color: color-mix(in srgb, var(--error), black 15%);
+  }
+
+  .destructive:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--error);
+  }
+
+  /* Outline - Brand color text with brand color border, no background */
+  .outline {
+    background-color: transparent;
+    border-color: var(--primary);
+    color: var(--primary);
+    --spinner-color: var(--primary);
+  }
+
+  .outline:hover {
+    background-color: color-mix(in srgb, var(--primary), white 95%);
+    border-color: color-mix(in srgb, var(--primary), black 10%);
+    color: color-mix(in srgb, var(--primary), black 10%);
+  }
+
+  .outline:active {
+    background-color: color-mix(in srgb, var(--primary), white 90%);
+    border-color: color-mix(in srgb, var(--primary), black 15%);
+    color: color-mix(in srgb, var(--primary), black 15%);
+  }
+
+  /* Ghost - Brand color text only, minimal styling until interaction */
+  .ghost {
+    background-color: transparent;
+    border-color: transparent;
+    --spinner-color: var(--primary);
+  }
+
+  .ghost:hover {
+    background-color: color-mix(in srgb, var(--primary), white 95%);
+    color: color-mix(in srgb, var(--primary), black 10%);
+  }
+
+  .ghost:active {
+    background-color: color-mix(in srgb, var(--primary), white 90%);
+    color: color-mix(in srgb, var(--primary), black 15%);
+  }
+
+  /* Link - Brand color text, underline on hover */
+  .link {
+    background-color: transparent;
+    color: var(--primary);
+    height: auto;
+    padding: 0;
+    text-decoration: none;
+    border: none;
+    border-radius: 0;
+    min-height: 2.75rem; /* Ensure touch target height */
+    display: inline-flex;
+    align-items: center;
+    --spinner-color: var(--primary);
+  }
+
+  .link:hover {
+    text-decoration: underline;
+    color: color-mix(in srgb, var(--primary), black 10%);
+    background-color: transparent;
+  }
+
+  .link:active {
+    color: color-mix(in srgb, var(--primary), black 15%);
+    background-color: transparent;
+  }
+
+  .link:focus-visible {
+    box-shadow: 0 0 0 2px var(--primary);
+    outline: none;
+    border-radius: 0.25rem;
+  }
+
+  /* Disabled state */
+  .disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* Dark mode - colors automatically adjust due to CSS variable system */
+  .dark .primary:focus-visible,
+  .dark .outline:focus-visible,
+  .dark .ghost:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--primary);
+  }
+
+  .dark .destructive:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--error);
+  }
+
+  .dark .link:focus-visible {
+    box-shadow: 0 0 0 2px var(--primary);
+  }
+}

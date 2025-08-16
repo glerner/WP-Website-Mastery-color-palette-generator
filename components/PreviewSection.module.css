@@ -1,0 +1,183 @@
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: var(--spacing-6);
+}
+
+.previewContainer {
+  background-color: var(--preview-bg);
+  color: var(--preview-bg-text);
+  padding: var(--spacing-8);
+  border-radius: var(--radius-lg);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.backgroundOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--preview-bg-overlay);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.previewCard {
+  background-color: var(--preview-card);
+  padding: var(--spacing-6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--preview-border);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.cardOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--preview-card-overlay);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.previewCardTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--preview-card-text);
+  margin: 0 0 var(--spacing-2);
+  position: relative;
+  z-index: 2;
+}
+
+.previewText {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--preview-card-text);
+  opacity: 0.8;
+  margin: 0 0 var(--spacing-6);
+  position: relative;
+  z-index: 2;
+}
+
+.formGroup {
+  margin-bottom: var(--spacing-4);
+  position: relative;
+  z-index: 2;
+}
+
+.label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: var(--spacing-2);
+  color: var(--preview-card-text);
+}
+
+.previewInput {
+  background-color: var(--preview-input-bg) !important;
+  border-color: var(--preview-input-border) !important;
+  color: var(--preview-input-text) !important;
+}
+
+.previewInput::placeholder {
+  color: var(--preview-input-text) !important;
+  opacity: 0.5;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  position: relative;
+  z-index: 2;
+}
+
+.primaryButton {
+  background-color: var(--preview-primary-btn) !important;
+  color: var(--preview-primary-btn-text) !important;
+  border-color: var(--preview-primary-btn) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.secondaryButton {
+  background-color: var(--preview-secondary-btn) !important;
+  color: var(--preview-secondary-btn-text) !important;
+  border-color: var(--preview-secondary-btn) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.buttonOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--preview-primary-btn-overlay);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.secondaryButton .buttonOverlay {
+  background-color: var(--preview-secondary-btn-overlay);
+}
+
+.buttonText {
+  position: relative;
+  z-index: 2;
+}
+
+.badgeGroup {
+  display: flex;
+  gap: var(--spacing-2);
+  position: relative;
+  z-index: 2;
+}
+
+.accentBadge {
+  background-color: var(--preview-accent-badge) !important;
+  color: var(--preview-accent-badge-text) !important;
+  border-color: transparent !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.defaultBadge {
+  background-color: var(--preview-default-badge) !important;
+  color: var(--preview-default-badge-text) !important;
+  border: 1px solid var(--preview-border) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.badgeOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.accentBadge .badgeOverlay {
+  background-color: var(--preview-accent-badge-overlay);
+}
+
+.defaultBadge .badgeOverlay {
+  background-color: var(--preview-default-badge-overlay);
+}
+
+.badgeText {
+  position: relative;
+  z-index: 2;
+}

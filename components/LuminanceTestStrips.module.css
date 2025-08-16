@@ -1,0 +1,124 @@
+.testStripsSection {
+  margin-bottom: var(--spacing-10);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-3);
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sectionNote {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.whiteBar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: #000;
+  padding: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.blackBar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #0a0a0a;
+  color: #fff;
+  padding: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.rows {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.rowTitle {
+  font-weight: 600;
+  margin-bottom: var(--spacing-2);
+}
+
+.warningTitle {
+  background: var(--warning-bg, #fff7ed);
+  color: var(--warning-fg, #9a3412);
+  border: 1px solid var(--warning-border, #fdba74);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+}
+
+.warningInline {
+  background: var(--warning-bg, #fff7ed);
+  color: var(--warning-fg, #9a3412);
+  border: 1px solid var(--warning-border, #fdba74);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  margin-bottom: var(--spacing-2);
+}
+
+.stripGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--spacing-2);
+}
+
+.swatch {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.swatchColor {
+  height: 48px;
+}
+
+/* Padded contrast badge displayed inside the colored swatch area */
+.contrastBadge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(0, 0, 0, 0.12); /* translucent backdrop to improve readability on light tints */
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.05);
+}
+
+.selected {
+  outline: 2px solid var(--primary, #3b82f6);
+  outline-offset: 0;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) inset;
+}
+
+.swatchMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--surface);
+}
+
+.metaLine {
+  font-family: var(--font-family-monospace);
+  font-size: 0.72rem;
+  opacity: 0.9;
+}
