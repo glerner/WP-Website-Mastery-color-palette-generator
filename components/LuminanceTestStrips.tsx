@@ -1,9 +1,8 @@
 import * as React from 'react';
 import styles from './LuminanceTestStrips.module.css';
 import { PaletteWithVariations, ColorType } from '../helpers/types';
-import { hexToRgb, rgbToHex, rgbToHslNorm, solveHslLightnessForY, luminance, TARGET_LUM_LIGHTER, TARGET_LUM_LIGHT, TARGET_LUM_DARK, TARGET_LUM_DARKER, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_TINTS_FROM_WHITE, MIN_DELTA_LUM_SHADES, getContrastRatio } from '../helpers/colorUtils';
-import { ensureAAAContrast, WHITE_TEXT_MIN_CONTRAST, BLACK_TEXT_MIN_CONTRAST, MAX_RECOMMENDED_CONTRAST_TINTS, MAX_RECOMMENDED_CONTRAST_SHADES, AA_SMALL_TEXT_MIN_CONTRAST } from '../helpers/ensureAAAContrast';
-import { NEAR_WHITE_RGB, NEAR_BLACK_RGB, TINT_TARGET_COUNT, SHADE_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, DARKER_MIN_Y, DARKER_MAX_Y, DARK_OVERLAP_MIN_Y, DARK_MAX_Y, Y_TARGET_DECIMALS, Y_DISPLAY_DECIMALS, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, HARD_MIN_SHADE_Y_GAP } from '../helpers/config';
+import { hexToRgb, rgbToHex, rgbToHslNorm, solveHslLightnessForY, luminance, getContrastRatio } from '../helpers/colorUtils';
+import { NEAR_WHITE_RGB, NEAR_BLACK_RGB, TINT_TARGET_COUNT, SHADE_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, DARKER_MIN_Y, DARKER_MAX_Y, DARK_OVERLAP_MIN_Y, DARK_MAX_Y, Y_TARGET_DECIMALS, Y_DISPLAY_DECIMALS, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, HARD_MIN_SHADE_Y_GAP, TARGET_LUM_LIGHTER, TARGET_LUM_LIGHT, TARGET_LUM_DARK, TARGET_LUM_DARKER, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_TINTS_FROM_WHITE, MIN_DELTA_LUM_SHADES, AAA_MIN, AA_SMALL_MIN, MAX_CONTRAST_TINTS, MAX_CONTRAST_SHADES } from '../helpers/config';
 
 function hslStringFromRgb(rgb: { r: number; g: number; b: number }, oneDecimal = true): string {
   const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
@@ -65,7 +64,7 @@ function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSele
     return ys
       .map((y) => ({ y, rgb: solveHslLightnessForY(baseRgb, y) }))
       .map(({ y, rgb }) => ({ y, rgb, ratio: getContrastRatio(rgb, NEAR_BLACK_RGB) }))
-      .filter(({ ratio }) => ratio >= BLACK_TEXT_MIN_CONTRAST && ratio <= MAX_RECOMMENDED_CONTRAST_TINTS)
+      .filter(({ ratio }) => ratio >= AAA_MIN && ratio <= MAX_CONTRAST_TINTS)
       .map(({ y }) => y);
   }, [baseRgb]);
 
@@ -86,19 +85,23 @@ function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSele
   const lighterHex = React.useMemo(() => rgbToHex(lighterRgb.r, lighterRgb.g, lighterRgb.b), [lighterRgb]);
   const lighterY = React.useMemo(() => luminance(lighterRgb.r, lighterRgb.g, lighterRgb.b), [lighterRgb]);
   const lighterHsl = React.useMemo(() => hslStringFromRgb(lighterRgb, true), [lighterRgb]);
-  const tooClose =
-    selectedLighterY != null && selectedLightY != null &&
-    (selectedLighterY - selectedLightY) < RECOMMENDED_TINT_Y_GAP;
+  const EPS = 1e-6;
+  const lightGap = (selectedLighterY != null && selectedLightY != null)
+    ? (selectedLighterY - selectedLightY)
+    : Number.POSITIVE_INFINITY;
+  const tooClose = Number.isFinite(lightGap) && (lightGap + EPS) < RECOMMENDED_TINT_Y_GAP;
 
   return (
     <div>
-      <div className={styles.rowTitle}>{name} — white → lighter (min gap from white: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})</div>
+      <div className={styles.rowTitle}>
+        {name} — white → lighter gap {selectedLighterY != null ? (1 - selectedLighterY).toFixed(3) : '-'} (recommended minimum gap: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})
+      </div>
       <div className={styles.stripGrid}>
         {lighterTargets.map((targetY, i) => {
           const rgb = solveHslLightnessForY(baseRgb, targetY);
           const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
           const contrast = getContrastRatio(rgb, NEAR_BLACK_RGB);
-          const level = contrast >= BLACK_TEXT_MIN_CONTRAST ? 'AAA' : contrast >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+          const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
           const hsl = hslStringFromRgb(rgb, true);
           const y = luminance(rgb.r, rgb.g, rgb.b);
           const isSelected = i === lighterClosest;
@@ -117,24 +120,20 @@ function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSele
         })}
       </div>
 
-      {tooClose ? (
-        <>
-          <div className={`${styles.rowTitle} ${styles.warningTitle}`}>
-            {name} — Selected lighter and light are close; may reduce perceptual separation
-          </div>
-          <div className={styles.warningInline}>
-            Selected lighter (Y {(selectedLighterY ?? 0).toFixed(3)}) and light (Y {(selectedLightY ?? 0).toFixed(3)}) are closer than recommended {RECOMMENDED_TINT_Y_GAP.toFixed(2)} (difference {(selectedLighterY != null && selectedLightY != null ? (selectedLighterY - selectedLightY) : 0).toFixed(3)}). Palette will preserve your selections, which may reduce perceptual separation.
-          </div>
-        </>
-      ) : (
-        <div className={styles.rowTitle}>{name} — lighter → light (recommended gap: {RECOMMENDED_TINT_Y_GAP.toFixed(2)})</div>
+      <div className={styles.rowTitle}>
+        {name} — lighter → light gap {selectedLighterY != null && selectedLightY != null ? (selectedLighterY - selectedLightY).toFixed(3) : '-'} (recommended minimum gap: {RECOMMENDED_TINT_Y_GAP.toFixed(2)})
+      </div>
+      {tooClose && (
+        <div className={styles.warningInline}>
+          Selected lighter (Y {(selectedLighterY ?? 0).toFixed(3)}) and light (Y {(selectedLightY ?? 0).toFixed(3)}) are closer than recommended {RECOMMENDED_TINT_Y_GAP.toFixed(2)} (difference {(selectedLighterY != null && selectedLightY != null ? (selectedLighterY - selectedLightY) : 0).toFixed(3)}). Palette will preserve your selections, which may reduce perceptual separation.
+        </div>
       )}
       <div className={styles.stripGrid}>
         {lightTargets.map((targetY, i) => {
           const rgb = solveHslLightnessForY(baseRgb, targetY);
           const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
           const contrast = getContrastRatio(rgb, NEAR_BLACK_RGB);
-          const level = contrast >= BLACK_TEXT_MIN_CONTRAST ? 'AAA' : contrast >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+          const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
           const hsl = hslStringFromRgb(rgb, true);
           const y = luminance(rgb.r, rgb.g, rgb.b);
           const isSelected = i === lightClosest;
@@ -172,7 +171,7 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
     return ys
       .map((y) => ({ y, rgb: solveHslLightnessForY(baseRgb, y) }))
       .map(({ y, rgb }) => ({ y, rgb, ratio: getContrastRatio(rgb, NEAR_WHITE_RGB) }))
-      .filter(({ ratio }) => ratio >= WHITE_TEXT_MIN_CONTRAST && ratio <= MAX_RECOMMENDED_CONTRAST_SHADES)
+      .filter(({ ratio }) => ratio >= AAA_MIN && ratio <= MAX_CONTRAST_SHADES)
       .map(({ y }) => y);
   }, [baseRgb]);
 
@@ -193,9 +192,11 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
   const darkerClosest = React.useMemo(() => findClosestIndex(darkerTargets, selectedDarkerY ?? TARGET_LUM_DARKER), [darkerTargets, selectedDarkerY]);
   const darkClosest = React.useMemo(() => findClosestIndex(darkTargets, selectedDarkY ?? TARGET_LUM_DARK), [darkTargets, selectedDarkY]);
 
-  const tooClose =
-    selectedDarkerY != null && selectedDarkY != null &&
-    (selectedDarkY - selectedDarkerY) < RECOMMENDED_SHADE_Y_GAP;
+  const EPS = 1e-6;
+  const darkGap = (selectedDarkerY != null && selectedDarkY != null)
+    ? (selectedDarkY - selectedDarkerY)
+    : Number.POSITIVE_INFINITY;
+  const tooClose = Number.isFinite(darkGap) && (darkGap + EPS) < RECOMMENDED_SHADE_Y_GAP;
 
   // Auto-correct defaults to avoid adjacent/too-close selection
   React.useEffect(() => {
@@ -224,14 +225,16 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
 
   return (
     <div>
-      <div className={styles.rowTitle}>{name} — black → darker (AAA)</div>
+      <div className={styles.rowTitle}>
+        {name} — black → darker gap {selectedDarkerY != null ? (selectedDarkerY - 0).toFixed(3) : '-'} (recommended minimum gap: {HARD_MIN_SHADE_Y_GAP.toFixed(2)})
+      </div>
       <div className={styles.stripGrid}>
         {darkerTargets.map((targetY, i) => {
           const rgb = solveHslLightnessForY(baseRgb, targetY);
           const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
           const y = luminance(rgb.r, rgb.g, rgb.b);
           const contrast = getContrastRatio(rgb, NEAR_WHITE_RGB);
-          const level = contrast >= WHITE_TEXT_MIN_CONTRAST ? 'AAA' : contrast >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+          const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
           const isSelected = i === darkerClosest;
           return (
             <div
@@ -247,20 +250,21 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
           );
         })}
       </div>
+      <div className={styles.rowTitle}>
+        {name} — darker → dark gap {selectedDarkerY != null && selectedDarkY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'} (recommended minimum gap: {RECOMMENDED_SHADE_Y_GAP.toFixed(2)})
+      </div>
       {tooClose && (
-        <div className={styles.warning}>
-          {name} — Selected darker (Y {selectedDarkerY?.toFixed(3) ?? '-'}) and dark (Y {selectedDarkY?.toFixed(3) ?? '-'}) are closer than recommended {RECOMMENDED_SHADE_Y_GAP.toFixed(3)} (difference {selectedDarkY != null && selectedDarkerY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'}). Palette will preserve your selections.
+        <div className={styles.warningInline}>
+          Selected darker (Y {selectedDarkerY?.toFixed(3) ?? '-'}) and dark (Y {selectedDarkY?.toFixed(3) ?? '-'}) are closer than recommended {RECOMMENDED_SHADE_Y_GAP.toFixed(2)} (difference {selectedDarkY != null && selectedDarkerY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'}). Palette will preserve your selections.
         </div>
       )}
-
-      <div className={styles.rowTitle}>{name} — darker → dark (recommended gap: {RECOMMENDED_SHADE_Y_GAP.toFixed(2)})</div>
       <div className={styles.stripGrid}>
         {darkTargets.map((targetY, i) => {
           const rgb = solveHslLightnessForY(baseRgb, targetY);
           const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
           const y = luminance(rgb.r, rgb.g, rgb.b);
           const contrast = getContrastRatio(rgb, NEAR_WHITE_RGB);
-          const level = contrast >= WHITE_TEXT_MIN_CONTRAST ? 'AAA' : contrast >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+          const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
           const isSelected = i === darkClosest;
           return (
             <div

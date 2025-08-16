@@ -1,0 +1,63 @@
+# Node & package managers
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+
+# Build outputs
+/dist/
+/build/
+/.vite/
+.vite/
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files (do not commit secrets)
+.env
+.env.*
+!.env.example
+
+# Editor/OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Tests/coverage
+coverage/
+.nyc_output/
+
+# Misc caches
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.turbo/
+.next/
+.svelte-kit/
+
+# Local Netlify/Vercel/etc
+.netlify/
+.vercel/
+
+# Storybook
+storybook-static/
+
+# Windsurf / Cascade workspace metadata
+.windsurf/
+.cascade/
+
+# notes about upcoming changes, plan
+change.md
+junk.txt
+changes.txt
+change.md

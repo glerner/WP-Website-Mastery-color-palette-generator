@@ -108,10 +108,10 @@ const GeneratorPage = () => {
 
   const handleAiSubmit = async (values: z.infer<typeof aiFormSchema>) => {
     console.log('AI Generation Input:', values);
-    
+
     try {
       const result = await generatePaletteMutation.mutateAsync(values);
-      
+
       // Extract the base colors from the palette with variations
       const newPalette: Palette = {
         primary: { name: result.primary.name, hex: result.primary.hex },
@@ -122,7 +122,7 @@ const GeneratorPage = () => {
         warning: { name: 'Warning', hex: '#d69e2e' },
         success: { name: 'Success', hex: '#38a169' },
       };
-      
+
       setPalette(newPalette);
       manualForm.setValues({
         primary: newPalette.primary.hex,
@@ -132,11 +132,11 @@ const GeneratorPage = () => {
       });
     } catch (error) {
       console.error('AI generation failed, using fallback palette:', error);
-      
+
       // Generate fallback palette using color harmony
       const fallbackPalette = generateAnalogousComplementaryPalette();
       console.log('Generated fallback palette:', fallbackPalette);
-      
+
       setPalette(fallbackPalette);
       manualForm.setValues({
         primary: fallbackPalette.primary.hex,
@@ -144,7 +144,7 @@ const GeneratorPage = () => {
         tertiary: fallbackPalette.tertiary.hex,
         accent: fallbackPalette.accent.hex,
       });
-      
+
       // Show fallback message to user
       toast.warning("AI generation failed, but we've created a harmonious color palette for you! You can customize it using the Manual Input tab.");
     }
@@ -162,39 +162,6 @@ const GeneratorPage = () => {
     }
   };
 
-  const handleExport = () => {
-    const filenameSuffix = generateFilenameSuffix(paletteWithVariations);
-    
-    // Export theme.json
-    const themeJsonString = generateThemeJson(paletteWithVariations);
-    const themeBlob = new Blob([themeJsonString], { type: 'application/json' });
-    const themeUrl = URL.createObjectURL(themeBlob);
-    const themeLink = document.createElement('a');
-    themeLink.href = themeUrl;
-    themeLink.download = `theme-${filenameSuffix}.json`;
-    document.body.appendChild(themeLink);
-    themeLink.click();
-    document.body.removeChild(themeLink);
-    URL.revokeObjectURL(themeUrl);
-    
-    // Export CSS file
-    const cssString = generateCssClasses(paletteWithVariations);
-    const cssBlob = new Blob([cssString], { type: 'text/css' });
-    const cssUrl = URL.createObjectURL(cssBlob);
-    const cssLink = document.createElement('a');
-    cssLink.href = cssUrl;
-    cssLink.download = `styles-${filenameSuffix}.css`;
-    document.body.appendChild(cssLink);
-    cssLink.click();
-    document.body.removeChild(cssLink);
-    URL.revokeObjectURL(cssUrl);
-    
-    console.log('Exported files:', {
-      theme: `theme-${filenameSuffix}.json`,
-      css: `styles-${filenameSuffix}.css`,
-      colors: paletteWithVariations
-    });
-  };
 
   const paletteWithVariations = useMemo(() => {
     // Build semantic colors dynamically from current palette
@@ -266,7 +233,9 @@ const GeneratorPage = () => {
 
     // Create ZIP and trigger download
     const zipBytes = zipSync(files, { level: 9 });
-    const blob = new Blob([zipBytes], { type: 'application/zip' });
+    // Use a sliced ArrayBuffer to satisfy TS BlobPart typing and avoid including extra bytes
+    const ab = zipBytes.buffer.slice(zipBytes.byteOffset, zipBytes.byteOffset + zipBytes.byteLength) as ArrayBuffer;
+    const blob = new Blob([ab], { type: 'application/zip' });
     const filename = `themes-${darkHexSuffix}.zip`;
 
     // Prefer File System Access API when available
@@ -513,16 +482,9 @@ const GeneratorPage = () => {
             <div className={styles.exportSection}>
               <h3 className={styles.exportTitle}>Export Palette</h3>
               <p className={styles.exportDescription}>
-                Download both a WordPress `theme.json` file and a CSS file with 
+                Download both a WordPress `theme.json` file and a CSS file with
                 contrast-optimized background and text color classes.
               </p>
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                className={styles.exportButton}
-              >
-                Export Files
-              </Button>
               <div style={{ marginTop: 'var(--spacing-2)' }}>
                 <Button
                   variant="primary"

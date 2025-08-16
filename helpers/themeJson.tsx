@@ -1,5 +1,5 @@
 import { PaletteWithVariations } from './types';
-import { AA_SMALL_TEXT_MIN_CONTRAST } from './ensureAAAContrast';
+import { AA_SMALL_MIN } from './config';
 import { generateThemeVariations } from './generateThemeVariations';
 
 // Calculate relative luminance for a color
@@ -30,7 +30,7 @@ const getContrastRatio = (color1: string, color2: string): number => {
 const meetsContrastRequirements = (hex: string): boolean => {
   const contrastWithBlack = getContrastRatio(hex, '#000000');
   const contrastWithWhite = getContrastRatio(hex, '#ffffff');
-  const minContrast = AA_SMALL_TEXT_MIN_CONTRAST; // AA standard
+  const minContrast = AA_SMALL_MIN; // AA standard
   
   // Require AA contrast against BOTH black AND white to filter out problematic middle-luminance colors
   return contrastWithBlack >= minContrast && contrastWithWhite >= minContrast;

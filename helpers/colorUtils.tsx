@@ -41,9 +41,12 @@ export const getContrastRatio = (
   return parseFloat(((brightest + 0.05) / (darkest + 0.05)).toFixed(2));
 };
 
+import { AAA_MIN, AA_SMALL_MIN } from './config';
+
 export const getContrastLevel = (ratio: number): 'AAA' | 'AA' | 'FAIL' => {
-  if (ratio >= AAA_MIN_CONTRAST) return 'AAA';
-  if (ratio >= AA_SMALL_TEXT_MIN_CONTRAST) return 'AA';
+  // Compare only against centralized thresholds from helpers/config.ts
+  if (ratio >= AAA_MIN) return 'AAA';
+  if (ratio >= AA_SMALL_MIN) return 'AA';
   return 'FAIL';
 };
 
@@ -134,8 +137,8 @@ const adjustHslLockedForContrast = (
   const maxY = 0.98;
   let y = initialY;
   const targetTextRgb = prefer === 'black' ? NEAR_BLACK_RGB : NEAR_WHITE_RGB;
-  const minContrast = prefer === 'black' ? BLACK_TEXT_MIN_CONTRAST : WHITE_TEXT_MIN_CONTRAST;
-  const MAX_CAP = prefer === 'black' ? MAX_RECOMMENDED_CONTRAST_TINTS : MAX_RECOMMENDED_CONTRAST_SHADES;
+  const minContrast = AAA_MIN;
+  const MAX_CAP = prefer === 'black' ? MAX_CONTRAST_TINTS : MAX_CONTRAST_SHADES;
 
   const move = prefer === 'black' ? (yy: number) => Math.min(maxY, yy + step) : (yy: number) => Math.max(minY, yy - step);
   let best = solveHslLightnessForY(baseRgb, y);
@@ -154,7 +157,7 @@ const adjustHslLockedForContrast = (
     if (y === minY || y === maxY) break;
   }
   const meetsAAA = contrast >= minContrast && contrast <= MAX_CAP;
-  const meetsAA = contrast >= AA_SMALL_TEXT_MIN_CONTRAST;
+  const meetsAA = contrast >= AA_SMALL_MIN;
   return { rgb: best, y: bestY, contrast, meetsAAA, meetsAA };
 };
 
@@ -255,31 +258,19 @@ const adjustToTargetLuminance = (baseRgb: { r: number; g: number; b: number }, t
   return bestRgb;
 };
 
-// Public targets and tuning variables (not hard-coded in logic)
-export const TARGET_LUM_LIGHTER = 0.84;  // user-selected default for lighter
-export const TARGET_LUM_LIGHT = 0.64;    // comfortably light (slightly darker for more separation)
-export const TARGET_LUM_DARK = 0.20;     // clearly dark
-export const TARGET_LUM_DARKER = 0.03;   // very dark (near-black, good with near-white text)
-export const MIN_DELTA_LUM_TINTS = 0.16; // minimum separation for lighter vs light (ensure distinct RGB after rounding)
-export const MIN_DELTA_LUM_TINTS_FROM_WHITE = 0.10; // minimum separation for white vs lighter on very light colors
-export const MIN_DELTA_LUM_SHADES = 0.06; // minimum separation for dark vs darker
-
 import {
+  TARGET_LUM_LIGHTER,
+  TARGET_LUM_LIGHT,
+  TARGET_LUM_DARK,
+  TARGET_LUM_DARKER,
+  MIN_DELTA_LUM_TINTS_FROM_WHITE,
+  MIN_DELTA_LUM_TINTS,
+  MIN_DELTA_LUM_SHADES,
   NEAR_BLACK_RGB,
   NEAR_WHITE_RGB,
-  AAA_MIN as AAA_MIN_FROM_CFG,
-  AA_SMALL_MIN as AA_SMALL_MIN_FROM_CFG,
   MAX_CONTRAST_TINTS,
   MAX_CONTRAST_SHADES,
 } from './config';
-
-// Centralized thresholds (defined locally to avoid circular imports)
-export const AAA_MIN_CONTRAST = AAA_MIN_FROM_CFG; // AAA (small text) configurable
-export const AA_SMALL_TEXT_MIN_CONTRAST = AA_SMALL_MIN_FROM_CFG; // AA (small text) configurable
-export const BLACK_TEXT_MIN_CONTRAST = AAA_MIN_CONTRAST; // near-black targeting AAA
-export const WHITE_TEXT_MIN_CONTRAST = AAA_MIN_CONTRAST; // near-white targeting AAA
-export const MAX_RECOMMENDED_CONTRAST_TINTS = MAX_CONTRAST_TINTS; // UX comfort guideline
-export const MAX_RECOMMENDED_CONTRAST_SHADES = MAX_CONTRAST_SHADES; // UX comfort guideline
 
 // Use centralized thresholds
 
@@ -296,8 +287,8 @@ const adjustLuminanceForContrast = (
   const maxY = 0.98;
   let y = initialY;
   const targetTextRgb = prefer === 'black' ? NEAR_BLACK_RGB : NEAR_WHITE_RGB;
-  const minContrast = prefer === 'black' ? BLACK_TEXT_MIN_CONTRAST : WHITE_TEXT_MIN_CONTRAST;
-  const MAX_CAP = prefer === 'black' ? MAX_RECOMMENDED_CONTRAST_TINTS : MAX_RECOMMENDED_CONTRAST_SHADES;
+  const minContrast = AAA_MIN;
+  const MAX_CAP = prefer === 'black' ? MAX_CONTRAST_TINTS : MAX_CONTRAST_SHADES;
 
   // Move lighter up if prefer black; move darker down if prefer white
   const move = prefer === 'black' ? (yy: number) => Math.min(maxY, yy + step) : (yy: number) => Math.max(minY, yy - step);
@@ -323,7 +314,7 @@ const adjustLuminanceForContrast = (
   }
 
   const meetsAAA = contrast >= minContrast && contrast <= MAX_CAP;
-  const meetsAA = contrast >= AA_SMALL_TEXT_MIN_CONTRAST;
+  const meetsAA = contrast >= AA_SMALL_MIN;
   return { rgb: best, y: bestY, contrast, meetsAAA, meetsAA };
 };
 
@@ -467,11 +458,11 @@ export const generateShades = (
 
   const checkBand = (band: typeof items, prefer: 'black' | 'white', label: string) => {
     const textRgb = prefer === 'black' ? NEAR_BLACK_RGB : NEAR_WHITE_RGB;
-    const minContrast = prefer === 'black' ? BLACK_TEXT_MIN_CONTRAST : WHITE_TEXT_MIN_CONTRAST;
-    const MAX_CAP = prefer === 'black' ? MAX_RECOMMENDED_CONTRAST_TINTS : MAX_RECOMMENDED_CONTRAST_SHADES;
+    const minContrast = AAA_MIN;
+    const MAX_CAP = prefer === 'black' ? MAX_CONTRAST_TINTS : MAX_CONTRAST_SHADES;
     const ratios = band.map(i => getContrastRatio(i.rgb, textRgb));
     const allAAA = ratios.every(r => r >= minContrast && r <= MAX_CAP);
-    const allAA = ratios.every(r => r >= AA_SMALL_TEXT_MIN_CONTRAST);
+    const allAA = ratios.every(r => r >= AA_SMALL_MIN);
     if (!allAAA) {
       if (allAA) {
         console.warn(`${colorName} ${label}: AAA contrast could not be achieved while keeping 2 distinct ${label}. Falling back to highest possible contrast ≥ AA.`);

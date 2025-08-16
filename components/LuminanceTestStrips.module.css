@@ -85,7 +85,11 @@
 }
 
 .swatchColor {
-  height: 48px;
+  min-height: 72px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 /* Padded contrast badge displayed inside the colored swatch area */

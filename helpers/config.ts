@@ -100,6 +100,10 @@ export const HARD_MIN_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP
 
 /** Minimum delta from white for the first lighter step (to avoid indistinguishable step). */
 export const MIN_DELTA_LUM_TINTS_FROM_WHITE = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS_FROM_WHITE', 0.04, 0, 1);
+/** Minimum separation in Y between lighter and light, to keep them visually distinct after rounding. */
+export const MIN_DELTA_LUM_TINTS = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS', 0.16, 0, 1);
+/** Minimum separation in Y between dark and darker, to keep them visually distinct after rounding. */
+export const MIN_DELTA_LUM_SHADES = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_SHADES', 0.06, 0, 1);
 
 // Target luminance anchors for each band (used by any auto-placement heuristics)
 /** Target Y for the lighter band. */

@@ -2,9 +2,9 @@ import * as React from 'react';
 import { Badge } from './Badge';
 import { Skeleton } from './Skeleton';
 import { PaletteWithVariations } from '../helpers/types';
-import { ensureAAAContrast, AAA_MIN_CONTRAST, AA_SMALL_TEXT_MIN_CONTRAST } from '../helpers/ensureAAAContrast';
-import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_WHITE_RGB, NEAR_BLACK_RGB } from '../helpers/config';
-import { hexToRgb, getContrastRatio, luminance, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_SHADES } from '../helpers/colorUtils';
+import { ensureAAAContrast } from '../helpers/ensureAAAContrast';
+import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_WHITE_RGB, NEAR_BLACK_RGB, AAA_MIN, AA_SMALL_MIN, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_SHADES } from '../helpers/config';
+import { hexToRgb, getContrastRatio, luminance } from '../helpers/colorUtils';
 import styles from './ColorDisplay.module.css';
 
 interface ColorDisplayProps {
@@ -19,7 +19,7 @@ const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
   const textRgb = textIsWhite ? NEAR_WHITE_RGB : NEAR_BLACK_RGB;
   const ratio = getContrastRatio(bg, textRgb);
 
-  const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN_CONTRAST ? 'AAA' : ratio >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+  const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN ? 'AAA' : ratio >= AA_SMALL_MIN ? 'AA' : 'FAIL';
   const variant: 'success' | 'warning' | 'destructive' =
     level === 'AAA' ? 'success' : level === 'AA' ? 'warning' : 'destructive';
 
@@ -43,27 +43,28 @@ const VariationBlock = ({ variation }: { variation: any }) => {
   const textIsWhite = contrastSolution.textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase();
   const textRgb = textIsWhite ? NEAR_WHITE_RGB : NEAR_BLACK_RGB;
   const ratio = getContrastRatio(bg, textRgb);
-  const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN_CONTRAST ? 'AAA' : ratio >= AA_SMALL_TEXT_MIN_CONTRAST ? 'AA' : 'FAIL';
+  const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN ? 'AAA' : ratio >= AA_SMALL_MIN ? 'AA' : 'FAIL';
   const hsl = hexToHslString(variation.hex, true);
   const y = luminance(...Object.values(hexToRgb(variation.hex)) as [number, number, number]);
 
   const badgeBg = textIsWhite ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
-  
+
   return (
-    <div className={styles.variationBlock} style={{ backgroundColor: variation.hex }}>
-      {contrastSolution.overlayColor && (
-        <div className={styles.overlay} style={{ backgroundColor: contrastSolution.overlayColor }} />
-      )}
-      {/* In-swatch contrast badge */}
-      <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor, background: badgeBg }}>
-        {level} {ratio.toFixed(2)}
+    <div className={styles.variationBlock}>
+      <div className={styles.variationHeaderBar}>
+        <span className={styles.variationName}>{variation.name}</span>
       </div>
-      <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
-        <div className={styles.variationHeader}>
-          <span className={styles.variationName}>{variation.name}</span>
+      <div className={styles.variationBody} style={{ backgroundColor: variation.hex }}>
+        {contrastSolution.overlayColor && (
+          <div className={styles.overlay} style={{ backgroundColor: contrastSolution.overlayColor }} />
+        )}
+        {/* In-swatch contrast badge */}
+        <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor, background: badgeBg }}>
+          {level} {ratio.toFixed(2)}
+        </div>
+        <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
           <div className={styles.variationCodesContainer}>
             <div className={styles.variationCodes}>
-              {/* Remove hex to reduce clutter. Keep HSL + Y to match strips */}
               <span className={styles.variationHsl}>{hsl}</span>
               <span className={styles.variationY}>Y {y.toFixed(3)}</span>
             </div>
@@ -94,10 +95,10 @@ const ColorCard = ({ color, name }: { color: any; name: string }) => {
   }, [ordered]);
   return (
     <div className={styles.colorCard}>
+      <div className={styles.variationHeader} style={{ padding: '4px 0' }}>
+        <span className={styles.variationName}>{name}</span>
+      </div>
       <div className={styles.variationsContainer}>
-        <div className={styles.variationHeader} style={{ padding: '4px 0' }}>
-          <span className={styles.variationName}>{name}</span>
-        </div>
         {gaps.tintGap != null && gaps.tintGap < MIN_DELTA_LUM_TINTS && (
           <div style={{
             margin: '4px 0',
