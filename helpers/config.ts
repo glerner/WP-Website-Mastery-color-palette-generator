@@ -57,7 +57,7 @@ export const LIGHTER_HEADROOM_FROM_MAX = numFromEnv('NEXT_PUBLIC_LIGHTER_HEADROO
 /** Base lower bound for the "light" band (Y). Env: NEXT_PUBLIC_LIGHT_MIN_Y_BASE */
 export const LIGHT_MIN_Y_BASE = numFromEnv('NEXT_PUBLIC_LIGHT_MIN_Y_BASE', 0.30, 0, 1);
 /** Upper cap for the "light" band (Y). Env: NEXT_PUBLIC_LIGHT_MAX_Y_CAP */
-export const LIGHT_MAX_Y_CAP = numFromEnv('NEXT_PUBLIC_LIGHT_MAX_Y_CAP', 0.90, 0, 1);
+export const LIGHT_MAX_Y_CAP = numFromEnv('NEXT_PUBLIC_LIGHT_MAX_Y_CAP', 0.75, 0, 1);
 
 /** Lower bound for the "darker" band (Y). Env: NEXT_PUBLIC_DARKER_MIN_Y */
 export const DARKER_MIN_Y = numFromEnv('NEXT_PUBLIC_DARKER_MIN_Y', 0.02, 0, 1);

@@ -73,11 +73,30 @@ function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSele
     return filterForBlackTextAAA(raw);
   }, [filterForBlackTextAAA]);
 
+  // Build the full AAA-valid range for "light" with a fine step, then sample up to TINT_TARGET_COUNT evenly
   const lightTargets = React.useMemo(() => {
-    const minY = Math.max(LIGHT_MIN_Y_BASE, TARGET_LUM_LIGHTER - MIN_DELTA_LUM_TINTS - 0.10);
+    const minY = Math.max(LIGHT_MIN_Y_BASE, 0);
     const maxY = Math.min(LIGHT_MAX_Y_CAP, LIGHTER_MAX_Y - MIN_DELTA_LUM_TINTS);
-    const raw = buildTargets(TINT_TARGET_COUNT, parseFloat(minY.toFixed(Y_TARGET_DECIMALS)), parseFloat(maxY.toFixed(Y_TARGET_DECIMALS)));
-    return filterForBlackTextAAA(raw);
+    // Generate a fine-grained range, then filter to AAA and sample evenly
+    const step = 0.005; // fine step to discover full AAA band
+    const makeRange = (start: number, end: number, s: number) => {
+      const out: number[] = [];
+      for (let y = start; y <= end + 1e-9; y += s) out.push(parseFloat(y.toFixed(Y_TARGET_DECIMALS)));
+      return out;
+    };
+    const sampleEvenly = (values: number[], count: number) => {
+      if (values.length <= count) return values;
+      const picks: number[] = [];
+      const stepIdx = (values.length - 1) / (count - 1);
+      for (let i = 0; i < count; i++) {
+        const idx = Math.round(i * stepIdx);
+        picks.push(values[idx]);
+      }
+      return Array.from(new Set(picks));
+    };
+    const raw = makeRange(minY, maxY, step);
+    const aaa = filterForBlackTextAAA(raw);
+    return sampleEvenly(aaa, TINT_TARGET_COUNT);
   }, [filterForBlackTextAAA]);
   const lighterClosest = React.useMemo(() => findClosestIndex(lighterTargets, selectedLighterY ?? TARGET_LUM_LIGHTER), [lighterTargets, selectedLighterY]);
   const lightClosest = React.useMemo(() => findClosestIndex(lightTargets, selectedLightY ?? TARGET_LUM_LIGHT), [lightTargets, selectedLightY]);
