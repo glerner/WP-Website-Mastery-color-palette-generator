@@ -9,10 +9,23 @@
   margin-bottom: var(--spacing-6);
 }
 
+/* Brief helper text below section title */
+.sectionInstructions {
+  font-size: 0.95rem;
+  color: var(--muted-foreground, #555);
+  margin: -4px 0 var(--spacing-6);
+}
+
 .paletteGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--spacing-8);
+}
+@media (max-width: 640px) {
+  .paletteGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-6);
+  }
 }
 
 .semanticTitle {
@@ -58,7 +71,8 @@
   flex-direction: column;
   gap: var(--spacing-4);
   padding: var(--spacing-4);
-  min-width: 360px; /* match paletteGrid min */
+  min-width: 0; /* allow shrink on small screens to avoid overflow */
+  width: 100%;
 }
 
 .originalColor {
@@ -93,7 +107,7 @@
 
 .variationsContainer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-3);
 }
 
@@ -103,7 +117,8 @@
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--surface);
-  min-width: 220px; /* ensure visual width for readability */
+  min-width: 0; /* avoid forcing overflow on small screens */
+  width: 100%;
 }
 
 .variationHeaderBar {
@@ -128,6 +143,14 @@
   position: relative;
   z-index: 2;
   min-height: 4rem;
+}
+@media (max-width: 480px) {
+  .originalColor {
+    padding: var(--spacing-4) var(--spacing-3);
+  }
+  .variationContent {
+    min-height: 3rem;
+  }
 }
 
 .overlay {
@@ -178,16 +201,17 @@
   margin-top: auto;
 }
 
-/* Padded contrast badge inside the colored area */
+/* Plain contrast text (no badge styling) shown at the top of the swatch */
 .contrastBadge {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 2px 6px;
-  border-radius: 6px;
+  position: static;
+  display: block;
+  margin-bottom: var(--spacing-2);
+  padding: 0; /* remove button-like padding */
+  border-radius: 0;
+  background: none; /* ensure no background */
   font-weight: 700;
-  font-size: 0.72rem;
-  line-height: 1;
+  font-size: 0.78rem;
+  line-height: 1.1;
   letter-spacing: 0.01em;
 }
 

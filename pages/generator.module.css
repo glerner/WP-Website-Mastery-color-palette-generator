@@ -1,14 +1,37 @@
+/* Root page wrapper fills viewport and contains either desktop layout or mobile tabs */
 .pageWrapper {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px); /* Adjust for header height */
+  height: 100dvh; /* app-within-viewport */
   background-color: var(--background);
+  overflow: hidden; /* inner regions handle their own scroll */
+}
+
+/* Desktop two-column layout container (hidden on mobile) */
+.desktopLayout {
+  display: none;
+  width: 100%;
+  height: 100%;
 }
 
 @media (min-width: 1024px) {
-  .pageWrapper {
+  .desktopLayout {
+    display: flex;
     flex-direction: row;
   }
+}
+
+/* Mobile tabbed layout (visible below 1024px) */
+.mobileLayout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0; /* allow children to size */
+}
+
+@media (min-width: 1024px) {
+  .mobileLayout { display: none; }
 }
 
 .controlsColumn {
@@ -25,6 +48,17 @@
     width: 380px;
     flex-shrink: 0;
     max-height: none;
+  }
+  /* Desktop-specific spacing tweaks */
+  .previewContent {
+    /* bring palette closer to the left scrollbar, and add more space toward the right panel */
+    padding: var(--spacing-3) var(--spacing-6) var(--spacing-6) var(--spacing-3);
+    margin: 0 var(--spacing-10) 0 var(--spacing-2);
+  }
+  .tabsColumn {
+    /* increase internal gap from the divider */
+    padding-left: var(--spacing-6);
+    padding-right: var(--spacing-3);
   }
 }
 
@@ -48,13 +82,56 @@
   margin: 0 auto;
 }
 
+/* Mobile tabs specific */
+.mobileTabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.mobileTabsHeader {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--background);
+}
+
+.mobileTabPanel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto; /* independent scroll per tab */
+  padding: var(--spacing-6);
+  -webkit-overflow-scrolling: touch; /* momentum scrolling on iOS */
+  overscroll-behavior: contain; /* prevent scroll chaining */
+  touch-action: pan-y; /* enable drag scroll vertically */
+}
+
+/* Desktop tabs column styles */
+.tabsColumn {
+  width: 100%;
+  max-width: 420px;
+  flex: 0 0 420px;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--sidebar, var(--background));
+}
+
+@media (max-width: 1023px) {
+  .tabsColumn { display: none; }
+}
+
 .tabs {
   display: flex;
   flex-direction: column;
 }
 
 .tabContent {
-  padding-top: var(--spacing-6);
+  /* add horizontal padding so selected outlines are fully visible */
+  padding: var(--spacing-4) var(--spacing-4) var(--spacing-6);
 }
 
 .submitButton {

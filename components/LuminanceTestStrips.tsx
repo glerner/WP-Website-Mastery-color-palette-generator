@@ -53,12 +53,12 @@ type RowProps = {
   name: string;
   baseHex: string;
   colorKey: ColorType;
-  selectedLighterY?: number;
-  selectedLightY?: number;
-  onSelect: (colorKey: ColorType, kind: 'lighter' | 'light', y: number) => void;
+  selectedLighterIndex?: number;
+  selectedLightIndex?: number;
+  onSelect: (colorKey: ColorType, kind: 'lighter' | 'light', index: number) => void;
 };
 
-function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSelect }: RowProps) {
+function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex, onSelect }: RowProps) {
   const baseRgb = hexToRgb(baseHex);
   const filterForBlackTextAAA = React.useCallback((ys: number[]) => {
     return ys
@@ -74,7 +74,7 @@ function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSele
   }, [filterForBlackTextAAA]);
 
   // Build the full AAA-valid range for "light" with a fine step, then sample up to TINT_TARGET_COUNT evenly
-  const lightTargets = React.useMemo(() => {
+  let lightTargets = React.useMemo(() => {
     const minY = Math.max(LIGHT_MIN_Y_BASE, 0);
     const maxY = Math.min(LIGHT_MAX_Y_CAP, LIGHTER_MAX_Y - MIN_DELTA_LUM_TINTS);
     // Generate a fine-grained range, then filter to AAA and sample evenly
@@ -98,40 +98,82 @@ function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSele
     const aaa = filterForBlackTextAAA(raw);
     return sampleEvenly(aaa, TINT_TARGET_COUNT);
   }, [filterForBlackTextAAA]);
-  const lighterClosest = React.useMemo(() => findClosestIndex(lighterTargets, selectedLighterY ?? TARGET_LUM_LIGHTER), [lighterTargets, selectedLighterY]);
-  const lightClosest = React.useMemo(() => findClosestIndex(lightTargets, selectedLightY ?? TARGET_LUM_LIGHT), [lightTargets, selectedLightY]);
-  const lighterRgb = React.useMemo(() => solveHslLightnessForY(baseRgb, selectedLighterY ?? TARGET_LUM_LIGHTER), [baseRgb, selectedLighterY]);
+
+  // Enforce mutual matchability for tints: only show lighter that can match some light, and light that can match some lighter
+  const { lighterTargetsFiltered, lightTargetsFiltered } = React.useMemo(() => {
+    const canMatchLight = (LL: number, L: number) => (LL - L) >= RECOMMENDED_TINT_Y_GAP;
+    const step1Light = lightTargets.filter(L => lighterTargets.some(LL => canMatchLight(LL, L)));
+    const step1Lighter = lighterTargets.filter(LL => step1Light.some(L => canMatchLight(LL, L)));
+    // Recompute lights against the trimmed lighter list to remove too-light lights
+    const step2Light = step1Light.filter(L => step1Lighter.some(LL => canMatchLight(LL, L)));
+    return { lighterTargetsFiltered: step1Lighter, lightTargetsFiltered: step2Light };
+  }, [lighterTargets, lightTargets]);
+  const lighterIndex = React.useMemo(() => {
+    if (!lighterTargetsFiltered.length) return 0;
+    if (selectedLighterIndex != null && selectedLighterIndex >= 0 && selectedLighterIndex < lighterTargetsFiltered.length) return selectedLighterIndex;
+    return Math.floor(lighterTargetsFiltered.length / 2);
+  }, [lighterTargetsFiltered, selectedLighterIndex]);
+  const lightIndex = React.useMemo(() => {
+    if (!lightTargetsFiltered.length) return 0;
+    if (selectedLightIndex != null && selectedLightIndex >= 0 && selectedLightIndex < lightTargetsFiltered.length) return selectedLightIndex;
+    // pick last by default; will be adjusted below to meet gap when possible
+    return Math.max(0, lightTargetsFiltered.length - 1);
+  }, [lightTargetsFiltered, selectedLightIndex]);
+
+  const lighterYSelected = lighterTargetsFiltered[lighterIndex] ?? TARGET_LUM_LIGHTER;
+  const lightYSelected = lightTargetsFiltered[lightIndex] ?? TARGET_LUM_LIGHT;
+
+  const lighterRgb = React.useMemo(() => solveHslLightnessForY(baseRgb, lighterYSelected), [baseRgb, lighterYSelected]);
   const lighterHex = React.useMemo(() => rgbToHex(lighterRgb.r, lighterRgb.g, lighterRgb.b), [lighterRgb]);
   const lighterY = React.useMemo(() => luminance(lighterRgb.r, lighterRgb.g, lighterRgb.b), [lighterRgb]);
   const lighterHsl = React.useMemo(() => hslStringFromRgb(lighterRgb, true), [lighterRgb]);
   const EPS = 1e-6;
-  const lightGap = (selectedLighterY != null && selectedLightY != null)
-    ? (selectedLighterY - selectedLightY)
+  const lightGap = (lighterYSelected != null && lightYSelected != null)
+    ? (lighterYSelected - lightYSelected)
     : Number.POSITIVE_INFINITY;
   const tooClose = Number.isFinite(lightGap) && (lightGap + EPS) < RECOMMENDED_TINT_Y_GAP;
+
+  // Initialize defaults from picker lists: middle lighter, then a light that respects recommended gap when possible
+  React.useEffect(() => {
+    if (!lighterTargetsFiltered.length || !lightTargetsFiltered.length) return;
+    // Initialize lighter index to middle if unset
+    if (selectedLighterIndex == null) {
+      const mid = Math.floor(lighterTargetsFiltered.length / 2);
+      onSelect(colorKey, 'lighter', mid);
+    }
+    // Initialize light index to satisfy gap relative to lighter when possible
+    if (selectedLightIndex == null) {
+      const baseY = lighterTargetsFiltered[selectedLighterIndex ?? Math.floor(lighterTargetsFiltered.length / 2)];
+      if (baseY != null) {
+        const idx = lightTargetsFiltered.findIndex(L => (baseY - L) >= RECOMMENDED_TINT_Y_GAP);
+        const fallback = Math.max(0, lightTargetsFiltered.length - 1);
+        onSelect(colorKey, 'light', idx >= 0 ? idx : fallback);
+      }
+    }
+  }, [lighterTargetsFiltered, lightTargetsFiltered, selectedLighterIndex, selectedLightIndex, onSelect, colorKey]);
 
   return (
     <div>
       <div className={styles.rowTitle}>
-        {name} — white → lighter gap {selectedLighterY != null ? (1 - selectedLighterY).toFixed(3) : '-'} (recommended minimum gap: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})
+        {name}: white to lighter gap: {lighterYSelected != null ? (1 - lighterYSelected).toFixed(3) : '-'} (min: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})
       </div>
       <div className={styles.stripGrid}>
-        {lighterTargets.map((targetY, i) => {
+        {lighterTargetsFiltered.map((targetY, i) => {
           const rgb = solveHslLightnessForY(baseRgb, targetY);
           const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
           const contrast = getContrastRatio(rgb, NEAR_BLACK_RGB);
           const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
           const hsl = hslStringFromRgb(rgb, true);
           const y = luminance(rgb.r, rgb.g, rgb.b);
-          const isSelected = i === lighterClosest;
+          const isSelected = i === lighterIndex;
           return (
             <div
               key={`${name}-${targetY}`}
               className={`${styles.swatch} ${isSelected ? styles.selected : ''}`}
-              onClick={() => onSelect(colorKey, 'lighter', targetY)}
+              onClick={() => onSelect(colorKey, 'lighter', i)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(colorKey, 'lighter', targetY); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(colorKey, 'lighter', i); }}
             >
               {renderPickerSwatchContent({ hex, hsl, y, level, contrast, textColor: '#000' })}
             </div>
@@ -140,30 +182,30 @@ function Row({ name, baseHex, colorKey, selectedLighterY, selectedLightY, onSele
       </div>
 
       <div className={styles.rowTitle}>
-        {name} — lighter → light gap {selectedLighterY != null && selectedLightY != null ? (selectedLighterY - selectedLightY).toFixed(3) : '-'} (recommended minimum gap: {RECOMMENDED_TINT_Y_GAP.toFixed(2)})
+        {name}: lighter to light gap: {lighterYSelected != null && lightYSelected != null ? (lighterYSelected - lightYSelected).toFixed(3) : '-'} (min: {RECOMMENDED_TINT_Y_GAP.toFixed(3)})
       </div>
       {tooClose && (
         <div className={styles.warningInline}>
-          Selected lighter (Y {(selectedLighterY ?? 0).toFixed(3)}) and light (Y {(selectedLightY ?? 0).toFixed(3)}) are closer than recommended {RECOMMENDED_TINT_Y_GAP.toFixed(2)} (difference {(selectedLighterY != null && selectedLightY != null ? (selectedLighterY - selectedLightY) : 0).toFixed(3)}). Palette will preserve your selections, which may reduce perceptual separation.
+          Selected lighter (Y {lighterYSelected?.toFixed(3) ?? '-'}) and light (Y {lightYSelected?.toFixed(3) ?? '-'}) are closer than recommended {RECOMMENDED_TINT_Y_GAP.toFixed(3)} (difference {Number.isFinite(lightGap) ? lightGap.toFixed(3) : '-'}). Palette will preserve your selections, which may reduce perceptual separation.
         </div>
       )}
       <div className={styles.stripGrid}>
-        {lightTargets.map((targetY, i) => {
+        {lightTargetsFiltered.map((targetY, i) => {
           const rgb = solveHslLightnessForY(baseRgb, targetY);
           const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
           const contrast = getContrastRatio(rgb, NEAR_BLACK_RGB);
           const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
           const hsl = hslStringFromRgb(rgb, true);
           const y = luminance(rgb.r, rgb.g, rgb.b);
-          const isSelected = i === lightClosest;
+          const isSelected = i === lightIndex;
           return (
             <div
               key={`${name}-light-${targetY}`}
               className={`${styles.swatch} ${isSelected ? styles.selected : ''}`}
-              onClick={() => onSelect(colorKey, 'light', targetY)}
+              onClick={() => onSelect(colorKey, 'light', i)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(colorKey, 'light', targetY); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(colorKey, 'light', i); }}
             >
               {renderPickerSwatchContent({ hex, hsl, y, level, contrast, textColor: '#000' })}
             </div>
@@ -194,18 +236,33 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
       .map(({ y }) => y);
   }, [baseRgb]);
 
-  const darkerTargets = React.useMemo(() => {
+  // Build one combined AAA-valid shade list, then split extremes
+  const { darkerTargets, darkTargets, totalShades } = React.useMemo(() => {
     const minY = DARKER_MIN_Y;
-    const maxY = DARKER_MAX_Y;
-    const raw = buildTargets(SHADE_TARGET_COUNT, minY, maxY);
-    return filterForWhiteTextAAA(raw);
-  }, [filterForWhiteTextAAA]);
-
-  const darkTargets = React.useMemo(() => {
-    const minY = Math.min(DARK_OVERLAP_MIN_Y, TARGET_LUM_DARKER + MIN_DELTA_LUM_SHADES); // allow overlap with darker
     const maxY = DARK_MAX_Y;
-    const raw = buildTargets(SHADE_TARGET_COUNT, parseFloat(minY.toFixed(Y_TARGET_DECIMALS)), maxY);
-    return filterForWhiteTextAAA(raw);
+    const step = 0.005;
+    const raw: number[] = [];
+    for (let y = minY; y <= maxY + 1e-9; y += step) raw.push(parseFloat(y.toFixed(Y_TARGET_DECIMALS)));
+    const aaaAll = filterForWhiteTextAAA(raw);
+    // Deduplicate consecutive Ys at our precision to avoid duplicate swatches
+    const uniq: number[] = [];
+    let last: number | undefined;
+    for (const y of aaaAll.sort((a, b) => a - b)) {
+      const r = parseFloat(y.toFixed(Y_TARGET_DECIMALS));
+      if (last == null || r !== last) {
+        uniq.push(r);
+        last = r;
+      }
+    }
+    // Decide split counts (up to 10 each)
+    const take = Math.min(10, uniq.length);
+    const dkr = uniq.slice(0, Math.min(take, uniq.length));
+    const drk = uniq.slice(Math.max(0, uniq.length - take));
+    // Apply matchability constraints
+    const darkestDarker = dkr.length ? dkr[0] : undefined;
+    const drkFiltered = drk.filter(y => darkestDarker != null && (y - darkestDarker) >= RECOMMENDED_SHADE_Y_GAP);
+    const dkrFiltered = dkr.filter(y => drkFiltered.some(dy => (dy - y) >= RECOMMENDED_SHADE_Y_GAP));
+    return { darkerTargets: dkrFiltered, darkTargets: drkFiltered, totalShades: uniq.length };
   }, [filterForWhiteTextAAA]);
 
   const darkerClosest = React.useMemo(() => findClosestIndex(darkerTargets, selectedDarkerY ?? TARGET_LUM_DARKER), [darkerTargets, selectedDarkerY]);
@@ -220,9 +277,9 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
   // Auto-correct defaults to avoid adjacent/too-close selection
   React.useEffect(() => {
     const setIf = (cond: boolean, fn: () => void) => { if (cond) fn(); };
-    // Compute desired defaults deterministically
+    // Compute desired defaults deterministically: pick middle of darker list
     const desiredDarker = (darkerTargets.length > 0)
-      ? (selectedDarkerY ?? darkerTargets[Math.min(1, darkerTargets.length - 1)])
+      ? (selectedDarkerY ?? darkerTargets[Math.floor(darkerTargets.length / 2)])
       : undefined;
 
     // Ensure darker has a default, but only if it changes
@@ -232,10 +289,12 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
       }
     });
 
-    // Ensure dark has a default respecting hard min gap from darker; do not override when "too close"
+    // Ensure dark has a default preferring recommended gap from darker; fall back to hard min/last
     const base = selectedDarkerY ?? desiredDarker;
     if ((selectedDarkY == null) && darkTargets.length > 0 && base != null) {
-      const candidate = darkTargets.find(y => y >= base + HARD_MIN_SHADE_Y_GAP) ?? darkTargets[darkTargets.length - 1];
+      const candidate = darkTargets.find(y => y >= base + RECOMMENDED_SHADE_Y_GAP)
+        ?? darkTargets.find(y => y >= base + HARD_MIN_SHADE_Y_GAP)
+        ?? darkTargets[darkTargets.length - 1];
       if (candidate != null && candidate !== selectedDarkY) {
         onSelect(colorKey, 'dark', candidate);
       }
@@ -245,7 +304,7 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
   return (
     <div>
       <div className={styles.rowTitle}>
-        {name} — black → darker gap {selectedDarkerY != null ? (selectedDarkerY - 0).toFixed(3) : '-'} (recommended minimum gap: {HARD_MIN_SHADE_Y_GAP.toFixed(2)})
+        {name}: black to darker gap: {selectedDarkerY != null ? (selectedDarkerY - 0).toFixed(3) : '-'} (min: {HARD_MIN_SHADE_Y_GAP.toFixed(3)})
       </div>
       <div className={styles.stripGrid}>
         {darkerTargets.map((targetY, i) => {
@@ -269,12 +328,17 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
           );
         })}
       </div>
+      {typeof totalShades === 'number' && totalShades < 6 && (
+        <div className={styles.warningInline}>
+          Only {totalShades} AAA-compliant dark shades available from this base color. Consider increasing saturation or slightly adjusting hue to widen the dark range.
+        </div>
+      )}
       <div className={styles.rowTitle}>
-        {name} — darker → dark gap {selectedDarkerY != null && selectedDarkY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'} (recommended minimum gap: {RECOMMENDED_SHADE_Y_GAP.toFixed(2)})
+        {name}: darker to dark gap: {selectedDarkerY != null && selectedDarkY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'} (min: {RECOMMENDED_SHADE_Y_GAP.toFixed(3)})
       </div>
       {tooClose && (
         <div className={styles.warningInline}>
-          Selected darker (Y {selectedDarkerY?.toFixed(3) ?? '-'}) and dark (Y {selectedDarkY?.toFixed(3) ?? '-'}) are closer than recommended {RECOMMENDED_SHADE_Y_GAP.toFixed(2)} (difference {selectedDarkY != null && selectedDarkerY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'}). Palette will preserve your selections.
+          Selected darker (Y {selectedDarkerY?.toFixed(3) ?? '-'}) and dark (Y {selectedDarkY?.toFixed(3) ?? '-'}) are closer than recommended {RECOMMENDED_SHADE_Y_GAP.toFixed(3)} (difference {selectedDarkY != null && selectedDarkerY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'}). Palette will preserve your selections.
         </div>
       )}
       <div className={styles.stripGrid}>
@@ -309,28 +373,29 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
 export function LuminanceTestStrips({
   palette,
   selections,
-  onSelect,
+  onSelectTintIndex,
+  onSelectShadeY,
 }: {
   palette: PaletteWithVariations;
-  selections: Partial<Record<ColorType, { lighterY?: number; lightY?: number; darkerY?: number; darkY?: number }>>;
-  onSelect: (colorKey: ColorType, kind: 'lighter' | 'light' | 'darker' | 'dark', y: number) => void;
+  selections: Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>;
+  onSelectTintIndex: (colorKey: ColorType, kind: 'lighter' | 'light', index: number) => void;
+  onSelectShadeY: (colorKey: ColorType, kind: 'darker' | 'dark', y: number) => void;
 }) {
   return (
     <section className={styles.testStripsSection}>
       <div className={styles.sectionHeader}>
         <h3 className={styles.sectionTitle}>Luminance test strips</h3>
-        <div className={styles.sectionNote}>Each group: white reference plus {TINT_TARGET_COUNT} tint targets and {SHADE_TARGET_COUNT} shade targets (AAA with white text). Pick your preferred Y values.</div>
+        <div className={styles.sectionNote}>Each group: tint choices and shade choices (all have at least AAA contrast with black or white text). "Y values" are the luminance.</div>
       </div>
 
       <div className={styles.rows}>
-        <div className={styles.whiteBar}>White reference — #FFFFFF — hsl(0, 0%, 100%) — Y 1.000</div>
         <Row
           name="Primary"
           baseHex={palette.primary.hex}
           colorKey="primary"
-          selectedLighterY={selections.primary?.lighterY}
-          selectedLightY={selections.primary?.lightY}
-          onSelect={onSelect}
+          selectedLighterIndex={selections.primary?.lighterIndex}
+          selectedLightIndex={selections.primary?.lightIndex}
+          onSelect={onSelectTintIndex}
         />
         <RowShades
           name="Primary"
@@ -338,17 +403,15 @@ export function LuminanceTestStrips({
           colorKey="primary"
           selectedDarkerY={selections.primary?.darkerY}
           selectedDarkY={selections.primary?.darkY}
-          onSelect={onSelect}
+          onSelect={onSelectShadeY}
         />
-
-        <div className={styles.whiteBar}>White reference — #FFFFFF — hsl(0, 0%, 100%) — Y 1.000</div>
         <Row
           name="Secondary"
           baseHex={palette.secondary.hex}
           colorKey="secondary"
-          selectedLighterY={selections.secondary?.lighterY}
-          selectedLightY={selections.secondary?.lightY}
-          onSelect={onSelect}
+          selectedLighterIndex={selections.secondary?.lighterIndex}
+          selectedLightIndex={selections.secondary?.lightIndex}
+          onSelect={onSelectTintIndex}
         />
         <RowShades
           name="Secondary"
@@ -356,17 +419,15 @@ export function LuminanceTestStrips({
           colorKey="secondary"
           selectedDarkerY={selections.secondary?.darkerY}
           selectedDarkY={selections.secondary?.darkY}
-          onSelect={onSelect}
+          onSelect={onSelectShadeY}
         />
-
-        <div className={styles.whiteBar}>White reference — #FFFFFF — hsl(0, 0%, 100%) — Y 1.000</div>
         <Row
           name="Tertiary"
           baseHex={palette.tertiary.hex}
           colorKey="tertiary"
-          selectedLighterY={selections.tertiary?.lighterY}
-          selectedLightY={selections.tertiary?.lightY}
-          onSelect={onSelect}
+          selectedLighterIndex={selections.tertiary?.lighterIndex}
+          selectedLightIndex={selections.tertiary?.lightIndex}
+          onSelect={onSelectTintIndex}
         />
         <RowShades
           name="Tertiary"
@@ -374,17 +435,15 @@ export function LuminanceTestStrips({
           colorKey="tertiary"
           selectedDarkerY={selections.tertiary?.darkerY}
           selectedDarkY={selections.tertiary?.darkY}
-          onSelect={onSelect}
+          onSelect={onSelectShadeY}
         />
-
-        <div className={styles.whiteBar}>White reference — #FFFFFF — hsl(0, 0%, 100%) — Y 1.000</div>
         <Row
           name="Accent"
           baseHex={palette.accent.hex}
           colorKey="accent"
-          selectedLighterY={selections.accent?.lighterY}
-          selectedLightY={selections.accent?.lightY}
-          onSelect={onSelect}
+          selectedLighterIndex={selections.accent?.lighterIndex}
+          selectedLightIndex={selections.accent?.lightIndex}
+          onSelect={onSelectTintIndex}
         />
         <RowShades
           name="Accent"
@@ -392,7 +451,7 @@ export function LuminanceTestStrips({
           colorKey="accent"
           selectedDarkerY={selections.accent?.darkerY}
           selectedDarkY={selections.accent?.darkY}
-          onSelect={onSelect}
+          onSelect={onSelectShadeY}
         />
       </div>
     </section>

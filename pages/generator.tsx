@@ -17,11 +17,11 @@ import {
 import { ColorInput } from '../components/ColorInput';
 import { ColorDisplay } from '../components/ColorDisplay';
 import { PreviewSection } from '../components/PreviewSection';
-import { ThemeVariations } from '../components/ThemeVariations';
 import { generateThemeJson } from '../helpers/themeJson';
 import { generateCssClasses, generateFilenameSuffix } from '../helpers/cssGenerator';
 import { Palette, ColorType, SemanticColorType, PaletteWithVariations } from '../helpers/types';
-import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex } from '../helpers/colorUtils';
+import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio } from '../helpers/colorUtils';
+import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP } from '../helpers/config';
 import { LuminanceTestStrips } from '../components/LuminanceTestStrips';
 import { useGeneratePalette } from '../helpers/useGeneratePalette';
 import { generateThemeVariations } from '../helpers/generateThemeVariations';
@@ -71,17 +71,28 @@ const initialPalette: Palette = {
 const GeneratorPage = () => {
   const [palette, setPalette] = useState<Palette>(initialPalette);
   const [selections, setSelections] = useState<
-    Partial<Record<ColorType, { lighterY?: number; lightY?: number; darkerY?: number; darkY?: number }>>
+    Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
   >({});
   const generatePaletteMutation = useGeneratePalette();
 
-  // Load saved selections once
+  // Load saved selections once, with migration from Y-based tints to index-based
   useEffect(() => {
     try {
       const raw = localStorage.getItem('gl_palette_luminance_selections');
       if (raw) {
         const parsed = JSON.parse(raw);
-        setSelections(parsed);
+        // If the saved object contains lighterY/lightY, preserve as-is for shades and drop tints (they'll init per component)
+        const migrated: Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>> = {};
+        (['primary','secondary','tertiary','accent'] as ColorType[]).forEach((k) => {
+          const v = parsed?.[k] || {};
+          migrated[k] = {
+            darkerY: v.darkerY,
+            darkY: v.darkY,
+            lighterIndex: v.lighterIndex, // may already be migrated
+            lightIndex: v.lightIndex,
+          };
+        });
+        setSelections(migrated);
       }
     } catch {}
   }, []);
@@ -105,6 +116,64 @@ const GeneratorPage = () => {
       accent: palette.accent.hex,
     },
   });
+
+  // Build AAA-compliant tint target lists for a base color and resolve Y from an index
+  const getTintTargets = React.useCallback((baseHex: string) => {
+    const baseRgb = hexToRgb(baseHex);
+    const filterForBlackTextAAA = (ys: number[]) =>
+      ys
+        .map((y) => ({ y, rgb: solveHslLightnessForY(baseRgb, y) }))
+        .map(({ y, rgb }) => ({ y, rgb, ratio: getContrastRatio(rgb, NEAR_BLACK_RGB) }))
+        .filter(({ ratio }) => ratio >= AAA_MIN && ratio <= MAX_CONTRAST_TINTS)
+        .map(({ y }) => y);
+
+    const buildTargets = (count = 10, minY = 0.6, maxY = 0.98) => {
+      const arr: number[] = [];
+      const step = (maxY - minY) / (count - 1);
+      for (let i = 0; i < count; i++) arr.push(parseFloat((minY + i * step).toFixed(3)));
+      return arr;
+    };
+
+    const lighterRaw = buildTargets(TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y);
+    const lighterTargets = filterForBlackTextAAA(lighterRaw);
+
+    // Light list derived from a fine range, then sampled evenly
+    const minY = Math.max(LIGHT_MIN_Y_BASE, 0);
+    const maxY = Math.min(LIGHT_MAX_Y_CAP, LIGHTER_MAX_Y - MIN_DELTA_LUM_TINTS);
+    const step = 0.005;
+    const raw: number[] = [];
+    for (let y = minY; y <= maxY + 1e-9; y += step) raw.push(parseFloat(y.toFixed(Y_TARGET_DECIMALS)));
+    const aaa = filterForBlackTextAAA(raw);
+    const sampleEvenly = (values: number[], count: number) => {
+      if (values.length <= count) return values;
+      const picks: number[] = [];
+      const stepIdx = (values.length - 1) / (count - 1);
+      for (let i = 0; i < count; i++) picks.push(values[Math.round(i * stepIdx)]);
+      return Array.from(new Set(picks));
+    };
+    const lightTargets = sampleEvenly(aaa, TINT_TARGET_COUNT);
+
+    // Enforce matchability between lighter and light
+    const canMatch = (LL: number, L: number) => (LL - L) >= RECOMMENDED_TINT_Y_GAP;
+    const lightStep1 = lightTargets.filter(L => lighterTargets.some(LL => canMatch(LL, L)));
+    const lighterStep1 = lighterTargets.filter(LL => lightStep1.some(L => canMatch(LL, L)));
+    const lightFinal = lightStep1.filter(L => lighterStep1.some(LL => canMatch(LL, L)));
+    const lighterFinal = lighterStep1;
+
+    return { lighterTargets: lighterFinal, lightTargets: lightFinal };
+  }, []);
+
+  const resolveTintYFromIndex = React.useCallback(
+    (baseHex: string, kind: 'lighter' | 'light', index?: number): number | undefined => {
+      if (index == null || index < 0) return undefined;
+      const { lighterTargets, lightTargets } = getTintTargets(baseHex);
+      const list = kind === 'lighter' ? lighterTargets : lightTargets;
+      if (!list.length) return undefined;
+      const clamped = Math.max(0, Math.min(index, list.length - 1));
+      return list[clamped];
+    },
+    [getTintTargets]
+  );
 
   const handleAiSubmit = async (values: z.infer<typeof aiFormSchema>) => {
     console.log('AI Generation Input:', values);
@@ -173,15 +242,15 @@ const GeneratorPage = () => {
       fullPalette[key] = {
         ...color,
         variations: generateShades(color.hex, color.name, {
-          targetLighterY: sel.lighterY,
-          targetLightY: sel.lightY,
+          targetLighterY: resolveTintYFromIndex(color.hex, 'lighter', sel.lighterIndex),
+          targetLightY: resolveTintYFromIndex(color.hex, 'light', sel.lightIndex),
           targetDarkY: sel.darkY,
           targetDarkerY: sel.darkerY,
         }),
       };
     });
     return fullPalette as PaletteWithVariations;
-  }, [palette, selections]);
+  }, [palette, selections, resolveTintYFromIndex]);
 
   const themeVariations = useMemo(() => {
     return generateThemeVariations(paletteWithVariations);
@@ -334,13 +403,270 @@ const GeneratorPage = () => {
         />
       </Helmet>
       <div className={styles.pageWrapper}>
-        <div className={styles.controlsColumn}>
-          <div className={styles.controlsContent}>
+        {/* Mobile: 4-tab layout */}
+        <div className={styles.mobileLayout}>
+          <div className={styles.mobileTabs}>
             <Tabs defaultValue="ai" className={styles.tabs}>
-              <TabsList>
-                <TabsTrigger value="ai">AI Generator</TabsTrigger>
-                <TabsTrigger value="manual">Manual Input</TabsTrigger>
+              <TabsList className={styles.mobileTabsHeader}>
+                <TabsTrigger value="ai">AI</TabsTrigger>
+                <TabsTrigger value="manual">Manual</TabsTrigger>
+                <TabsTrigger value="adjust">Adjust</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsTrigger value="export">Export</TabsTrigger>
               </TabsList>
+
+              {/* AI Tab */}
+              <TabsContent value="ai" className={styles.mobileTabPanel}>
+                <Form {...aiForm}>
+                  <form onSubmit={aiForm.handleSubmit(handleAiSubmit)} className={styles.aiForm}>
+                    <FormItem name="industry">
+                      <FormLabel>Industry</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Technology, Healthcare, Finance"
+                          value={aiForm.values.industry}
+                          onChange={(e) =>
+                            aiForm.setValues({ ...aiForm.values, industry: e.target.value })
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        What industry does your business operate in?
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+
+                    <FormItem name="targetAudience">
+                      <FormLabel>Target Audience</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="e.g., Young professionals aged 25-40 who value convenience and trust"
+                          rows={3}
+                          value={aiForm.values.targetAudience}
+                          onChange={(e) =>
+                            aiForm.setValues({ ...aiForm.values, targetAudience: e.target.value })
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Who are your primary customers or users?
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+
+                    <FormItem name="brandPersonality">
+                      <FormLabel>Brand Personality</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="e.g., Modern, trustworthy, innovative, approachable"
+                          rows={3}
+                          value={aiForm.values.brandPersonality}
+                          onChange={(e) =>
+                            aiForm.setValues({ ...aiForm.values, brandPersonality: e.target.value })
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        How would you describe your brand's personality and values?
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+
+                    <FormItem name="avoidColors">
+                      <FormLabel>Colors to Avoid (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Red, bright yellow"
+                          value={aiForm.values.avoidColors}
+                          onChange={(e) =>
+                            aiForm.setValues({ ...aiForm.values, avoidColors: e.target.value })
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Any colors you want to avoid for your brand?
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+
+                    {generatePaletteMutation.isError && (
+                      <div className={styles.errorContainer}>
+                        <div className={styles.errorHeader}>
+                          <AlertTriangle size={16} />
+                          <span>Generation Failed</span>
+                        </div>
+                        <p className={styles.errorMessage}>
+                          {generatePaletteMutation.error?.message || 'Failed to generate palette. Please try again.'}
+                        </p>
+                        {generatePaletteMutation.error?.message?.toLowerCase().includes('quota') && (
+                          <div className={styles.errorSuggestion}>
+                            <strong>Suggestion:</strong> Check your OpenAI billing settings or try again later.
+                          </div>
+                        )}
+                        {generatePaletteMutation.error?.message?.toLowerCase().includes('api key') && (
+                          <div className={styles.errorSuggestion}>
+                            <strong>Suggestion:</strong> Please verify your OpenAI API configuration.
+                          </div>
+                        )}
+                        {generatePaletteMutation.error?.message?.toLowerCase().includes('network') && (
+                          <div className={styles.errorSuggestion}>
+                            <strong>Suggestion:</strong> Check your internet connection and try again.
+                          </div>
+                        )}
+                        <Button
+                          type="submit"
+                          variant="outline"
+                          className={styles.retryButton}
+                          disabled={generatePaletteMutation.isPending}
+                        >
+                          <RefreshCw size={16} />
+                          Try Again
+                        </Button>
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className={styles.submitButton}
+                      disabled={generatePaletteMutation.isPending}
+                    >
+                      {generatePaletteMutation.isPending ? 'Generating...' : 'Generate with AI'}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+              {/* Manual Tab */}
+              <TabsContent value="manual" className={styles.mobileTabPanel}>
+                <Form {...manualForm}>
+                  <form className={styles.manualForm}>
+                    {(Object.keys(palette) as ColorType[]).map((key) => (
+                      <FormItem key={key} name={key}>
+                        <FormLabel>{palette[key].name}</FormLabel>
+                        <FormControl>
+                          <ColorInput
+                            value={manualForm.values[key]}
+                            onChange={(hex) => handleManualColorChange(key, hex)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    ))}
+                  </form>
+                </Form>
+              </TabsContent>
+              {/* Adjustments Tab */}
+              <TabsContent value="adjust" className={styles.mobileTabPanel}>
+                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)' }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
+                      } catch {}
+                    }}
+                  >
+                    Save selections
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setSelections({})}
+                  >
+                    Clear selections
+                  </Button>
+                </div>
+                <LuminanceTestStrips
+                  palette={paletteWithVariations}
+                  selections={selections}
+                  onSelectTintIndex={(colorKey, kind, index) => {
+                    setSelections((prev) => {
+                      const next = {
+                        ...prev,
+                        [colorKey]: {
+                          ...prev[colorKey],
+                          [`${kind}Index`]: index,
+                        },
+                      } as typeof prev;
+                      try { localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(next)); } catch {}
+                      return next;
+                    });
+                  }}
+                  onSelectShadeY={(colorKey, kind, y) => {
+                    setSelections((prev) => {
+                      const next = {
+                        ...prev,
+                        [colorKey]: {
+                          ...prev[colorKey],
+                          [`${kind}Y`]: y,
+                        },
+                      } as typeof prev;
+                      try { localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(next)); } catch {}
+                      return next;
+                    });
+                  }}
+                />
+              </TabsContent>
+              {/* Preview Tab */}
+              <TabsContent value="preview" className={styles.mobileTabPanel}>
+                <div className={styles.previewContent}>
+                  <ColorDisplay
+                    palette={paletteWithVariations}
+                    isLoading={generatePaletteMutation.isPending}
+                  />
+                  {/* Example Components: move directly after Color Palette */}
+                  <PreviewSection
+                    palette={paletteWithVariations}
+                    isLoading={generatePaletteMutation.isPending}
+                  />
+                  {/* Theme Variations removed */}
+                </div>
+              </TabsContent>
+              {/* Export Tab */}
+              <TabsContent value="export" className={styles.mobileTabPanel}>
+                <div className={styles.exportSection}>
+                  <h3 className={styles.exportTitle}>Export</h3>
+                  <p className={styles.exportDescription}>
+                    Download a ZIP containing the base palette and all theme variations. Each folder includes a WordPress theme.json and a CSS file with contrast-optimized utilities.
+                  </p>
+                  <div style={{ marginTop: 'var(--spacing-2)' }}>
+                    <Button
+                      variant="primary"
+                      onClick={handleExportGzipAll}
+                      className={styles.exportButton}
+                    >
+                      Download .zip file
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+        {/* Desktop: 2-column layout */}
+        <div className={styles.desktopLayout}>
+          <div className={styles.previewColumn}>
+            <div className={styles.previewContent}>
+              <ColorDisplay
+                palette={paletteWithVariations}
+                isLoading={generatePaletteMutation.isPending}
+              />
+              {/* Example Components: move directly after Color Palette */}
+              <PreviewSection
+                palette={paletteWithVariations}
+                isLoading={generatePaletteMutation.isPending}
+              />
+              {/* Luminance controls moved to Adjust tab in desktop */}
+            </div>
+          </div>
+          <div className={styles.tabsColumn}>
+            <Tabs defaultValue="ai" className={styles.tabs}>
+              <TabsList className={styles.tabsHeader}>
+                <TabsTrigger value="ai">AI</TabsTrigger>
+                <TabsTrigger value="manual">Manual</TabsTrigger>
+                <TabsTrigger value="adjust">Adjust</TabsTrigger>
+                <TabsTrigger value="export">Export</TabsTrigger>
+              </TabsList>
+
+              {/* AI Tab */}
               <TabsContent value="ai" className={styles.tabContent}>
                 <Form {...aiForm}>
                   <form onSubmit={aiForm.handleSubmit(handleAiSubmit)} className={styles.aiForm}>
@@ -460,6 +786,7 @@ const GeneratorPage = () => {
                   </form>
                 </Form>
               </TabsContent>
+              {/* Manual Tab */}
               <TabsContent value="manual" className={styles.tabContent}>
                 <Form {...manualForm}>
                   <form className={styles.manualForm}>
@@ -478,81 +805,75 @@ const GeneratorPage = () => {
                   </form>
                 </Form>
               </TabsContent>
+              {/* Adjustments Tab */}
+              <TabsContent value="adjust" className={styles.tabContent}>
+                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)' }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
+                      } catch {}
+                    }}
+                  >
+                    Save selections
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setSelections({})}
+                  >
+                    Clear selections
+                  </Button>
+                </div>
+                <LuminanceTestStrips
+                  palette={paletteWithVariations}
+                  selections={selections}
+                  onSelectTintIndex={(colorKey, kind, index) =>
+                    setSelections((prev) => ({
+                      ...prev,
+                      [colorKey]: {
+                        ...(prev[colorKey] || {}),
+                        ...(kind === 'lighter' ? { lighterIndex: index } : {}),
+                        ...(kind === 'light' ? { lightIndex: index } : {}),
+                      },
+                    }))
+                  }
+                  onSelectShadeY={(colorKey, kind, y) =>
+                    setSelections((prev) => ({
+                      ...prev,
+                      [colorKey]: {
+                        ...(prev[colorKey] || {}),
+                        ...(kind === 'darker' ? { darkerY: y } : {}),
+                        ...(kind === 'dark' ? { darkY: y } : {}),
+                      },
+                    }))
+                  }
+                />
+              </TabsContent>
+              {/* Export Tab */}
+              <TabsContent value="export" className={styles.tabContent}>
+                <div className={styles.exportSection}>
+                  <h3 className={styles.exportTitle}>Export</h3>
+                  <p className={styles.exportDescription}>
+                    Download a ZIP containing the base palette and all theme variations. Each folder includes a WordPress theme.json and a CSS file with contrast-optimized utilities.
+                  </p>
+                  <div style={{ marginTop: 'var(--spacing-2)' }}>
+                    <Button
+                      variant="primary"
+                      onClick={handleExportGzipAll}
+                      className={styles.exportButton}
+                    >
+                      Download .zip file
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
-            <div className={styles.exportSection}>
-              <h3 className={styles.exportTitle}>Export Palette</h3>
-              <p className={styles.exportDescription}>
-                Download both a WordPress `theme.json` file and a CSS file with
-                contrast-optimized background and text color classes.
-              </p>
-              <div style={{ marginTop: 'var(--spacing-2)' }}>
-                <Button
-                  variant="primary"
-                  onClick={handleExportGzipAll}
-                  className={styles.exportButton}
-                >
-                  Export .zip (all variations: theme.json + CSS)
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className={styles.previewColumn}>
-          <div className={styles.previewContent}>
-            <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end' }}>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  try {
-                    localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
-                  } catch {}
-                }}
-              >
-                Save selections
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setSelections({})}
-              >
-                Clear selections
-              </Button>
-            </div>
-            <ColorDisplay
-              palette={paletteWithVariations}
-              isLoading={generatePaletteMutation.isPending}
-            />
-            <div style={{ fontSize: '0.85rem', opacity: 0.8, margin: 'var(--spacing-2) 0' }}>
-              You can pick your preferred tints and shades in the luminance strips below.
-            </div>
-            <ThemeVariations
-              variations={themeVariations}
-              isLoading={generatePaletteMutation.isPending}
-            />
-            <LuminanceTestStrips
-              palette={paletteWithVariations}
-              selections={selections}
-              onSelect={(colorKey, kind, y) =>
-                setSelections((prev) => ({
-                  ...prev,
-                  [colorKey]: {
-                    ...(prev[colorKey] || {}),
-                    ...(kind === 'lighter' ? { lighterY: y } : {}),
-                    ...(kind === 'light' ? { lightY: y } : {}),
-                    ...(kind === 'darker' ? { darkerY: y } : {}),
-                    ...(kind === 'dark' ? { darkY: y } : {}),
-                  },
-                }))
-              }
-            />
-            <PreviewSection
-              palette={paletteWithVariations}
-              isLoading={generatePaletteMutation.isPending}
-            />
           </div>
         </div>
       </div>
     </>
   );
-};
+}
 
 export default GeneratorPage;

@@ -90,20 +90,20 @@ export const AA_SMALL_MIN = numFromEnv('NEXT_PUBLIC_AA_SMALL_MIN_CONTRAST', 4.5,
 
 // Visual separation guidance (Y-gap) — used for warnings & sensible defaults only
 /** Recommended minimum Y-gap between lighter and light. Env: NEXT_PUBLIC_RECOMMENDED_TINT_Y_GAP */
-export const RECOMMENDED_TINT_Y_GAP = numFromEnv('NEXT_PUBLIC_RECOMMENDED_TINT_Y_GAP', 0.20, 0, 1);
+export const RECOMMENDED_TINT_Y_GAP = numFromEnv('NEXT_PUBLIC_RECOMMENDED_TINT_Y_GAP', 0.10, 0, 1);
 /** Hard minimum Y-gap used only for default placements (never forced). Env: NEXT_PUBLIC_HARD_MIN_TINT_Y_GAP */
 export const HARD_MIN_TINT_Y_GAP = numFromEnv('NEXT_PUBLIC_HARD_MIN_TINT_Y_GAP', 0.08, 0, 1);
 /** Recommended minimum Y-gap between dark and darker. Env: NEXT_PUBLIC_RECOMMENDED_SHADE_Y_GAP */
-export const RECOMMENDED_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_RECOMMENDED_SHADE_Y_GAP', 0.035, 0, 1);
+export const RECOMMENDED_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_RECOMMENDED_SHADE_Y_GAP', 0.02, 0, 1);
 /** Hard minimum Y-gap used only for default placements (never forced). Env: NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP */
-export const HARD_MIN_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP', 0.02, 0, 1);
+export const HARD_MIN_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP', 0.015, 0, 1);
 
 /** Minimum delta from white for the first lighter step (to avoid indistinguishable step). */
 export const MIN_DELTA_LUM_TINTS_FROM_WHITE = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS_FROM_WHITE', 0.04, 0, 1);
 /** Minimum separation in Y between lighter and light, to keep them visually distinct after rounding. */
 export const MIN_DELTA_LUM_TINTS = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS', 0.16, 0, 1);
 /** Minimum separation in Y between dark and darker, to keep them visually distinct after rounding. */
-export const MIN_DELTA_LUM_SHADES = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_SHADES', 0.06, 0, 1);
+export const MIN_DELTA_LUM_SHADES = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_SHADES', 0.03, 0, 1);
 
 // Target luminance anchors for each band (used by any auto-placement heuristics)
 /** Target Y for the lighter band. */

@@ -3,7 +3,7 @@ import { Badge } from './Badge';
 import { Skeleton } from './Skeleton';
 import { PaletteWithVariations } from '../helpers/types';
 import { ensureAAAContrast } from '../helpers/ensureAAAContrast';
-import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_WHITE_RGB, NEAR_BLACK_RGB, AAA_MIN, AA_SMALL_MIN, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_SHADES } from '../helpers/config';
+import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_WHITE_RGB, NEAR_BLACK_RGB, AAA_MIN, AA_SMALL_MIN, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP } from '../helpers/config';
 import { hexToRgb, getContrastRatio, luminance } from '../helpers/colorUtils';
 import styles from './ColorDisplay.module.css';
 
@@ -59,7 +59,7 @@ const VariationBlock = ({ variation }: { variation: any }) => {
           <div className={styles.overlay} style={{ backgroundColor: contrastSolution.overlayColor }} />
         )}
         {/* In-swatch contrast badge */}
-        <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor, background: badgeBg }}>
+        <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor }}>
           {level} {ratio.toFixed(2)}
         </div>
         <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
@@ -81,7 +81,7 @@ const ColorCard = ({ color, name }: { color: any; name: string }) => {
     return [...(color.variations || [])].sort((a, b) => (order[a.step] ?? 99) - (order[b.step] ?? 99));
   }, [color.variations]);
 
-  // Compute palette-level gap warnings
+  // Compute palette-level gap warnings (use the same recommended Y-gap thresholds as the selectors)
   const gaps = React.useMemo(() => {
     const byStep: Record<string, any> = Object.fromEntries(ordered.map(v => [v.step, v]));
     const yOf = (v: any | undefined) => v ? luminance(...Object.values(hexToRgb(v.hex)) as [number, number, number]) : undefined;
@@ -89,8 +89,9 @@ const ColorCard = ({ color, name }: { color: any; name: string }) => {
     const yLight = yOf(byStep.light);
     const yDarker = yOf(byStep.darker);
     const yDark = yOf(byStep.dark);
-    const tintGap = (yLighter != null && yLight != null) ? (yLighter - yLight) : undefined;
-    const shadeGap = (yDark != null && yDarker != null) ? (yDark - yDarker) : undefined;
+    const r3 = (n: number) => Math.round(n * 1000) / 1000;
+    const tintGap = (yLighter != null && yLight != null) ? r3(yLighter - yLight) : undefined;
+    const shadeGap = (yDark != null && yDarker != null) ? r3(yDark - yDarker) : undefined;
     return { tintGap, shadeGap };
   }, [ordered]);
   return (
@@ -99,7 +100,7 @@ const ColorCard = ({ color, name }: { color: any; name: string }) => {
         <span className={styles.variationName}>{name}</span>
       </div>
       <div className={styles.variationsContainer}>
-        {gaps.tintGap != null && gaps.tintGap < MIN_DELTA_LUM_TINTS && (
+        {gaps.tintGap != null && gaps.tintGap < Math.round(RECOMMENDED_TINT_Y_GAP * 1000) / 1000 && (
           <div style={{
             margin: '4px 0',
             padding: '6px 8px',
@@ -108,13 +109,13 @@ const ColorCard = ({ color, name }: { color: any; name: string }) => {
             color: 'var(--foreground, #7a5d00)',
             border: '1px solid var(--border, #f59e0b)'
           }}>
-            {name} lighter vs light gap {gaps.tintGap.toFixed(3)} is below the minimum {MIN_DELTA_LUM_TINTS.toFixed(2)}.
+            {name} lighter vs light gap {gaps.tintGap.toFixed(3)} is below the recommended minimum {RECOMMENDED_TINT_Y_GAP.toFixed(3)}.
           </div>
         )}
         {ordered.map((variation: any) => (
           <VariationBlock key={variation.name} variation={variation} />
         ))}
-        {gaps.shadeGap != null && gaps.shadeGap < MIN_DELTA_LUM_SHADES && (
+        {gaps.shadeGap != null && gaps.shadeGap < Math.round(RECOMMENDED_SHADE_Y_GAP * 1000) / 1000 && (
           <div style={{
             margin: '4px 0',
             padding: '6px 8px',
@@ -123,7 +124,7 @@ const ColorCard = ({ color, name }: { color: any; name: string }) => {
             color: 'var(--foreground, #7a5d00)',
             border: '1px solid var(--border, #f59e0b)'
           }}>
-            {name} dark vs darker gap {gaps.shadeGap.toFixed(3)} is below the minimum {MIN_DELTA_LUM_SHADES.toFixed(2)}.
+            {name} dark vs darker gap {gaps.shadeGap.toFixed(3)} is below the recommended minimum {RECOMMENDED_SHADE_Y_GAP.toFixed(3)}.
           </div>
         )}
       </div>
@@ -190,6 +191,11 @@ export const ColorDisplay = ({ palette, isLoading }: ColorDisplayProps) => {
   return (
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Color Palette</h2>
+      <p className={styles.sectionInstructions}>
+        Click a color to adjust its tints and shades. Scroll down to see Example Components.
+        All colors are optimized for excellent contrast with near-white or near-black text.
+        The export will include multiple WordPress Theme Variations that swap which colors are used for headings, links, menus, and more.
+      </p>
       <div className={styles.paletteGrid}>
         {isLoading ? (
           <>

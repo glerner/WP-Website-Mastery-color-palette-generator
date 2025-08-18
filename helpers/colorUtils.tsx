@@ -363,37 +363,39 @@ export const generateShades = (
   if (yLighter - yLight < MIN_DELTA_LUM_TINTS) {
     const userSetLighter = opts?.targetLighterY != null;
     const userSetLight = opts?.targetLightY != null;
-    if (userSetLighter && userSetLight) {
-      console.warn(`${colorName} tints: selected lighter (${yLighter.toFixed(3)}) and light (${yLight.toFixed(3)}) are closer than ${MIN_DELTA_LUM_TINTS}. Keeping user selections.`);
-    } else if (userSetLighter && !userSetLight) {
-      // Preserve lighter; adjust light downwards to enforce gap
-      const targetDown = Math.max(0.02, yLighter - MIN_DELTA_LUM_TINTS);
-      const nudged = adjustLuminanceForContrast(baseRgb, targetDown, 'black');
-      yLight = nudged.y;
-    } else if (!userSetLighter && userSetLight) {
-      // Preserve light; adjust lighter upwards to enforce gap
-      const targetUp = Math.min(0.98, yLight + MIN_DELTA_LUM_TINTS);
-      const nudged = adjustLuminanceForContrast(baseRgb, targetUp, 'black');
-      yLighter = nudged.y;
+    if (userSetLighter || userSetLight) {
+      // At least one provided by user/picker; do not auto-nudge to a non-picker Y. Keep as-is and let UI warn.
     } else {
-      // No explicit user targets; enforce monotonic tints by moving lighter above light
+      // Neither explicitly provided by user; we may gently enforce minimum distinctness by moving lighter above light.
       const targetUp = Math.min(0.98, yLight + MIN_DELTA_LUM_TINTS);
       const nudged = adjustLuminanceForContrast(baseRgb, targetUp, 'black');
-      yLighter = nudged.y; // always take nudged up; avoid pulling light down
+      yLighter = nudged.y; // avoid pulling light down
     }
   }
 
   let yDark = darkAdj.y;
   let yDarker = darkerAdj.y;
+  // Preserve picker-provided selections exactly. Only adjust when neither value was explicitly provided.
   if (yDark - yDarker < MIN_DELTA_LUM_SHADES) {
-    const targetDown = Math.max(0.02, yDark - MIN_DELTA_LUM_SHADES);
-    const nudged = adjustLuminanceForContrast(baseRgb, targetDown, 'white');
-    if (nudged.meetsAA) {
-      yDarker = nudged.y;
+    if (userSetDark && userSetDarker) {
+      // Both provided by user; keep as-is even if too close.
+    } else if (userSetDark && !userSetDarker) {
+      // Keep user's dark; leave darker as selected if provided, otherwise do not nudge here to avoid non-picker Y.
+      // No-op: rely on UI warnings instead of auto-nudging.
+    } else if (!userSetDark && userSetDarker) {
+      // Keep user's darker; do not auto-nudge dark to a non-picker value.
+      // No-op.
     } else {
-      const targetUp = Math.min(0.98, yDarker + MIN_DELTA_LUM_SHADES);
-      const nudgedUp = adjustLuminanceForContrast(baseRgb, targetUp, 'white');
-      yDark = nudgedUp.y;
+      // Neither explicitly provided by user; we can gently enforce minimum distinctness.
+      const targetDown = Math.max(0.02, yDark - MIN_DELTA_LUM_SHADES);
+      const nudged = adjustLuminanceForContrast(baseRgb, targetDown, 'white');
+      if (nudged.meetsAA) {
+        yDarker = nudged.y;
+      } else {
+        const targetUp = Math.min(0.98, yDarker + MIN_DELTA_LUM_SHADES);
+        const nudgedUp = adjustLuminanceForContrast(baseRgb, targetUp, 'white');
+        yDark = nudgedUp.y;
+      }
     }
   }
 
