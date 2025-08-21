@@ -2,7 +2,12 @@ import { PaletteWithVariations } from './types';
 import { ensureAAAContrast } from './ensureAAAContrast';
 
 export const generateCssClasses = (palette: PaletteWithVariations): string => {
-  let css = '/* Color Palette CSS Classes */\n';
+  let css = '/*\n';
+  css += '  NOTE: For developer use only. WordPress does not load these generated CSS files by default.\\n';
+  css += "  Only your theme's main style.css is used by WordPress automatically.\\n";
+  css += '  You may copy/paste variables and classes from this file into your theme if desired.\\n';
+  css += '*/\n';
+  css += '/* Color Palette CSS Classes */\n';
   css += '/* Generated with optimal contrast ratios */\n';
   css += '/* Only includes adjusted colors with proper contrast optimization */\n\n';
   

@@ -45,7 +45,6 @@
     background-color: var(--muted);
     color: var(--muted-foreground);
     cursor: not-allowed;
-    opacity: 0.75;
     box-shadow: none;
   }
 
@@ -115,7 +114,7 @@
 
   .selectLabel {
     padding: var(--spacing-2) var(--spacing-4);
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     font-weight: 500;
     color: var(--muted-foreground);
   }
@@ -126,7 +125,7 @@
     align-items: center;
     padding: var(--spacing-2) var(--spacing-4);
     padding-right: var(--spacing-8);
-    font-size: 0.9375rem;
+    font-size: var(--cf-text-m);
     line-height: 1.5;
     border-radius: var(--radius-sm);
     color: var(--popup-foreground);
@@ -150,7 +149,6 @@
 
   .selectItem[data-disabled] {
     color: var(--muted-foreground);
-    opacity: 0.5;
     pointer-events: none;
   }
 

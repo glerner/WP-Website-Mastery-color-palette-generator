@@ -32,9 +32,12 @@ function renderPickerSwatchContent(params: {
   return (
     <>
       <div className={styles.swatchColor} style={{ backgroundColor: hex, color: textColor }}>
-        <div className={styles.metaLine}>{level} {contrast.toFixed(2)}</div>
+        <div className={styles.metaLine}>
+          {level} {contrast.toFixed(2)}
+          {' '}
+          <span style={{ opacity: 0.9 }}>• Y {y.toFixed(Y_DISPLAY_DECIMALS)}</span>
+        </div>
         <div className={styles.metaLine}>{hsl}</div>
-        <div className={styles.metaLine}>Y {y.toFixed(Y_DISPLAY_DECIMALS)}</div>
       </div>
     </>
   );
@@ -389,6 +392,7 @@ export function LuminanceTestStrips({
       </div>
 
       <div className={styles.rows}>
+        <div id="luminance-primary" />
         <Row
           name="Primary"
           baseHex={palette.primary.hex}
@@ -405,6 +409,7 @@ export function LuminanceTestStrips({
           selectedDarkY={selections.primary?.darkY}
           onSelect={onSelectShadeY}
         />
+        <div id="luminance-secondary" />
         <Row
           name="Secondary"
           baseHex={palette.secondary.hex}
@@ -421,6 +426,7 @@ export function LuminanceTestStrips({
           selectedDarkY={selections.secondary?.darkY}
           onSelect={onSelectShadeY}
         />
+        <div id="luminance-tertiary" />
         <Row
           name="Tertiary"
           baseHex={palette.tertiary.hex}
@@ -437,6 +443,7 @@ export function LuminanceTestStrips({
           selectedDarkY={selections.tertiary?.darkY}
           onSelect={onSelectShadeY}
         />
+        <div id="luminance-accent" />
         <Row
           name="Accent"
           baseHex={palette.accent.hex}

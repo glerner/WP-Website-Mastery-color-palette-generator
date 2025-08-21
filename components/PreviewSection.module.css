@@ -61,7 +61,6 @@
   font-size: 1rem;
   line-height: 1.6;
   color: var(--preview-card-text);
-  opacity: 0.8;
   margin: 0 0 var(--spacing-6);
   position: relative;
   z-index: 2;
@@ -75,7 +74,7 @@
 
 .label {
   display: block;
-  font-size: 0.875rem;
+  font-size: var(--cf-text-m);
   font-weight: 500;
   margin-bottom: var(--spacing-2);
   color: var(--preview-card-text);
@@ -89,7 +88,6 @@
 
 .previewInput::placeholder {
   color: var(--preview-input-text) !important;
-  opacity: 0.5;
 }
 
 .buttonGroup {

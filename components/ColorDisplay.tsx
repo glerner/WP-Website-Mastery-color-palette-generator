@@ -10,6 +10,7 @@ import styles from './ColorDisplay.module.css';
 interface ColorDisplayProps {
   palette: PaletteWithVariations;
   isLoading: boolean;
+  onColorClick?: (key: 'primary' | 'secondary' | 'tertiary' | 'accent') => void;
 }
 
 const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
@@ -58,15 +59,14 @@ const VariationBlock = ({ variation }: { variation: any }) => {
         {contrastSolution.overlayColor && (
           <div className={styles.overlay} style={{ backgroundColor: contrastSolution.overlayColor }} />
         )}
-        {/* In-swatch contrast badge */}
+        {/* In-swatch contrast badge with Y value inline */}
         <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor }}>
-          {level} {ratio.toFixed(2)}
+          {level} {ratio.toFixed(2)} • Y {y.toFixed(3)}
         </div>
         <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
           <div className={styles.variationCodesContainer}>
             <div className={styles.variationCodes}>
               <span className={styles.variationHsl}>{hsl}</span>
-              <span className={styles.variationY}>Y {y.toFixed(3)}</span>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ const VariationBlock = ({ variation }: { variation: any }) => {
   );
 };
 
-const ColorCard = ({ color, name }: { color: any; name: string }) => {
+const ColorCard = ({ color, name, onClick }: { color: any; name: string; onClick?: () => void }) => {
   const ordered = React.useMemo(() => {
     const order: Record<string, number> = { lighter: 0, light: 1, dark: 2, darker: 3 };
     return [...(color.variations || [])].sort((a, b) => (order[a.step] ?? 99) - (order[b.step] ?? 99));
@@ -95,7 +95,14 @@ const ColorCard = ({ color, name }: { color: any; name: string }) => {
     return { tintGap, shadeGap };
   }, [ordered]);
   return (
-    <div className={styles.colorCard}>
+    <div
+      className={styles.colorCard}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : -1}
+      onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) onClick(); }}
+      style={onClick ? { cursor: 'pointer' } : undefined}
+    >
       <div className={styles.variationHeader} style={{ padding: '4px 0' }}>
         <span className={styles.variationName}>{name}</span>
       </div>
@@ -187,7 +194,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-export const ColorDisplay = ({ palette, isLoading }: ColorDisplayProps) => {
+export const ColorDisplay = ({ palette, isLoading, onColorClick }: ColorDisplayProps) => {
   return (
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Color Palette</h2>
@@ -206,10 +213,10 @@ export const ColorDisplay = ({ palette, isLoading }: ColorDisplayProps) => {
           </>
         ) : (
           <>
-            <ColorCard color={palette.primary} name="Primary" />
-            <ColorCard color={palette.secondary} name="Secondary" />
-            <ColorCard color={palette.tertiary} name="Tertiary" />
-            <ColorCard color={palette.accent} name="Accent" />
+            <ColorCard color={palette.primary} name="Primary" onClick={() => onColorClick?.('primary')} />
+            <ColorCard color={palette.secondary} name="Secondary" onClick={() => onColorClick?.('secondary')} />
+            <ColorCard color={palette.tertiary} name="Tertiary" onClick={() => onColorClick?.('tertiary')} />
+            <ColorCard color={palette.accent} name="Accent" onClick={() => onColorClick?.('accent')} />
           </>
         )}
       </div>
@@ -225,7 +232,7 @@ export const ColorDisplay = ({ palette, isLoading }: ColorDisplayProps) => {
         ) : (
           <>
             <SemanticBlock color={palette.error} name="Error" step="dark" />
-            <SemanticBlock color={palette.warning} name="Warning" step="lighter" />
+            <SemanticBlock color={palette.warning} name="Warning" step="dark" />
             <SemanticBlock color={palette.success} name="Success" step="dark" />
           </>
         )}

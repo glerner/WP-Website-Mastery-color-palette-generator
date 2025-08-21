@@ -3,7 +3,7 @@
 }
 
 .sectionTitle {
-  font-size: 1.5rem;
+  font-size: var(--cf-text-xl);
   font-weight: 600;
   color: var(--foreground);
   margin-bottom: var(--spacing-6);
@@ -11,25 +11,25 @@
 
 /* Brief helper text below section title */
 .sectionInstructions {
-  font-size: 0.95rem;
-  color: var(--muted-foreground, #555);
+  font-size: var(--cf-text-m);
+  color: var(--muted-foreground);
   margin: -4px 0 var(--spacing-6);
 }
 
 .paletteGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--spacing-8);
+  gap: var(--spacing-6);
 }
 @media (max-width: 640px) {
   .paletteGrid {
     grid-template-columns: 1fr;
-    gap: var(--spacing-6);
+    gap: var(--spacing-5);
   }
 }
 
 .semanticTitle {
-  font-size: 1.25rem;
+  font-size: var(--cf-text-l);
   font-weight: 600;
   color: var(--foreground);
   margin: var(--spacing-8) 0 var(--spacing-6);
@@ -96,13 +96,12 @@
 
 .originalColorName {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--cf-text-m);
 }
 
 .originalColorHex {
   font-family: var(--font-family-monospace);
-  font-size: 0.875rem;
-  opacity: 0.9;
+  font-size: var(--cf-text-m);
 }
 
 .variationsContainer {
@@ -133,16 +132,16 @@
 .variationBody {
   position: relative;
   overflow: hidden;
-  padding: var(--spacing-4);
+  padding: var(--spacing-3);
 }
 
 .variationContent {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   position: relative;
   z-index: 2;
-  min-height: 4rem;
+  min-height: 2.5rem;
 }
 @media (max-width: 480px) {
   .originalColor {
@@ -170,31 +169,31 @@
 
 .variationName {
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--cf-text-m);
 }
 
 .variationHex {
   font-family: var(--font-family-monospace);
-  font-size: 0.75rem;
-  opacity: 0.9;
+  font-size: var(--cf-text-m);
 }
 
 /* Inline codes row for Hex and HSL */
 .variationCodesContainer {
-  margin-top: var(--spacing-1);
+  margin-top: 0;
 }
 
 .variationCodes {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
 }
 
 .variationHsl {
   font-family: var(--font-family-monospace);
-  font-size: 0.75rem;
-  opacity: 0.9;
+  font-size: var(--cf-text-m);
+  /* inherit computed contrast color from parent */
+  color: inherit;
 }
 
 .variationContrast {
@@ -210,7 +209,7 @@
   border-radius: 0;
   background: none; /* ensure no background */
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: var(--cf-text-m);
   line-height: 1.1;
   letter-spacing: 0.01em;
 }
@@ -219,10 +218,11 @@
 .overlayTag {
   display: inline-flex;
   align-items: center;
-  height: 1.1rem;
+  /* allow natural height with min readable size */
+  height: auto;
   padding: 0 0.4rem;
   border-radius: 0.4rem;
-  font-size: 0.65rem;
+  font-size: var(--cf-text-m);
   font-weight: 600;
   letter-spacing: 0.02em;
   background: rgba(0,0,0,0.25);
@@ -250,7 +250,7 @@
 }
 
 .contrastLabel {
-  font-size: 0.75rem;
+  font-size: var(--cf-text-m);
   font-family: var(--font-family-monospace);
-  opacity: 0.9;
+  color: var(--muted-foreground);
 }

@@ -21,7 +21,7 @@
   .link {
     display: inline-flex;
     align-items: center;
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     color: var(--muted-foreground);
     text-decoration: none;
     padding: var(--spacing-1) var(--spacing-2);
@@ -44,7 +44,7 @@
   .page {
     display: inline-flex;
     align-items: center;
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     font-weight: 500;
     color: var(--foreground);
     padding: var(--spacing-1) var(--spacing-2);

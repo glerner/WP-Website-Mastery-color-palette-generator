@@ -58,7 +58,7 @@
 }
 
 .variationDescription {
-  font-size: 0.875rem;
+  font-size: var(--cf-text-s);
   color: var(--muted-foreground);
   margin: 0;
   font-family: var(--font-family-monospace);
@@ -84,7 +84,7 @@
 
 .colorLabel {
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--cf-text-s);
   font-family: var(--font-family-monospace);
   /* Color is now set dynamically via ensureAAAContrast */
 }

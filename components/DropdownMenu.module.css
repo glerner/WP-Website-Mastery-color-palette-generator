@@ -26,7 +26,7 @@
     cursor: pointer;
     user-select: none;
     border-radius: var(--radius-sm);
-    font-size: 0.9375rem;
+    font-size: var(--cf-text-m);
     padding: var(--spacing-2) var(--spacing-3);
     color: var(--popup-foreground);
     outline: none;
@@ -56,7 +56,8 @@
   .radioItem[data-disabled],
   .subTrigger[data-disabled] {
     pointer-events: none;
-    opacity: 0.5;
+    color: var(--muted-foreground);
+    cursor: not-allowed;
   }
 
   .item[data-highlighted],
@@ -105,7 +106,7 @@
 
   .label {
     padding: var(--spacing-2) var(--spacing-3);
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     font-weight: 500;
     color: var(--muted-foreground);
   }
@@ -118,9 +119,8 @@
 
   .shortcut {
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: var(--cf-text-xs);
     letter-spacing: 0.025em;
-    opacity: 0.6;
   }
 
   .subTriggerIcon {

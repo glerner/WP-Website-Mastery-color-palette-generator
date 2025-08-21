@@ -14,7 +14,7 @@
   }
 
   .item:has(.trigger:disabled) {
-    opacity: 0.6;
+    /* avoid dimming text via opacity; keep visual by muted colors */
     box-shadow: var(--shadow);
   }
 
@@ -37,19 +37,19 @@
     color: inherit;
     border: none;
     cursor: pointer;
-    transition: opacity var(--animation-duration-fast) ease;
+    transition: background-color var(--animation-duration-fast) ease,
+      color var(--animation-duration-fast) ease;
   }
 
   .trigger:hover:not(:disabled) {
-    opacity: 0.8;
+    background-color: var(--muted);
   }
 
   .trigger:active:not(:disabled) {
-    opacity: 0.7;
+    background-color: color-mix(in srgb, var(--muted) 80%, white);
   }
 
   .trigger:disabled {
-    opacity: 0.6;
     cursor: not-allowed;
     color: var(--muted-foreground);
   }
@@ -70,7 +70,6 @@
 
   .trigger:disabled .icon {
     color: var(--muted-foreground);
-    opacity: 0.5;
   }
 
   .trigger[data-state="open"] .icon {
@@ -93,7 +92,7 @@
   .contentInner {
     padding: var(--spacing-3) var(--spacing-6) var(--spacing-4);
     color: var(--muted-foreground);
-    font-size: 0.95rem;
+    font-size: var(--cf-text-m);
     line-height: 1.6;
   }
 

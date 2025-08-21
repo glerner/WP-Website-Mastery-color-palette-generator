@@ -32,13 +32,13 @@
   .sm {
     height: 1.5rem;
     padding: 0 var(--spacing-2);
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
   }
 
   .md {
     height: 2.5rem;
     padding: 0 var(--spacing-3);
-    font-size: 0.9375rem;
+    font-size: var(--cf-text-m);
   }
 
   .lg {
@@ -222,7 +222,7 @@
 
   /* Disabled state */
   .disabled {
-    opacity: 0.5;
+    color: var(--muted-foreground);
     cursor: not-allowed;
     pointer-events: none;
   }

@@ -88,7 +88,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: var(--cf-text-s);
     font-weight: 500;
     color: var(--muted-foreground);
   }
@@ -115,7 +115,7 @@
     border: none;
     background-color: transparent;
     color: inherit;
-    font-size: 0.9rem;
+    font-size: var(--cf-text-m);
     font-weight: 400;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -170,14 +170,12 @@
 
   .outside .day_button {
     color: var(--muted-foreground);
-    opacity: 0.6;
   }
 
   .disabled .day_button {
-    opacity: 0.3;
+    color: var(--muted-foreground);
     cursor: not-allowed;
     background-color: transparent;
-    color: var(--card-foreground);
   }
 
   .disabled .day_button:hover {

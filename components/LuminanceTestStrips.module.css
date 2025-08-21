@@ -11,14 +11,14 @@
 }
 
 .sectionTitle {
-  font-size: 1.1rem;
+  font-size: var(--cf-text-l);
   font-weight: 600;
   margin: 0;
 }
 
 .sectionNote {
-  font-size: 0.8rem;
-  opacity: 0.8;
+  font-size: var(--cf-text-m);
+  color: var(--muted-foreground);
 }
 
 .whiteBar {
@@ -47,9 +47,9 @@
 
 .rows {
   display: grid;
-  gap: var(--spacing-4);
+  gap: var(--spacing-3);
   /* add breathing room below the entire strip groups */
-  margin-bottom: var(--spacing-8);
+  margin-bottom: var(--spacing-6);
 }
 
 .rowTitle {
@@ -71,16 +71,16 @@
   border: 1px solid var(--warning-border, #fdba74);
   border-radius: var(--radius-md);
   padding: 8px 10px;
-  font-size: 0.85rem;
+  font-size: var(--cf-text-m);
   margin-bottom: var(--spacing-2);
 }
 
 .stripGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: var(--spacing-2);
   /* space below the grid so following titles aren't flush */
-  margin-bottom: var(--spacing-3);
+  margin-bottom: var(--spacing-2);
   /* slight padding so selected outlines are fully visible at edges */
   padding: 2px;
 }
@@ -93,8 +93,8 @@
 }
 
 .swatchColor {
-  min-height: 72px;
-  padding: 8px 10px;
+  min-height: 56px;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -105,14 +105,15 @@
   position: absolute;
   top: 6px;
   left: 6px;
-  background: rgba(0, 0, 0, 0.12); /* translucent backdrop to improve readability on light tints */
+  background: rgba(0, 0, 0, 0.12);
+  /* translucent backdrop to improve readability on light tints */
   padding: 2px 6px;
   border-radius: 6px;
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: var(--cf-text-m);
   line-height: 1;
   letter-spacing: 0.01em;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.05);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
 .selected {
@@ -131,6 +132,6 @@
 
 .metaLine {
   font-family: var(--font-family-monospace);
-  font-size: 0.72rem;
-  opacity: 0.9;
+  font-size: var(--cf-text-m);
+  color: inherit;
 }

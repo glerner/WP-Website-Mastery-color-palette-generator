@@ -22,7 +22,7 @@
   /* Recharts overrides */
   .container :global(.recharts-cartesian-axis-tick text) {
     fill: var(--muted-foreground);
-    font-size: 0.75rem;
+    font-size: var(--cf-text-xs);
   }
 
   .container :global(.recharts-cartesian-grid line[stroke="#ccc"]) {
@@ -101,7 +101,7 @@
 
   .tooltipLabel {
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     margin-bottom: var(--spacing-2);
     color: var(--popup-foreground);
     padding-bottom: var(--spacing-2);
@@ -118,7 +118,7 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
   }
 
   .tooltipItemIndicator {
@@ -218,7 +218,7 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     color: var(--surface-foreground);
   }
 

@@ -9,7 +9,7 @@
   .formLabel {
     font-family: var(--font-family-base);
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: var(--cf-text-m);
     line-height: 1.5;
     color: var(--foreground);
     transition: color var(--animation-duration-fast) ease;
@@ -29,7 +29,7 @@
   }
 
   .formDescription {
-    font-size: 0.75rem;
+    font-size: var(--cf-text-m);
     line-height: 1.5;
     color: var(--muted-foreground);
     margin-top: var(--spacing-1);
@@ -37,7 +37,7 @@
   }
 
   .formMessage {
-    font-size: 0.75rem;
+    font-size: var(--cf-text-m);
     line-height: 1.5;
     font-weight: 500;
     color: var(--error);

@@ -46,7 +46,7 @@
     border: none;
     outline: none;
     font-family: var(--font-family-base);
-    font-size: 0.95rem;
+    font-size: var(--cf-text-m);
   }
 
   .cmdkInput::placeholder {
@@ -66,7 +66,7 @@
     justify-content: center;
     height: 4rem;
     color: var(--muted-foreground);
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
   }
 
   .commandGroup {
@@ -78,7 +78,7 @@
     padding: 0 var(--spacing-3);
     margin-bottom: var(--spacing-2);
     color: var(--muted-foreground);
-    font-size: 0.75rem;
+    font-size: var(--cf-text-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -98,7 +98,7 @@
     padding: var(--spacing-2) var(--spacing-3);
     border-radius: var(--radius-sm);
     color: var(--popup-foreground);
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     cursor: pointer;
     transition:
       background-color var(--animation-duration-fast) ease,
@@ -113,7 +113,6 @@
   }
 
   .commandItem[data-disabled="true"] {
-    opacity: 0.5;
     cursor: not-allowed;
   }
 
@@ -132,7 +131,7 @@
     display: inline-flex;
     align-items: center;
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: var(--cf-text-xs);
     font-family: var(--font-family-monospace);
     color: var(--muted-foreground);
     padding-left: var(--spacing-4);
@@ -140,6 +139,5 @@
 
   .commandItem[data-selected="true"] .commandShortcut {
     color: var(--primary-foreground);
-    opacity: 0.8;
   }
 }

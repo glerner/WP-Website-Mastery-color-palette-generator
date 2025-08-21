@@ -37,7 +37,7 @@
     color: var(--primary-foreground);
     font-family: var(--font-family-base);
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     line-height: 1;
     text-transform: uppercase;
   }

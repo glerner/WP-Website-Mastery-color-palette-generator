@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import * as z from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import styles from './generator.module.css';
 import { zipSync, strToU8 } from 'fflate';
 import { generateSemanticColors } from '../helpers/generateSemanticColors';
+import { buildWpVariationJson, validateBaseContrast } from '../helpers/themeJson';
 
 const aiFormSchema = z.object({
   industry: z
@@ -52,10 +53,16 @@ const aiFormSchema = z.object({
 });
 
 const manualFormSchema = z.object({
+  themeName: z.string().max(100).optional().default(''),
+  textOnDark: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color'),
+  textOnLight: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color'),
   primary: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color'),
   secondary: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color'),
   tertiary: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color'),
   accent: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color'),
+  error: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color').optional(),
+  warning: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color').optional(),
+  success: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color').optional(),
 });
 
 const initialPalette: Palette = {
@@ -74,6 +81,25 @@ const GeneratorPage = () => {
     Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
   >({});
   const generatePaletteMutation = useGeneratePalette();
+  const [activeTab, setActiveTab] = useState<'ai' | 'manual' | 'adjust' | 'preview' | 'export'>('ai');
+  const [themeName, setThemeName] = useState<string>('');
+  const [themeConfig, setThemeConfig] = useState<any | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Details parsed from an imported theme.json (for display only)
+  const [importDetails, setImportDetails] = useState<{
+    schema?: string;
+    version?: string | number;
+    colors?: Array<{ slug: string; color: string }>;
+    title?: string;
+    warnings?: string[];
+    error?: string;
+  } | null>(null);
+  // Default when nothing has been saved yet; a hydration effect below will
+  // load persisted values from localStorage and overwrite these shortly.
+  // Near-white for text on dark backgrounds (temporary default).
+  const [textOnDark, setTextOnDark] = useState<string>('#D6D2CE');
+  // Near-black for text on light backgrounds (temporary default).
+  const [textOnLight, setTextOnLight] = useState<string>('#1A1514');
 
   // Load saved selections once, with migration from Y-based tints to index-based
   useEffect(() => {
@@ -83,7 +109,7 @@ const GeneratorPage = () => {
         const parsed = JSON.parse(raw);
         // If the saved object contains lighterY/lightY, preserve as-is for shades and drop tints (they'll init per component)
         const migrated: Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>> = {};
-        (['primary','secondary','tertiary','accent'] as ColorType[]).forEach((k) => {
+        (['primary', 'secondary', 'tertiary', 'accent'] as ColorType[]).forEach((k) => {
           const v = parsed?.[k] || {};
           migrated[k] = {
             darkerY: v.darkerY,
@@ -94,8 +120,24 @@ const GeneratorPage = () => {
         });
         setSelections(migrated);
       }
-    } catch {}
+    } catch { }
   }, []);
+
+  // Load/save textOnDark/textOnLight overrides
+  useEffect(() => {
+    try {
+      const b = localStorage.getItem('gl_theme_text_on_dark_hex');
+      const c = localStorage.getItem('gl_theme_text_on_light_hex');
+      if (b) setTextOnDark(b);
+      if (c) setTextOnLight(c);
+    } catch { }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem('gl_theme_text_on_dark_hex', textOnDark);
+      localStorage.setItem('gl_theme_text_on_light_hex', textOnLight);
+    } catch { }
+  }, [textOnDark, textOnLight]);
 
   const aiForm = useForm({
     schema: aiFormSchema,
@@ -110,16 +152,67 @@ const GeneratorPage = () => {
   const manualForm = useForm({
     schema: manualFormSchema,
     defaultValues: {
+      themeName: themeName,
+      textOnDark: textOnDark,
+      textOnLight: textOnLight,
       primary: palette.primary.hex,
       secondary: palette.secondary.hex,
       tertiary: palette.tertiary.hex,
       accent: palette.accent.hex,
+      error: palette.error.hex,
+      warning: palette.warning.hex,
+      success: palette.success.hex,
     },
   });
 
-  // Build AAA-compliant tint target lists for a base color and resolve Y from an index
-  const getTintTargets = React.useCallback((baseHex: string) => {
-    const baseRgb = hexToRgb(baseHex);
+  // Import an existing theme.json to read schema/version and surface base/contrast colors for the user to copy
+  const handleImportThemeJson = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      setThemeConfig(parsed);
+      // Prefer imported title if manual themeName is empty
+      if ((!themeName || !themeName.trim()) && typeof parsed.title === 'string' && parsed.title.trim()) {
+        setThemeName(parsed.title.trim());
+      }
+      // Gather import details without mutating user inputs
+      let schema: string | undefined = typeof parsed?.$schema === 'string' ? parsed.$schema : undefined;
+      const version: string | number | undefined = parsed?.version;
+      const impPalette: Array<{ slug?: string; color?: string }> = parsed?.settings?.color?.palette || [];
+      const wanted = new Set(['base', 'contrast', 'basecolor', 'contrastcolor']);
+      const colors = impPalette
+        .filter((e) => e && typeof e.slug === 'string' && typeof e.color === 'string' && wanted.has(String(e.slug)))
+        .map((e) => ({ slug: String(e.slug), color: String(e.color) }));
+
+      // Prefer trunk schema when schema is missing but version or relevant colors exist
+      if (!schema && (version != null || (colors && colors.length > 0))) {
+        schema = 'https://schemas.wp.org/trunk/theme.json';
+        // Persist the inferred schema into themeConfig for export
+        try {
+          const next = { ...parsed, $schema: schema };
+          setThemeConfig(next);
+        } catch {}
+      }
+
+      // Build warnings for missing schema or missing version; do NOT warn on non-numeric version like "trunk"
+      const warnings: string[] = [];
+      if (!schema) warnings.push('No $schema found; export will default to https://schemas.wp.org/trunk/theme.json.');
+      if (version == null) {
+        warnings.push('No version found; export will default to 3.');
+      }
+
+      setImportDetails({ schema, version, colors, title: parsed?.title, warnings });
+
+      // Do not show a success toast; details are displayed inline under the explanation.
+    } catch (e) {
+      console.error('Failed to import theme.json:', e);
+      setImportDetails({ error: 'Invalid theme.json file. Please select a valid JSON.' });
+    }
+  }, [themeName]);
+
+  // Build AAA-compliant tint target lists for a very light base color and resolve Y from an index
+  const getTintTargets = React.useCallback((textOnDarkHex: string) => {
+    const baseRgb = hexToRgb(textOnDarkHex);
     const filterForBlackTextAAA = (ys: number[]) =>
       ys
         .map((y) => ({ y, rgb: solveHslLightnessForY(baseRgb, y) }))
@@ -164,9 +257,9 @@ const GeneratorPage = () => {
   }, []);
 
   const resolveTintYFromIndex = React.useCallback(
-    (baseHex: string, kind: 'lighter' | 'light', index?: number): number | undefined => {
+    (textOnDarkHex: string, kind: 'lighter' | 'light', index?: number): number | undefined => {
       if (index == null || index < 0) return undefined;
-      const { lighterTargets, lightTargets } = getTintTargets(baseHex);
+      const { lighterTargets, lightTargets } = getTintTargets(textOnDarkHex);
       const list = kind === 'lighter' ? lighterTargets : lightTargets;
       if (!list.length) return undefined;
       const clamped = Math.max(0, Math.min(index, list.length - 1));
@@ -174,6 +267,38 @@ const GeneratorPage = () => {
     },
     [getTintTargets]
   );
+
+  // Load saved manual colors once
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('gl_palette_manual_colors');
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<Record<string, string>>;
+      if (!saved) return;
+      const nextValues = { ...manualForm.values } as Record<string, string>;
+      Object.keys(nextValues).forEach((k) => {
+        const v = (saved as any)[k];
+        if (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) nextValues[k] = v;
+      });
+      manualForm.setValues(nextValues);
+      setPalette((prev) => ({
+        ...prev,
+        primary: { ...prev.primary, hex: nextValues.primary },
+        secondary: { ...prev.secondary, hex: nextValues.secondary },
+        tertiary: { ...prev.tertiary, hex: nextValues.tertiary },
+        accent: { ...prev.accent, hex: nextValues.accent },
+        error: nextValues.error ? { ...prev.error, hex: nextValues.error } : prev.error,
+        warning: nextValues.warning ? { ...prev.warning, hex: nextValues.warning } : prev.warning,
+        success: nextValues.success ? { ...prev.success, hex: nextValues.success } : prev.success,
+      }));
+      if ((nextValues as any).textOnDark) setTextOnDark((nextValues as any).textOnDark);
+      if ((nextValues as any).textOnLight) setTextOnLight((nextValues as any).textOnLight);
+      const tn = localStorage.getItem('gl_theme_name');
+      const manualName = typeof nextValues.themeName === 'string' ? nextValues.themeName : '';
+      const chosenName = manualName?.trim() ? manualName : (tn || '');
+      if (chosenName) setThemeName(chosenName);
+    } catch { }
+  }, []);
 
   const handleAiSubmit = async (values: z.infer<typeof aiFormSchema>) => {
     console.log('AI Generation Input:', values);
@@ -219,7 +344,7 @@ const GeneratorPage = () => {
     }
   };
 
-  const handleManualColorChange = (colorType: ColorType, hex: string) => {
+  const handleManualColorChange = (colorType: ColorType | SemanticColorType, hex: string) => {
     const newValues = { ...manualForm.values, [colorType]: hex };
     manualForm.setValues(newValues);
 
@@ -258,7 +383,7 @@ const GeneratorPage = () => {
 
   // Build a filename suffix using dark hexes for base colors
   const darkHexSuffix = useMemo(() => {
-    const pickDark = (c: any) => (c.variations.find((v: any) => v.step === 'dark')?.hex || c.hex).replace('#','');
+    const pickDark = (c: any) => (c.variations.find((v: any) => v.step === 'dark')?.hex || c.hex).replace('#', '');
     const p = pickDark(paletteWithVariations.primary);
     const s = pickDark(paletteWithVariations.secondary);
     const t = pickDark(paletteWithVariations.tertiary);
@@ -271,27 +396,55 @@ const GeneratorPage = () => {
     const files: Record<string, Uint8Array> = {};
 
     const safe = (name: string) => name.toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
+    const prefix = themeName ? safe(themeName) : 'themes';
 
-    // Base (current palette)
-    const baseDir = `base/`;
-    const baseTheme = generateThemeJson(paletteWithVariations);
+    // Helper to map variation name to suffix
+    const suffixFor = (name: string) => {
+      const m = name.match(/Variant\s+([A-E])/i);
+      if (m) return `-${m[1].toLowerCase()}`;
+      // Original has no suffix
+      return '';
+    };
+
+    // Build effective themeConfig with textOnDark/textOnLight from Manual tab and validate
+    const incomingPalette: Array<any> = themeConfig?.settings?.color?.palette || [];
+    const filtered = Array.isArray(incomingPalette) ? incomingPalette.filter((e) => e?.slug !== 'base' && e?.slug !== 'contrast') : [];
+    const { baseHex: vBase, contrastHex: vContrast, swapped, issues } = validateBaseContrast(textOnDark, textOnLight);
+    if (swapped) toast.warning('Base and Contrast looked reversed; using a light theme layout (swapped for export).');
+    issues.forEach((msg) => toast.warning(msg));
+    const mergedThemeConfig = {
+      ...(themeConfig || {}),
+      settings: {
+        ...(themeConfig?.settings || {}),
+        color: {
+          ...(themeConfig?.settings?.color || {}),
+          palette: [
+            ...filtered,
+            { slug: 'base', color: vBase, name: 'Base' },
+            { slug: 'contrast', color: vContrast, name: 'Contrast' },
+          ],
+        },
+      },
+    };
+
+    // Base (current palette) as flat files (WordPress style variation JSON v2)
+    const baseTitle = themeName || 'Theme';
+    const baseTheme = buildWpVariationJson(paletteWithVariations, baseTitle, mergedThemeConfig);
     const baseCss = generateCssClasses(paletteWithVariations);
-    files[`${baseDir}theme.json`] = strToU8(baseTheme);
-    files[`${baseDir}styles.css`] = strToU8(baseCss);
+    files[`${prefix}.json`] = strToU8(baseTheme);
+    files[`${prefix}.css`] = strToU8(baseCss);
 
-    // Variations
+    // Variations as flat files
     themeVariations.forEach((tv: any) => {
-      const dir = `${safe(tv.name)}/`;
-      const themeJson = generateThemeJson(tv.palette);
+      const sfx = suffixFor(tv.name);
+      // Skip creating duplicate of base when sfx === '' and tv.name === 'Original'?
+      // We'll only add variations where sfx is non-empty to avoid duplicates.
+      if (!sfx) return;
+      const varTitle = `${baseTitle} (${tv.description})`;
+      const themeJson = buildWpVariationJson(tv.palette, varTitle, mergedThemeConfig);
       const cssText = generateCssClasses(tv.palette);
-      files[`${dir}theme.json`] = strToU8(themeJson);
-      files[`${dir}styles.css`] = strToU8(cssText);
-      // Optional: small metadata file
-      const meta = {
-        name: tv.name,
-        description: tv.description,
-      };
-      files[`${dir}meta.json`] = strToU8(JSON.stringify(meta, null, 2));
+      files[`${prefix}${sfx}.json`] = strToU8(themeJson);
+      files[`${prefix}${sfx}.css`] = strToU8(cssText);
     });
 
     // Add a README
@@ -305,7 +458,7 @@ const GeneratorPage = () => {
     // Use a sliced ArrayBuffer to satisfy TS BlobPart typing and avoid including extra bytes
     const ab = zipBytes.buffer.slice(zipBytes.byteOffset, zipBytes.byteOffset + zipBytes.byteLength) as ArrayBuffer;
     const blob = new Blob([ab], { type: 'application/zip' });
-    const filename = `themes-${darkHexSuffix}.zip`;
+    const filename = `${prefix}-${darkHexSuffix}.zip`;
 
     // Prefer File System Access API when available
     // @ts-ignore
@@ -333,7 +486,7 @@ const GeneratorPage = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [paletteWithVariations, themeVariations, darkHexSuffix]);
+  }, [paletteWithVariations, themeVariations, darkHexSuffix, themeConfig, textOnDark, textOnLight]);
 
   useEffect(() => {
     const pv = paletteWithVariations as any;
@@ -342,7 +495,7 @@ const GeneratorPage = () => {
       Object.fromEntries(arr.map((x) => [x.name.toLowerCase(), x.hex]));
     const pickSemantic = (k: 'warning' | 'error' | 'success') => {
       const map = byName(variationsOf(k));
-      if (k === 'warning') return map['light'] ?? map['lighter'] ?? map['dark'] ?? pv?.[k]?.hex;
+      // Always prefer the dark variant; fall back to darker, then light, then base hex
       return map['dark'] ?? map['darker'] ?? map['light'] ?? pv?.[k]?.hex;
     };
 
@@ -366,7 +519,7 @@ const GeneratorPage = () => {
       };
 
       const root = document.documentElement;
-      // warning (chosen variant)
+      // warning (chosen dark variant)
       if (warn) {
         const t = deriveTriplet(warn)!;
         root.style.setProperty('--warning-bg', t.bg);
@@ -374,7 +527,7 @@ const GeneratorPage = () => {
         root.style.setProperty('--warning-border', t.border);
         root.style.setProperty('--wp--preset--color--warning', warn);
       }
-      // error (chosen variant)
+      // error (chosen dark variant)
       if (err) {
         const t = deriveTriplet(err)!;
         root.style.setProperty('--error-bg', t.bg);
@@ -382,7 +535,7 @@ const GeneratorPage = () => {
         root.style.setProperty('--error-border', t.border);
         root.style.setProperty('--wp--preset--color--error', err);
       }
-      // success (chosen variant)
+      // success (chosen dark variant)
       if (succ) {
         const t = deriveTriplet(succ)!;
         root.style.setProperty('--success-bg', t.bg);
@@ -390,7 +543,7 @@ const GeneratorPage = () => {
         root.style.setProperty('--success-border', t.border);
         root.style.setProperty('--wp--preset--color--success', succ);
       }
-    } catch {}
+    } catch { }
   }, [paletteWithVariations]);
 
   return (
@@ -406,7 +559,7 @@ const GeneratorPage = () => {
         {/* Mobile: 4-tab layout */}
         <div className={styles.mobileLayout}>
           <div className={styles.mobileTabs}>
-            <Tabs defaultValue="ai" className={styles.tabs}>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className={styles.tabs}>
               <TabsList className={styles.mobileTabsHeader}>
                 <TabsTrigger value="ai">AI</TabsTrigger>
                 <TabsTrigger value="manual">Manual</TabsTrigger>
@@ -538,14 +691,135 @@ const GeneratorPage = () => {
               {/* Manual Tab */}
               <TabsContent value="manual" className={styles.mobileTabPanel}>
                 <Form {...manualForm}>
+                  {/* Explanation + Import row */}
+                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)' }}>
+                    <div style={{ flex: 1 }}>
+                      <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import only the schema and version so exported files match your base theme.json. (Typography, gradients, and duotone are not imported into palette presets.)</p>
+                      {importDetails && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
+                          {(importDetails.schema || importDetails.version != null || importDetails.title) && (
+                            <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
+                              {importDetails.title ? (<>
+                                <strong>Title:</strong> {importDetails.title} {' '}
+                              </>) : null}
+                              {importDetails.schema ? (<>
+                                <strong>Schema:</strong> {importDetails.schema} {' '}
+                              </>) : null}
+                              {importDetails.version != null ? (<>
+                                <strong>Version:</strong> {String(importDetails.version)}
+                              </>) : null}
+                            </p>
+                          )}
+                          {importDetails.warnings && importDetails.warnings.length > 0 && (
+                            <ul className={styles.formHelp} style={{ margin: 0, paddingLeft: '1.2em', fontSize: 'var(--cf-text-s)' }}>
+                              {importDetails.warnings.map((w, i) => (
+                                <li key={i}>{w}</li>
+                              ))}
+                            </ul>
+                          )}
+                          {importDetails.error && (
+                            <p className={styles.formHelp} style={{ color: 'var(--error-text, #b00020)', fontSize: 'var(--cf-text-s)' }}>{importDetails.error}</p>
+                          )}
+                          {importDetails.colors && importDetails.colors.length > 0 && (
+                            <div>
+                              <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Detected palette entries (copy/paste if desired):</p>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-3)' }}>
+                                {importDetails.colors.map((c) => (
+                                  <div key={`${c.slug}:${c.color}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ width: 14, height: 14, borderRadius: 3, background: c.color, border: '1px solid #ccc', display: 'inline-block' }} />
+                                    <code style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}: {c.color}</code>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/json,.json"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleImportThemeJson(f);
+                        e.currentTarget.value = '';
+                      }}
+                    />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Import theme.json</Button>
+                  </div>
+
+                  {/* Details appear inline under the explanation (left column) */}
+
+                  {/* Theme Name block */}
+                  <div style={{ display: 'block', marginBottom: 'var(--spacing-3)' }}>
+                    <label className={styles.formLabel}>Theme Name</label>
+                    <Input
+                      placeholder="e.g., Business Calm"
+                      value={manualForm.values.themeName}
+                      onChange={(e) => {
+                        manualForm.setValues({ ...manualForm.values, themeName: e.target.value });
+                        setThemeName(e.target.value);
+                      }}
+                    />
+                  </div>
+
+                  {/* Save colors block */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)' }}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          localStorage.setItem('gl_palette_manual_colors', JSON.stringify(manualForm.values));
+                          const mv: any = manualForm.values || {};
+                          localStorage.setItem('gl_theme_name', (mv.themeName ?? themeName ?? '') as string);
+                          if (mv.textOnDark) localStorage.setItem('gl_theme_text_on_dark_hex', mv.textOnDark);
+                          if (mv.textOnLight) localStorage.setItem('gl_theme_text_on_light_hex', mv.textOnLight);
+                          if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
+                          if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
+                          if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
+                          toast.success('Theme name and colors saved');
+                        } catch { }
+                      }}
+                    >
+                      Save colors
+                    </Button>
+                  </div>
                   <form className={styles.manualForm}>
-                    {(Object.keys(palette) as ColorType[]).map((key) => (
+                    <FormItem name="textOnDark">
+                      <FormLabel>Text on Dark (near white)</FormLabel>
+                      <FormControl>
+                        <ColorInput
+                          value={manualForm.values.textOnDark}
+                          onChange={(hex) => {
+                            manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                            setTextOnDark(hex);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                    <FormItem name="textOnLight">
+                      <FormLabel>Text on Light (near black)</FormLabel>
+                      <FormControl>
+                        <ColorInput
+                          value={manualForm.values.textOnLight}
+                          onChange={(hex) => {
+                            manualForm.setValues({ ...manualForm.values, textOnLight: hex });
+                            setTextOnLight(hex);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                    {(Object.keys(palette) as (ColorType | SemanticColorType)[]).map((key) => (
                       <FormItem key={key} name={key}>
                         <FormLabel>{palette[key].name}</FormLabel>
                         <FormControl>
                           <ColorInput
                             value={manualForm.values[key]}
-                            onChange={(hex) => handleManualColorChange(key, hex)}
+                            onChange={(hex) => handleManualColorChange(key as ColorType | SemanticColorType, hex)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -562,7 +836,7 @@ const GeneratorPage = () => {
                     onClick={() => {
                       try {
                         localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
-                      } catch {}
+                      } catch { }
                     }}
                   >
                     Save selections
@@ -586,7 +860,7 @@ const GeneratorPage = () => {
                           [`${kind}Index`]: index,
                         },
                       } as typeof prev;
-                      try { localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(next)); } catch {}
+                      try { localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(next)); } catch { }
                       return next;
                     });
                   }}
@@ -599,7 +873,7 @@ const GeneratorPage = () => {
                           [`${kind}Y`]: y,
                         },
                       } as typeof prev;
-                      try { localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(next)); } catch {}
+                      try { localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(next)); } catch { }
                       return next;
                     });
                   }}
@@ -611,6 +885,14 @@ const GeneratorPage = () => {
                   <ColorDisplay
                     palette={paletteWithVariations}
                     isLoading={generatePaletteMutation.isPending}
+                    onColorClick={(key) => {
+                      setActiveTab('adjust');
+                      // allow tab content to mount, then scroll
+                      setTimeout(() => {
+                        const el = document.getElementById(`luminance-${key}`);
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 0);
+                    }}
                   />
                   {/* Example Components: move directly after Color Palette */}
                   <PreviewSection
@@ -648,6 +930,13 @@ const GeneratorPage = () => {
               <ColorDisplay
                 palette={paletteWithVariations}
                 isLoading={generatePaletteMutation.isPending}
+                onColorClick={(key) => {
+                  setActiveTab('adjust');
+                  setTimeout(() => {
+                    const el = document.getElementById(`luminance-${key}`);
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 0);
+                }}
               />
               {/* Example Components: move directly after Color Palette */}
               <PreviewSection
@@ -658,7 +947,7 @@ const GeneratorPage = () => {
             </div>
           </div>
           <div className={styles.tabsColumn}>
-            <Tabs defaultValue="ai" className={styles.tabs}>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className={styles.tabs}>
               <TabsList className={styles.tabsHeader}>
                 <TabsTrigger value="ai">AI</TabsTrigger>
                 <TabsTrigger value="manual">Manual</TabsTrigger>
@@ -789,14 +1078,133 @@ const GeneratorPage = () => {
               {/* Manual Tab */}
               <TabsContent value="manual" className={styles.tabContent}>
                 <Form {...manualForm}>
+                  {/* Explanation + Import row */}
+                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)' }}>
+                    <div style={{ flex: 1 }}>
+                      <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import from existing theme.json the schema/version to ensure exported files match your base theme.</p>
+                      {importDetails && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
+                          {(importDetails.schema || importDetails.version != null || importDetails.title) && (
+                            <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
+                              {importDetails.title ? (<>
+                                <strong>Title:</strong> {importDetails.title} {' '}
+                              </>) : null}
+                              {importDetails.schema ? (<>
+                                <strong>Schema:</strong> {importDetails.schema} {' '}
+                              </>) : null}
+                              {importDetails.version != null ? (<>
+                                <strong>Version:</strong> {String(importDetails.version)}
+                              </>) : null}
+                            </p>
+                          )}
+                          {importDetails.warnings && importDetails.warnings.length > 0 && (
+                            <ul className={styles.formHelp} style={{ margin: 0, paddingLeft: '1.2em', fontSize: 'var(--cf-text-s)' }}>
+                              {importDetails.warnings.map((w, i) => (
+                                <li key={i}>{w}</li>
+                              ))}
+                            </ul>
+                          )}
+                          {importDetails.error && (
+                            <p className={styles.formHelp} style={{ color: 'var(--error-text, #b00020)', fontSize: 'var(--cf-text-s)' }}>{importDetails.error}</p>
+                          )}
+                          {importDetails.colors && importDetails.colors.length > 0 && (
+                            <div>
+                              <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Detected palette entries (copy/paste if desired):</p>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-3)' }}>
+                                {importDetails.colors.map((c) => (
+                                  <div key={`${c.slug}:${c.color}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ width: 14, height: 14, borderRadius: 3, background: c.color, border: '1px solid #ccc', display: 'inline-block' }} />
+                                    <code style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}: {c.color}</code>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/json,.json"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleImportThemeJson(f);
+                        e.currentTarget.value = '';
+                      }}
+                    />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Import theme.json</Button>
+                  </div>
+
+                  {/* Theme Name block */}
+                  <div style={{ display: 'block', marginBottom: 'var(--spacing-3)' }}>
+                    <label className={styles.formLabel}>Theme Name</label>
+                    <Input
+                      placeholder="e.g., Business Calm"
+                      value={manualForm.values.themeName}
+                      onChange={(e) => {
+                        manualForm.setValues({ ...manualForm.values, themeName: e.target.value });
+                        setThemeName(e.target.value);
+                      }}
+                    />
+                  </div>
+
+                  {/* Save colors block */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)' }}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          localStorage.setItem('gl_palette_manual_colors', JSON.stringify(manualForm.values));
+                          const mv: any = manualForm.values || {};
+                          localStorage.setItem('gl_theme_name', (mv.themeName ?? themeName ?? '') as string);
+                          if (mv.textOnDark) localStorage.setItem('gl_theme_text_on_dark_hex', mv.textOnDark);
+                          if (mv.textOnLight) localStorage.setItem('gl_theme_text_on_light_hex', mv.textOnLight);
+                          if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
+                          if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
+                          if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
+                          toast.success('Theme name and colors saved');
+                        } catch { }
+                      }}
+                    >
+                      Save colors
+                    </Button>
+                  </div>
                   <form className={styles.manualForm}>
-                    {(Object.keys(palette) as ColorType[]).map((key) => (
+                    <FormItem name="textOnDark">
+                      <FormLabel>Text on Dark (near white)</FormLabel>
+                      <FormControl>
+                        <ColorInput
+                          value={manualForm.values.textOnDark}
+                          onChange={(hex) => {
+                            manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                            setTextOnDark(hex);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                    <FormItem name="textOnLight">
+                      <FormLabel>Text on Light (near black)</FormLabel>
+                      <FormControl>
+                        <ColorInput
+                          value={manualForm.values.textOnLight}
+                          onChange={(hex) => {
+                            manualForm.setValues({ ...manualForm.values, textOnLight: hex });
+                            setTextOnLight(hex);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                    {(Object.keys(palette) as (ColorType | SemanticColorType)[]).map((key) => (
                       <FormItem key={key} name={key}>
                         <FormLabel>{palette[key].name}</FormLabel>
                         <FormControl>
                           <ColorInput
                             value={manualForm.values[key]}
-                            onChange={(hex) => handleManualColorChange(key, hex)}
+                            onChange={(hex) => handleManualColorChange(key as ColorType | SemanticColorType, hex)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -813,7 +1221,7 @@ const GeneratorPage = () => {
                     onClick={() => {
                       try {
                         localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
-                      } catch {}
+                      } catch { }
                     }}
                   >
                     Save selections

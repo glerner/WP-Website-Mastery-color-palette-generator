@@ -18,7 +18,7 @@
     align-items: center;
     justify-content: center;
     font-family: var(--font-family-base);
-    font-size: 0.9rem;
+    font-size: var(--cf-text-m);
     font-weight: 500;
     color: var(--muted-foreground);
     background-color: transparent;
@@ -84,7 +84,6 @@
   }
 
   .tabsTrigger[disabled] {
-    opacity: 0.5;
     cursor: not-allowed;
     color: var(--muted-foreground);
   }

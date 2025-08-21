@@ -51,11 +51,15 @@ function buildSemantic(base: Palette): Pick<Palette, 'error' | 'warning' | 'succ
 }
 
 export function generateSemanticColors(base: Palette): Palette {
+  const isHex = (v?: string) => !!v && /^#[0-9a-f]{6}$/i.test(v);
   const sem = buildSemantic(base);
+  const errorHex = isHex((base as any).error?.hex) ? (base as any).error.hex : sem.error.hex;
+  const warningHex = isHex((base as any).warning?.hex) ? (base as any).warning.hex : sem.warning.hex;
+  const successHex = isHex((base as any).success?.hex) ? (base as any).success.hex : sem.success.hex;
   return {
     ...base,
-    error: sem.error,
-    warning: sem.warning,
-    success: sem.success,
+    error: { name: 'Error', hex: errorHex },
+    warning: { name: 'Warning', hex: warningHex },
+    success: { name: 'Success', hex: successHex },
   };
 }

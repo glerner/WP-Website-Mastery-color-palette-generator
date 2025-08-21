@@ -42,13 +42,13 @@
   
   .title {
     font-weight: 600;
-    font-size: 1rem;
+    font-size: var(--cf-text-m);
     color: var(--card-foreground);
     line-height: 1.4;
   }
   
   .description {
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     color: var(--muted-foreground);
     line-height: 1.4;
   }
@@ -70,7 +70,7 @@
     border: none;
     border-radius: var(--radius-sm);
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     cursor: pointer;
     transition: background-color var(--animation-duration-fast) ease;
     margin-left: var(--spacing-2);
@@ -97,7 +97,7 @@
     border: none;
     border-radius: var(--radius-sm);
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: var(--cf-text-s);
     cursor: pointer;
     transition: background-color var(--animation-duration-fast) ease;
     white-space: nowrap;
