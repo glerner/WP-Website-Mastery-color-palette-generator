@@ -32,10 +32,9 @@ function renderPickerSwatchContent(params: {
   return (
     <>
       <div className={styles.swatchColor} style={{ backgroundColor: hex, color: textColor }}>
-        <div className={styles.metaLine}>
-          {level} {contrast.toFixed(2)}
-          {' '}
-          <span style={{ opacity: 0.9 }}>• Y {y.toFixed(Y_DISPLAY_DECIMALS)}</span>
+        <div className={styles.metaStack}>
+          <span className={styles.metaFixed}>{level} {contrast.toFixed(2)}</span>
+          <span className={styles.metaFixed}>Y={y.toFixed(Y_DISPLAY_DECIMALS)}</span>
         </div>
         <div className={styles.metaLine}>{hsl}</div>
       </div>
@@ -157,8 +156,8 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
 
   return (
     <div>
-      <div className={styles.rowTitle}>
-        {name}: white to lighter gap: {lighterYSelected != null ? (1 - lighterYSelected).toFixed(3) : '-'} (min: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})
+      <div className={`${styles.rowTitle} cf-font-600`}>
+        {name}: Y-gap (white→lighter): {lighterYSelected != null ? (1 - lighterYSelected).toFixed(3) : '-'} (min: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})
       </div>
       <div className={styles.stripGrid}>
         {lighterTargetsFiltered.map((targetY, i) => {
@@ -184,8 +183,8 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
         })}
       </div>
 
-      <div className={styles.rowTitle}>
-        {name}: lighter to light gap: {lighterYSelected != null && lightYSelected != null ? (lighterYSelected - lightYSelected).toFixed(3) : '-'} (min: {RECOMMENDED_TINT_Y_GAP.toFixed(3)})
+      <div className={`${styles.rowTitle} cf-font-600`}>
+        {name}: Y-gap (lighter→light): {lighterYSelected != null && lightYSelected != null ? (lighterYSelected - lightYSelected).toFixed(3) : '-'} (min: {RECOMMENDED_TINT_Y_GAP.toFixed(3)})
       </div>
       {tooClose && (
         <div className={styles.warningInline}>
@@ -306,8 +305,8 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
 
   return (
     <div>
-      <div className={styles.rowTitle}>
-        {name}: black to darker gap: {selectedDarkerY != null ? (selectedDarkerY - 0).toFixed(3) : '-'} (min: {HARD_MIN_SHADE_Y_GAP.toFixed(3)})
+      <div className={`${styles.rowTitle} cf-font-600`}>
+        {name}: Y-gap (black→darker): {selectedDarkerY != null ? (selectedDarkerY - 0).toFixed(3) : '-'} (min: {HARD_MIN_SHADE_Y_GAP.toFixed(3)})
       </div>
       <div className={styles.stripGrid}>
         {darkerTargets.map((targetY, i) => {
@@ -336,8 +335,8 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
           Only {totalShades} AAA-compliant dark shades available from this base color. Consider increasing saturation or slightly adjusting hue to widen the dark range.
         </div>
       )}
-      <div className={styles.rowTitle}>
-        {name}: darker to dark gap: {selectedDarkerY != null && selectedDarkY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'} (min: {RECOMMENDED_SHADE_Y_GAP.toFixed(3)})
+      <div className={`${styles.rowTitle} cf-font-600`}>
+        {name}: Y-gap (darker→dark): {selectedDarkerY != null && selectedDarkY != null ? (selectedDarkY - selectedDarkerY).toFixed(3) : '-'} (min: {RECOMMENDED_SHADE_Y_GAP.toFixed(3)})
       </div>
       {tooClose && (
         <div className={styles.warningInline}>
@@ -387,7 +386,7 @@ export function LuminanceTestStrips({
   return (
     <section className={styles.testStripsSection}>
       <div className={styles.sectionHeader}>
-        <h3 className={styles.sectionTitle}>Luminance test strips</h3>
+        <h2 className={`${styles.sectionTitle} cf-font-600`}>Luminance test strips</h2>
         <div className={styles.sectionNote}>Each group: tint choices and shade choices (all have at least AAA contrast with black or white text). "Y values" are the luminance.</div>
       </div>
 

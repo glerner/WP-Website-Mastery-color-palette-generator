@@ -4,14 +4,12 @@
 
 .sectionTitle {
   font-size: var(--cf-text-xl);
-  font-weight: 600;
   color: var(--foreground);
   margin-bottom: var(--spacing-6);
 }
 
 /* Brief helper text below section title */
 .sectionInstructions {
-  font-size: var(--cf-text-m);
   color: var(--muted-foreground);
   margin: -4px 0 var(--spacing-6);
 }
@@ -21,6 +19,7 @@
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--spacing-6);
 }
+
 @media (max-width: 640px) {
   .paletteGrid {
     grid-template-columns: 1fr;
@@ -29,8 +28,7 @@
 }
 
 .semanticTitle {
-  font-size: var(--cf-text-l);
-  font-weight: 600;
+  font-size: var(--cf-text-m);
   color: var(--foreground);
   margin: var(--spacing-8) 0 var(--spacing-6);
 }
@@ -56,7 +54,7 @@
   }
 }
 
-.semanticContainer > * {
+.semanticContainer>* {
   max-width: 388px;
   justify-self: center;
 }
@@ -71,7 +69,8 @@
   flex-direction: column;
   gap: var(--spacing-4);
   padding: var(--spacing-4);
-  min-width: 0; /* allow shrink on small screens to avoid overflow */
+  min-width: 0;
+  /* allow shrink on small screens to avoid overflow */
   width: 100%;
 }
 
@@ -95,13 +94,11 @@
 }
 
 .originalColorName {
-  font-weight: 600;
   font-size: var(--cf-text-m);
 }
 
 .originalColorHex {
   font-family: var(--font-family-monospace);
-  font-size: var(--cf-text-m);
 }
 
 .variationsContainer {
@@ -116,7 +113,8 @@
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--surface);
-  min-width: 0; /* avoid forcing overflow on small screens */
+  min-width: 0;
+  /* avoid forcing overflow on small screens */
   width: 100%;
 }
 
@@ -143,10 +141,12 @@
   z-index: 2;
   min-height: 2.5rem;
 }
+
 @media (max-width: 480px) {
   .originalColor {
     padding: var(--spacing-4) var(--spacing-3);
   }
+
   .variationContent {
     min-height: 3rem;
   }
@@ -168,13 +168,11 @@
 }
 
 .variationName {
-  font-weight: 600;
   font-size: var(--cf-text-m);
 }
 
 .variationHex {
   font-family: var(--font-family-monospace);
-  font-size: var(--cf-text-m);
 }
 
 /* Inline codes row for Hex and HSL */
@@ -191,7 +189,6 @@
 
 .variationHsl {
   font-family: var(--font-family-monospace);
-  font-size: var(--cf-text-m);
   /* inherit computed contrast color from parent */
   color: inherit;
 }
@@ -203,13 +200,17 @@
 /* Plain contrast text (no badge styling) shown at the top of the swatch */
 .contrastBadge {
   position: static;
-  display: block;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cf-space-4xs);
   margin-bottom: var(--spacing-2);
-  padding: 0; /* remove button-like padding */
+  padding: 0;
+  /* remove button-like padding */
   border-radius: 0;
-  background: none; /* ensure no background */
-  font-weight: 700;
-  font-size: var(--cf-text-m);
+  background: none;
+  /* ensure no background */
+  font-family: var(--font-family-monospace);
   line-height: 1.1;
   letter-spacing: 0.01em;
 }
@@ -222,10 +223,8 @@
   height: auto;
   padding: 0 0.4rem;
   border-radius: 0.4rem;
-  font-size: var(--cf-text-m);
-  font-weight: 600;
   letter-spacing: 0.02em;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
   color: #fff;
   margin-right: var(--spacing-2);
 }
@@ -244,13 +243,19 @@
   flex-wrap: wrap;
 }
 
-.contrastRow > .contrastLabel {
+.contrastRow>.contrastLabel {
   flex: 1;
   min-width: 0;
 }
 
 .contrastLabel {
-  font-size: var(--cf-text-m);
   font-family: var(--font-family-monospace);
   color: var(--muted-foreground);
+}
+
+/* Fixed-width inline utility for aligning short metadata (e.g., contrast level, Y values) */
+.metaFixed {
+  display: inline-block;
+  min-width: 6ch;
+  white-space: nowrap;
 }

@@ -4,7 +4,6 @@
     height: 100%;
     width: 100%;
     padding-top: var(--spacing-4);
-    font-family: var(--font-family-base);
 
     /* make sure that 100% height won't collapse
     if the parent container has not height set.
@@ -189,7 +188,6 @@
 
   .tooltipItemLabelText {
     color: var(--popup-foreground);
-    font-weight: 500;
   }
 
   .tooltipItemValue {

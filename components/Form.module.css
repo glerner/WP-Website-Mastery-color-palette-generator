@@ -7,8 +7,6 @@
   }
 
   .formLabel {
-    font-family: var(--font-family-base);
-    font-weight: 500;
     font-size: var(--cf-text-m);
     line-height: 1.5;
     color: var(--foreground);
@@ -29,21 +27,18 @@
   }
 
   .formDescription {
-    font-size: var(--cf-text-m);
+    font-size: var(--cf-text-s);
     line-height: 1.5;
     color: var(--muted-foreground);
     margin-top: var(--spacing-1);
-    font-family: var(--font-family-base);
   }
 
   .formMessage {
-    font-size: var(--cf-text-m);
+    font-size: var(--cf-text-s);
     line-height: 1.5;
-    font-weight: 500;
     color: var(--error);
     animation: slideIn var(--animation-duration-normal) ease;
     margin-top: var(--spacing-1);
-    font-family: var(--font-family-base);
   }
 
   @keyframes slideIn {

@@ -16,7 +16,7 @@ export const PreviewSection = ({ palette, isLoading }: PreviewSectionProps) => {
   if (isLoading) {
     return (
       <section>
-        <h2 className={styles.sectionTitle}>UI Preview</h2>
+        <h2 className={`${styles.sectionTitle} cf-font-600`}>UI Preview</h2>
         <div className={styles.previewContainer}>
           <div className={styles.previewCard}>
             <Skeleton style={{ width: '120px', height: '24px', marginBottom: 'var(--spacing-4)' }} />
@@ -91,7 +91,7 @@ export const PreviewSection = ({ palette, isLoading }: PreviewSectionProps) => {
 
   return (
     <section>
-      <h2 className={styles.sectionTitle}>UI Preview</h2>
+      <h2 className={`${styles.sectionTitle} cf-font-600`}>UI Preview</h2>
       <div className={styles.previewContainer} style={previewStyle}>
         {backgroundContrast.overlayColor && (
           <div className={styles.backgroundOverlay} />
@@ -100,13 +100,13 @@ export const PreviewSection = ({ palette, isLoading }: PreviewSectionProps) => {
           {cardContrast.overlayColor && (
             <div className={styles.cardOverlay} />
           )}
-          <h3 className={styles.previewCardTitle}>Example Component</h3>
+          <h3 className={`${styles.previewCardTitle} cf-font-600`}>Example Component</h3>
           <p className={styles.previewText}>
             This is some sample text to demonstrate text color on the background.
             The quick brown fox jumps over the lazy dog.
           </p>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Email Address</label>
+            <label className={`${styles.label}`}>Email Address</label>
             <Input placeholder="you@example.com" className={styles.previewInput} />
           </div>
           <div className={styles.buttonGroup}>

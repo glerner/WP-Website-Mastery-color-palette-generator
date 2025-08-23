@@ -19,64 +19,64 @@ const VariationCard = ({ variation }: { variation: ThemeVariation }) => {
         <p className={styles.variationDescription}>{description}</p>
       </div>
       <div className={styles.colorSwatches}>
-        <div 
-          className={styles.colorSwatch} 
-          style={{ 
+        <div
+          className={styles.colorSwatch}
+          style={{
             backgroundColor: palette.primary.hex,
             ...(ensureAAAContrast(palette.primary.hex).overlayColor && {
               backgroundImage: `linear-gradient(${ensureAAAContrast(palette.primary.hex).overlayColor}, ${ensureAAAContrast(palette.primary.hex).overlayColor})`
             })
           }}
         >
-          <span 
+          <span
             className={styles.colorLabel}
             style={{ color: ensureAAAContrast(palette.primary.hex).textColor }}
           >
             P
           </span>
         </div>
-        <div 
-          className={styles.colorSwatch} 
-          style={{ 
+        <div
+          className={styles.colorSwatch}
+          style={{
             backgroundColor: palette.secondary.hex,
             ...(ensureAAAContrast(palette.secondary.hex).overlayColor && {
               backgroundImage: `linear-gradient(${ensureAAAContrast(palette.secondary.hex).overlayColor}, ${ensureAAAContrast(palette.secondary.hex).overlayColor})`
             })
           }}
         >
-          <span 
-            className={styles.colorLabel}
+          <span
+            className={`${styles.colorLabel} cf-font-600`}
             style={{ color: ensureAAAContrast(palette.secondary.hex).textColor }}
           >
             S
           </span>
         </div>
-        <div 
-          className={styles.colorSwatch} 
-          style={{ 
+        <div
+          className={styles.colorSwatch}
+          style={{
             backgroundColor: palette.tertiary.hex,
             ...(ensureAAAContrast(palette.tertiary.hex).overlayColor && {
               backgroundImage: `linear-gradient(${ensureAAAContrast(palette.tertiary.hex).overlayColor}, ${ensureAAAContrast(palette.tertiary.hex).overlayColor})`
             })
           }}
         >
-          <span 
+          <span
             className={styles.colorLabel}
             style={{ color: ensureAAAContrast(palette.tertiary.hex).textColor }}
           >
             T
           </span>
         </div>
-        <div 
-          className={styles.colorSwatch} 
-          style={{ 
+        <div
+          className={styles.colorSwatch}
+          style={{
             backgroundColor: palette.accent.hex,
             ...(ensureAAAContrast(palette.accent.hex).overlayColor && {
               backgroundImage: `linear-gradient(${ensureAAAContrast(palette.accent.hex).overlayColor}, ${ensureAAAContrast(palette.accent.hex).overlayColor})`
             })
           }}
         >
-          <span 
+          <span
             className={styles.colorLabel}
             style={{ color: ensureAAAContrast(palette.accent.hex).textColor }}
           >
@@ -105,7 +105,7 @@ const LoadingSkeleton = () => (
 export const ThemeVariations = ({ variations, isLoading }: ThemeVariationsProps) => {
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Theme Variations</h2>
+      <h2 className={`${styles.sectionTitle} cf-font-600`}>Theme Variations</h2>
       <p className={styles.sectionDescription}>
         Explore different combinations of your core colors. Each variation maintains the same accent and semantic colors while rotating the primary, secondary, and tertiary assignments.
       </p>

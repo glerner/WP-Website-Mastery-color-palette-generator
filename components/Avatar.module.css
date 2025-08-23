@@ -36,7 +36,7 @@
     background-color: var(--primary);
     color: var(--primary-foreground);
     font-family: var(--font-family-base);
-    font-weight: 500;
+    font-weight: 600;
     font-size: var(--cf-text-s);
     line-height: 1;
     text-transform: uppercase;

@@ -38,7 +38,6 @@
 .heroTitle {
   font-family: var(--font-family-heading);
   font-size: 3rem;
-  font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
   margin: 0 0 var(--spacing-4);
@@ -47,6 +46,7 @@
     var(--foreground) 30%,
     var(--muted-foreground) 100%
   );
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -109,7 +109,6 @@
 .sectionTitle {
   font-family: var(--font-family-heading);
   font-size: 2.5rem;
-  font-weight: 700;
   line-height: 1.2;
   margin-bottom: var(--spacing-3);
   color: var(--foreground);
@@ -165,7 +164,6 @@
 
 .featureTitle {
   font-size: 1.25rem;
-  font-weight: 600;
   margin-bottom: var(--spacing-2);
   color: var(--surface-foreground);
 }

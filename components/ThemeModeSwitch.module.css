@@ -23,7 +23,7 @@
 }
 
 .activeItem {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--primary);
   background-color: color-mix(in srgb, var(--primary), transparent 90%) !important;
 }

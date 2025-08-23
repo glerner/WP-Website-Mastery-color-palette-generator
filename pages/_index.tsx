@@ -55,7 +55,7 @@ const IndexPage = () => {
                 <div className={styles.featureIcon}>
                   <Bot size={24} />
                 </div>
-                <h3 className={styles.featureTitle}>AI-Assisted Generation</h3>
+                <h3 className={styles.featureTitle} >AI-Assisted Generation</h3>
                 <p className={styles.featureDescription}>
                   Describe your brand's vibe, industry, and target audience. Our
                   AI will generate unique, context-aware color palettes in

@@ -25,10 +25,10 @@ const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
     level === 'AAA' ? 'success' : level === 'AA' ? 'warning' : 'destructive';
 
   return (
-    <div className={styles.contrastInfo}>
+    <div className={`${styles.contrastInfo}`}>
       <div className={styles.contrastRow}>
         {solution.overlayColor && (
-          <span className={styles.overlayTag}>overlay</span>
+          <span className={`${styles.overlayTag} cf-font-600`}>overlay</span>
         )}
         <Badge variant={variant}>
           {level} {ratio.toFixed(2)}
@@ -53,15 +53,16 @@ const VariationBlock = ({ variation }: { variation: any }) => {
   return (
     <div className={styles.variationBlock}>
       <div className={styles.variationHeaderBar}>
-        <span className={styles.variationName}>{variation.name}</span>
+        <span className={`${styles.variationName} cf-font-600`}>{variation.name}</span>
       </div>
       <div className={styles.variationBody} style={{ backgroundColor: variation.hex }}>
         {contrastSolution.overlayColor && (
           <div className={styles.overlay} style={{ backgroundColor: contrastSolution.overlayColor }} />
         )}
-        {/* In-swatch contrast badge with Y value inline */}
-        <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor }}>
-          {level} {ratio.toFixed(2)} • Y {y.toFixed(3)}
+        {/* In-swatch contrast badge with aligned fixed-width meta spans (no wrap) */}
+        <div className={`${styles.contrastBadge} cf-font-700`} style={{ color: contrastSolution.textColor }}>
+          <span className={styles.metaFixed}>{level} {ratio.toFixed(2)}</span>
+          <span className={styles.metaFixed}>Y={y.toFixed(3)}</span>
         </div>
         <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
           <div className={styles.variationCodesContainer}>
@@ -104,7 +105,7 @@ const ColorCard = ({ color, name, onClick }: { color: any; name: string; onClick
       style={onClick ? { cursor: 'pointer' } : undefined}
     >
       <div className={styles.variationHeader} style={{ padding: '4px 0' }}>
-        <span className={styles.variationName}>{name}</span>
+        <span className={`${styles.variationName} cf-font-600`}>{name}</span>
       </div>
       <div className={styles.variationsContainer}>
         {gaps.tintGap != null && gaps.tintGap < Math.round(RECOMMENDED_TINT_Y_GAP * 1000) / 1000 && (
@@ -197,7 +198,7 @@ const LoadingSkeleton = () => (
 export const ColorDisplay = ({ palette, isLoading, onColorClick }: ColorDisplayProps) => {
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Color Palette</h2>
+      <h2 className={`${styles.sectionTitle} cf-font-600`}>Color Palette</h2>
       <p className={styles.sectionInstructions}>
         Click a color to adjust its tints and shades. Scroll down to see Example Components.
         All colors are optimized for excellent contrast with near-white or near-black text.
@@ -221,7 +222,7 @@ export const ColorDisplay = ({ palette, isLoading, onColorClick }: ColorDisplayP
         )}
       </div>
       
-      <h3 className={styles.semanticTitle}>Semantic Colors</h3>
+      <h3 className={`${styles.semanticTitle} cf-font-600`}>Semantic Colors</h3>
       <div className={styles.semanticContainer}>
         {isLoading ? (
           <>

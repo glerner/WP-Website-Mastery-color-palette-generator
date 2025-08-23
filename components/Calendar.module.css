@@ -1,7 +1,6 @@
 @layer base {
   .calendar {
     min-width: 18rem;
-    font-family: var(--font-family-base);
     background-color: var(--card);
     color: var(--card-foreground);
     border-radius: var(--radius);
@@ -74,7 +73,7 @@
 
   .caption_label {
     font-weight: 600;
-    font-size: 1rem;
+    font-size: var(--cf-text-m);
     color: var(--card-foreground);
   }
 
@@ -89,7 +88,6 @@
     align-items: center;
     justify-content: center;
     font-size: var(--cf-text-s);
-    font-weight: 500;
     color: var(--muted-foreground);
   }
 
@@ -138,7 +136,7 @@
   .selected .day_button {
     background-color: var(--primary);
     color: var(--primary-foreground);
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .selected .day_button:hover {
@@ -148,7 +146,7 @@
 
   .today .day_button {
     border: 1px solid var(--primary);
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .today.selected .day_button {

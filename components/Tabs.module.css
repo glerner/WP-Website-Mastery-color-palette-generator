@@ -19,7 +19,6 @@
     justify-content: center;
     font-family: var(--font-family-base);
     font-size: var(--cf-text-m);
-    font-weight: 500;
     color: var(--muted-foreground);
     background-color: transparent;
     padding: var(--spacing-3) var(--spacing-4);
@@ -38,7 +37,6 @@
 
   .tabsTrigger[data-state="active"] {
     color: var(--primary);
-    font-weight: 600;
   }
 
   /* Modern indicator with better animation */

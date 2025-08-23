@@ -171,14 +171,14 @@
 }
 
 .exportTitle {
-  font-size: var(--cf-text-l);
+  font-size: var(--cf-text-m);
   font-weight: 600;
   color: var(--foreground);
   margin: 0 0 var(--spacing-2);
 }
 
 .exportDescription {
-  font-size: var(--cf-text-m);
+  font-size: var(--cf-text-s);
   color: var(--muted-foreground);
   margin: 0 0 var(--spacing-4);
   line-height: 1.5;
@@ -201,13 +201,13 @@
   align-items: center;
   gap: var(--spacing-2);
   color: var(--error);
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: var(--spacing-2);
 }
 
 .errorMessage {
   color: var(--foreground);
-  font-size: var(--cf-text-m);
+  font-size: var(--cf-text-s);
   margin: 0 0 var(--spacing-3);
   line-height: 1.4;
 }
@@ -216,7 +216,7 @@
   background-color: var(--muted);
   border-radius: var(--radius-sm);
   padding: var(--spacing-3);
-  font-size: var(--cf-text-m);
+  font-size: var(--cf-text-s);
   color: var(--muted-foreground);
   margin-bottom: var(--spacing-3);
   line-height: 1.4;

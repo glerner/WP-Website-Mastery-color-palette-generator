@@ -115,7 +115,7 @@
   .selectLabel {
     padding: var(--spacing-2) var(--spacing-4);
     font-size: var(--cf-text-s);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--muted-foreground);
   }
 

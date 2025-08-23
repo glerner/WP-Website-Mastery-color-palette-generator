@@ -3,8 +3,7 @@
 }
 
 .sectionTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: var(--cf-text-xl);
   color: var(--foreground);
   margin-bottom: var(--spacing-3);
 }
@@ -51,8 +50,7 @@
 }
 
 .variationName {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: var(--cf-text-m);
   color: var(--foreground);
   margin: 0;
 }
@@ -83,7 +81,6 @@
 }
 
 .colorLabel {
-  font-weight: 600;
   font-size: var(--cf-text-s);
   font-family: var(--font-family-monospace);
   /* Color is now set dynamically via ensureAAAContrast */

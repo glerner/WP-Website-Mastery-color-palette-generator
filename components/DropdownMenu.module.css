@@ -107,7 +107,6 @@
   .label {
     padding: var(--spacing-2) var(--spacing-3);
     font-size: var(--cf-text-s);
-    font-weight: 500;
     color: var(--muted-foreground);
   }
 

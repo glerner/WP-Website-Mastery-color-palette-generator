@@ -10,7 +10,7 @@ export const Header = ({ children }: { children: React.ReactNode }) => {
         <div className={styles.container}>
           <Link to="/" className={styles.logo}>
             <Palette size={24} color="var(--primary)" />
-            <span className={styles.logoText}>GL Color</span>
+            <span className={`${styles.logoText} cf-font-600`}>GL Color</span>
           </Link>
           <nav className={styles.nav}>
             <Link to="/" className={styles.navLink}>

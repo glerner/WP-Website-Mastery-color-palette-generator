@@ -77,7 +77,6 @@
   .title {
     font-family: var(--font-family-heading);
     font-size: 1.25rem;
-    font-weight: 600;
     color: var(--popup-foreground);
     line-height: 1.4;
     margin-bottom: var(--spacing-2);

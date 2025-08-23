@@ -125,6 +125,18 @@ body,
 body {
   overflow: hidden;
   /* inner panels handle their own scroll */
+  font-family: var(--font-family-base);
+  font-size: var(--cf-text-s);
+  line-height: 1.4;
+}
+
+/* Inputs and interactive controls default to body size */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: var(--cf-text-s);
 }
 
 .dark {

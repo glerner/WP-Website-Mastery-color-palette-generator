@@ -11,13 +11,12 @@
 }
 
 .sectionTitle {
-  font-size: var(--cf-text-l);
-  font-weight: 600;
+  font-size: var(--cf-text-m);
   margin: 0;
 }
 
 .sectionNote {
-  font-size: var(--cf-text-m);
+  /* font-size: var(--cf-text-s); */
   color: var(--muted-foreground);
 }
 
@@ -47,13 +46,13 @@
 
 .rows {
   display: grid;
-  gap: var(--spacing-3);
+  gap: var(--cf-space-3xs);
   /* add breathing room below the entire strip groups */
-  margin-bottom: var(--spacing-6);
+  margin-bottom: var(--cf-space-s);
 }
 
 .rowTitle {
-  font-weight: 600;
+  font-size: var(--cf-text-m);
   margin-bottom: var(--spacing-2);
 }
 
@@ -63,6 +62,7 @@
   border: 1px solid var(--warning-border, #fdba74);
   border-radius: var(--radius-md);
   padding: 8px 10px;
+  font-size: var(--cf-text-m);
 }
 
 .warningInline {
@@ -71,18 +71,18 @@
   border: 1px solid var(--warning-border, #fdba74);
   border-radius: var(--radius-md);
   padding: 8px 10px;
-  font-size: var(--cf-text-m);
+  font-size: var(--cf-text-s);
   margin-bottom: var(--spacing-2);
 }
 
 .stripGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: var(--spacing-2);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--cf-space-2xs);
   /* space below the grid so following titles aren't flush */
-  margin-bottom: var(--spacing-2);
+  margin-bottom: var(--cf-space-2xs);
   /* slight padding so selected outlines are fully visible at edges */
-  padding: 2px;
+  padding: var(--cf-space-4xs);
 }
 
 .swatch {
@@ -93,11 +93,14 @@
 }
 
 .swatchColor {
-  min-height: 56px;
-  padding: 6px 8px;
+  min-height: clamp(72px, 12vh, 128px);
+  padding: var(--cf-space-3xs) var(--cf-space-2xs);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--cf-space-4xs);
+  font-family: var(--font-family-monospace);
+  font-size: var(--cf-text-s);
+  line-height: 1.2;
 }
 
 /* Padded contrast badge displayed inside the colored swatch area */
@@ -109,11 +112,10 @@
   /* translucent backdrop to improve readability on light tints */
   padding: 2px 6px;
   border-radius: 6px;
-  font-weight: 700;
-  font-size: var(--cf-text-m);
   line-height: 1;
   letter-spacing: 0.01em;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
 }
 
 .selected {
@@ -125,13 +127,26 @@
 .swatchMeta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px 8px;
+  gap: var(--cf-space-4xs);
+  padding: var(--cf-space-3xs) var(--cf-space-2xs);
   background: var(--surface);
 }
 
 .metaLine {
-  font-family: var(--font-family-monospace);
-  font-size: var(--cf-text-m);
   color: inherit;
+}
+
+/* Fixed-width inline utility for aligning short metadata (e.g., contrast level, Y values) */
+.metaFixed {
+  display: inline-block;
+  min-width: 6ch;
+  white-space: nowrap;
+}
+
+/* Stack container for contrast + Y lines so each stays on its own line */
+.metaStack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cf-space-4xs);
 }
