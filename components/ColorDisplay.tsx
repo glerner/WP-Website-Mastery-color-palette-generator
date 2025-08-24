@@ -233,7 +233,7 @@ export const ColorDisplay = ({ palette, isLoading, onColorClick }: ColorDisplayP
         ) : (
           <>
             <SemanticBlock color={palette.error} name="Error" step="dark" />
-            <SemanticBlock color={palette.warning} name="Warning" step="dark" />
+            <SemanticBlock color={palette.warning} name="Warning" step="light" />
             <SemanticBlock color={palette.success} name="Success" step="dark" />
           </>
         )}
