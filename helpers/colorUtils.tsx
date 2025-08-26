@@ -126,6 +126,43 @@ export const solveHslLightnessForY = (
   return best;
 };
 
+// Solve for RGB given explicit H and S that achieves a target WCAG luminance (Y) by binary-searching L.
+// Units: h in [0,360), s in [0,1], targetY in [0,1].
+export const solveHslLightnessForYFromHS = (
+  h: number,
+  s: number,
+  targetY: number,
+  opts: { eps?: number; maxIters?: number } = {}
+): { r: number; g: number; b: number } => {
+  const eps = opts.eps ?? 0.001;
+  const maxIters = opts.maxIters ?? 22;
+  let low = 0, high = 1;
+  let best = hslNormToRgb(h, s, 0.5);
+  let bestDiff = Math.abs(luminance(best.r, best.g, best.b) - targetY);
+  for (let i = 0; i < maxIters; i++) {
+    const mid = (low + high) / 2;
+    const rgb = hslNormToRgb(h, s, mid);
+    const y = luminance(rgb.r, rgb.g, rgb.b);
+    const diff = Math.abs(y - targetY);
+    if (diff < bestDiff) { best = rgb; bestDiff = diff; }
+    if (diff < eps) break;
+    if (y < targetY) low = mid; else high = mid;
+  }
+  return best;
+};
+
+// Convenience: given Primary's band color (to read its saturation), target hue, and target band Y,
+// build a color that matches Primary's saturation while hitting the target luminance at the new hue.
+export const matchBandFromPrimaryByS = (
+  primaryBandRgb: { r: number; g: number; b: number },
+  targetHueDeg: number,
+  targetY: number,
+  opts: { eps?: number; maxIters?: number } = {}
+) => {
+  const { s } = rgbToHslNorm(primaryBandRgb.r, primaryBandRgb.g, primaryBandRgb.b);
+  return solveHslLightnessForYFromHS(((targetHueDeg % 360) + 360) % 360, s, targetY, opts);
+};
+
 // Contrast-aware Y nudger that stays HSL-locked (moves Y, re-solves L each step)
 const adjustHslLockedForContrast = (
   baseRgb: { r: number; g: number; b: number },

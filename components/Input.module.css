@@ -21,8 +21,14 @@
       0 1px 0 rgba(255, 255, 255, 0.3);
   }
 
-  .input::placeholder {
+  /* Placeholder styling: use project-wide muted-foreground */
+  .input::placeholder,
+  .input::-webkit-input-placeholder,
+  .input::-moz-placeholder,
+  .input:-ms-input-placeholder,
+  .input::-ms-input-placeholder {
     color: var(--muted-foreground);
+    opacity: 1;
   }
 
   .input:hover {

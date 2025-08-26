@@ -12,6 +12,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     | "destructive";
   size?: "sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-md" | "icon-lg";
   asChild?: boolean;
+  wrap?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -21,6 +22,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "primary",
       size = "md",
       asChild = false,
+      wrap = false,
       className,
       disabled,
       type = "button",
@@ -38,6 +40,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ${styles.button} 
         ${styles[variant]} 
         ${styles[size]} 
+        ${wrap ? styles.wrap : ""}
         ${disabled ? styles.disabled : ""} 
         ${className || ""}
       `}

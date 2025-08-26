@@ -1,12 +1,14 @@
 @layer base {
   .tabsList {
     display: flex;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow-x: visible;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
     margin: 0;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    row-gap: var(--spacing-1);
   }
 
   .tabsList::-webkit-scrollbar {
@@ -28,7 +30,7 @@
     position: relative;
     transition: color var(--animation-duration-normal)
       cubic-bezier(0.22, 1, 0.36, 1);
-    white-space: nowrap;
+    white-space: normal; /* allow wrapping to next line */
   }
 
   .tabsTrigger:hover {

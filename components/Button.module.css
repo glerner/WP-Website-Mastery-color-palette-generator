@@ -188,6 +188,18 @@
     color: color-mix(in srgb, var(--primary), black 15%);
   }
 
+  /* Optional modifier: allow button labels to wrap on multiple lines */
+  .wrap {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+    /* ensure content can shrink within flex/grid parents */
+    min-width: 0;
+    /* allow multi-line height while keeping touch target */
+    height: auto !important;
+    min-height: 2.5rem; /* matches .md height; ensures minimum target */
+  }
+
   /* Link - Brand color text, underline on hover */
   .link {
     background-color: transparent;

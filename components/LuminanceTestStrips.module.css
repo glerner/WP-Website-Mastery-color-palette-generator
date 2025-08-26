@@ -77,7 +77,10 @@
 
 .stripGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  /* Em-based min ensures sizing follows font metrics; 6em works well with monospace */
+  /* specify font here to ensure consistent text metrics for minmax width calculations */
+  font-family: var(--font-family-monospace);
+  grid-template-columns: repeat(auto-fill, minmax(6em, 1fr));
   gap: var(--cf-space-2xs);
   /* space below the grid so following titles aren't flush */
   margin-bottom: var(--cf-space-2xs);
@@ -90,6 +93,8 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border);
+  /* Let grid cell control width to avoid overflow at certain viewports */
+  min-width: 0;
 }
 
 .swatchColor {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Button } from '../components/Button';
@@ -6,6 +6,11 @@ import { ArrowRight, Bot, Brush, Code } from 'lucide-react';
 import styles from './_index.module.css';
 
 const IndexPage = () => {
+  const [previewScheme, setPreviewScheme] = useState<'auto' | 'light' | 'dark'>('auto');
+  const wrapperStyle =
+    previewScheme === 'auto'
+      ? undefined
+      : ({ colorScheme: previewScheme } as React.CSSProperties);
   return (
     <>
       <Helmet>
@@ -83,6 +88,86 @@ const IndexPage = () => {
                   as a ready-to-use `theme.json` file for seamless WordPress
                   Block Theme integration.
                 </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Light/Dark Preview */}
+          <section className={styles.previewSection} aria-labelledby="preview-title">
+            <h2 id="preview-title" className={styles.sectionTitle}>
+              Example Component Preview (light/dark)
+            </h2>
+            <div className={styles.sectionSubtitle}>
+              Toggle to see how CSS <code>light-dark()</code> resolves under different schemes.
+            </div>
+
+            <div className={styles.previewControls} role="group" aria-label="Preview color scheme">
+              <button
+                type="button"
+                className={[
+                  styles.previewButton,
+                  previewScheme === 'auto' ? styles.previewButtonActive : '',
+                ].join(' ')}
+                onClick={() => setPreviewScheme('auto')}
+              >
+                Auto
+              </button>
+              <button
+                type="button"
+                className={[
+                  styles.previewButton,
+                  previewScheme === 'light' ? styles.previewButtonActive : '',
+                ].join(' ')}
+                onClick={() => setPreviewScheme('light')}
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                className={[
+                  styles.previewButton,
+                  previewScheme === 'dark' ? styles.previewButtonActive : '',
+                ].join(' ')}
+                onClick={() => setPreviewScheme('dark')}
+              >
+                Dark
+              </button>
+            </div>
+
+            <div className={styles.previewWrapper} style={wrapperStyle}>
+              <div className={styles.previewGrid}>
+                {/* Primary swatch uses derived lighter/darker via color-mix */}
+                <div
+                  className={styles.swatch}
+                  style={{
+                    background:
+                      'light-dark(color-mix(in srgb, var(--primary) 85%, white), color-mix(in srgb, var(--primary) 70%, black))',
+                    color: 'light-dark(var(--text-on-light), var(--text-on-dark))',
+                  }}
+                >
+                  <strong>Primary</strong>
+                </div>
+                {/* Surface swatch using foreground/surface pair */}
+                <div
+                  className={styles.swatch}
+                  style={{
+                    background: 'light-dark(var(--surface), var(--foreground))',
+                    color: 'light-dark(var(--surface-foreground), var(--surface))',
+                  }}
+                >
+                  <strong>Surface</strong>
+                </div>
+                {/* Accent (fallbacks to primary if missing) */}
+                <div
+                  className={styles.swatch}
+                  style={{
+                    background:
+                      'light-dark(color-mix(in srgb, var(--accent, var(--primary)) 85%, white), color-mix(in srgb, var(--accent, var(--primary)) 70%, black))',
+                    color: 'light-dark(var(--text-on-light), var(--text-on-dark))',
+                  }}
+                >
+                  <strong>Accent</strong>
+                </div>
               </div>
             </div>
           </section>

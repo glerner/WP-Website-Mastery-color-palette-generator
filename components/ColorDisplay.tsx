@@ -10,7 +10,10 @@ import styles from './ColorDisplay.module.css';
 interface ColorDisplayProps {
   palette: PaletteWithVariations;
   isLoading: boolean;
-  onColorClick?: (key: 'primary' | 'secondary' | 'tertiary' | 'accent') => void;
+  onVariationClick?: (
+    key: 'primary' | 'secondary' | 'tertiary' | 'accent',
+    step: 'lighter' | 'light' | 'dark' | 'darker'
+  ) => void;
 }
 
 const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
@@ -38,7 +41,7 @@ const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
   );
 };
 
-const VariationBlock = ({ variation }: { variation: any }) => {
+const VariationBlock = ({ variation, onClick }: { variation: any; onClick?: () => void }) => {
   const contrastSolution = ensureAAAContrast(variation.hex);
   const bg = hexToRgb(variation.hex);
   const textIsWhite = contrastSolution.textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase();
@@ -51,7 +54,14 @@ const VariationBlock = ({ variation }: { variation: any }) => {
   const badgeBg = textIsWhite ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
 
   return (
-    <div className={styles.variationBlock}>
+    <div
+      className={styles.variationBlock}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+      role={onClick ? 'button' as const : undefined}
+      tabIndex={onClick ? 0 : -1}
+      onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.stopPropagation(); onClick(); } }}
+      style={onClick ? { cursor: 'pointer' } : undefined}
+    >
       <div className={styles.variationHeaderBar}>
         <span className={`${styles.variationName} cf-font-600`}>{variation.name}</span>
       </div>
@@ -60,7 +70,7 @@ const VariationBlock = ({ variation }: { variation: any }) => {
           <div className={styles.overlay} style={{ backgroundColor: contrastSolution.overlayColor }} />
         )}
         {/* In-swatch contrast badge with aligned fixed-width meta spans (no wrap) */}
-        <div className={`${styles.contrastBadge} cf-font-700`} style={{ color: contrastSolution.textColor }}>
+        <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor }}>
           <span className={styles.metaFixed}>{level} {ratio.toFixed(2)}</span>
           <span className={styles.metaFixed}>Y={y.toFixed(3)}</span>
         </div>
@@ -76,7 +86,7 @@ const VariationBlock = ({ variation }: { variation: any }) => {
   );
 };
 
-const ColorCard = ({ color, name, onClick }: { color: any; name: string; onClick?: () => void }) => {
+const ColorCard = ({ color, name, onVariationClick }: { color: any; name: string; onVariationClick?: (step: 'lighter' | 'light' | 'dark' | 'darker') => void }) => {
   const ordered = React.useMemo(() => {
     const order: Record<string, number> = { lighter: 0, light: 1, dark: 2, darker: 3 };
     return [...(color.variations || [])].sort((a, b) => (order[a.step] ?? 99) - (order[b.step] ?? 99));
@@ -96,14 +106,7 @@ const ColorCard = ({ color, name, onClick }: { color: any; name: string; onClick
     return { tintGap, shadeGap };
   }, [ordered]);
   return (
-    <div
-      className={styles.colorCard}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : -1}
-      onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) onClick(); }}
-      style={onClick ? { cursor: 'pointer' } : undefined}
-    >
+    <div className={styles.colorCard}>
       <div className={styles.variationHeader} style={{ padding: '4px 0' }}>
         <span className={`${styles.variationName} cf-font-600`}>{name}</span>
       </div>
@@ -121,7 +124,11 @@ const ColorCard = ({ color, name, onClick }: { color: any; name: string; onClick
           </div>
         )}
         {ordered.map((variation: any) => (
-          <VariationBlock key={variation.name} variation={variation} />
+          <VariationBlock
+            key={variation.name}
+            variation={variation}
+            onClick={onVariationClick ? () => onVariationClick(variation.step as any) : undefined}
+          />
         ))}
         {gaps.shadeGap != null && gaps.shadeGap < Math.round(RECOMMENDED_SHADE_Y_GAP * 1000) / 1000 && (
           <div style={{
@@ -195,7 +202,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-export const ColorDisplay = ({ palette, isLoading, onColorClick }: ColorDisplayProps) => {
+export const ColorDisplay = ({ palette, isLoading, onVariationClick }: ColorDisplayProps) => {
   return (
     <section className={styles.section}>
       <h2 className={`${styles.sectionTitle} cf-font-600`}>Color Palette</h2>
@@ -214,14 +221,30 @@ export const ColorDisplay = ({ palette, isLoading, onColorClick }: ColorDisplayP
           </>
         ) : (
           <>
-            <ColorCard color={palette.primary} name="Primary" onClick={() => onColorClick?.('primary')} />
-            <ColorCard color={palette.secondary} name="Secondary" onClick={() => onColorClick?.('secondary')} />
-            <ColorCard color={palette.tertiary} name="Tertiary" onClick={() => onColorClick?.('tertiary')} />
-            <ColorCard color={palette.accent} name="Accent" onClick={() => onColorClick?.('accent')} />
+            <ColorCard
+              color={palette.primary}
+              name="Primary"
+              onVariationClick={(step) => onVariationClick?.('primary', step)}
+            />
+            <ColorCard
+              color={palette.secondary}
+              name="Secondary"
+              onVariationClick={(step) => onVariationClick?.('secondary', step)}
+            />
+            <ColorCard
+              color={palette.tertiary}
+              name="Tertiary"
+              onVariationClick={(step) => onVariationClick?.('tertiary', step)}
+            />
+            <ColorCard
+              color={palette.accent}
+              name="Accent"
+              onVariationClick={(step) => onVariationClick?.('accent', step)}
+            />
           </>
         )}
       </div>
-      
+
       <h3 className={`${styles.semanticTitle} cf-font-600`}>Semantic Colors</h3>
       <div className={styles.semanticContainer}>
         {isLoading ? (

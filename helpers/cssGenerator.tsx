@@ -16,6 +16,16 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
   // WordPress preset color variables on :root
   const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9-]/g, '-');
   const appendVar = (name: string, value: string) => `  --wp--preset--color--${name}: ${value};\n`;
+  const stepCounterpart = (step: string): string | null => {
+    if (step === 'lighter') return 'darker';
+    if (step === 'light') return 'dark';
+    if (step === 'dark') return 'light';
+    if (step === 'darker') return 'lighter';
+    return null; // e.g., base or unknown
+  };
+  const lightTextAlias = 'var(--text-on-light)';
+  const darkTextAlias = 'var(--text-on-dark)';
+
   // Emit a visible warning into the generated CSS output
   css += '/* IMPORTANT: Do NOT paste the :root block below into your theme\'s style.css. */\n';
   css += '/* WordPress automatically generates wp--preset--color variables from theme.json. */\n';
@@ -52,6 +62,27 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
     // error/success prefer dark; fallback to light; no base fallback
     return byStep['dark'] ?? byStep['darker'] ?? byStep['light'] ?? byStep['lighter'] ?? null;
   };
+  // For light/dark output, compute separate semantic choices
+  const pickSemanticHexLD = (ct: 'error' | 'warning' | 'success') => {
+    const v = (palette as any)[ct].variations as { name: string; hex: string }[];
+    const byStep = Object.fromEntries(
+      v.map((x) => {
+        const slug = toSlug(x.name);
+        const step = slug.startsWith(`${ct}-`) ? slug.slice(ct.length + 1) : slug;
+        return [step, x.hex];
+      })
+    ) as Record<string, string>;
+    const baseHex = (palette as any)[ct].hex as string | undefined;
+    const lightChoice =
+      ct === 'warning'
+        ? byStep['light'] ?? byStep['lighter'] ?? baseHex ?? byStep['dark'] ?? byStep['darker'] ?? null
+        : byStep['light'] ?? byStep['lighter'] ?? baseHex ?? null;
+    const darkChoice =
+      ct === 'warning'
+        ? byStep['dark'] ?? byStep['darker'] ?? baseHex ?? byStep['light'] ?? byStep['lighter'] ?? null
+        : byStep['dark'] ?? byStep['darker'] ?? baseHex ?? null;
+    return { lightChoice, darkChoice } as { lightChoice: string | null; darkChoice: string | null };
+  };
   (['error', 'warning', 'success'] as const).forEach((ct) => {
     const chosen = pickSemanticHex(ct);
     if (chosen) {
@@ -66,6 +97,7 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
   // these are not WordPress presets; safe to copy to your style.css if needed
   css += '/* these are *not* WordPress presets, safe to copy to your style.css as needed */\n\n';
   css += ':root {\n';
+  css += `  color-scheme: light dark;\n`;
   css += `  --text-on-dark: ${NEAR_WHITE_HEX};        /* near-white for dark backgrounds */\n`;
   css += `  --text-on-light: ${NEAR_BLACK_HEX};       /* near-black for light backgrounds */\n`;
   css += '}\n\n';
@@ -75,36 +107,48 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
     const colorData = palette[colorType as keyof PaletteWithVariations];
 
     // Only variation classes for main colors (no base color classes)
+    // Build a quick map of available steps for counterpart lookups
+    const stepsMap = new Set(
+      colorData.variations.map((v: { name: string }) => {
+        const vs = toSlug(v.name);
+        return vs.startsWith(`${colorType}-`) ? vs.slice(colorType.length + 1) : vs;
+      })
+    );
+
     colorData.variations.forEach((variation: { name: string; hex: string }) => {
-      const contrastSolution = ensureAAAContrast(variation.hex);
       // Use normalized step slug (lowercase) for class names
       const varSlug = toSlug(variation.name);
       const step = varSlug.startsWith(`${colorType}-`) ? varSlug.slice(colorType.length + 1) : varSlug;
       const slug = `${colorType}-${step}`;
-      const alias = contrastSolution.textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase() ? 'text-on-dark' : 'text-on-light';
+      const counterpart = stepCounterpart(step);
+      const hasCounterpart = counterpart ? stepsMap.has(counterpart) : false;
 
       // Merge .bg-* and .has-*-background-color into a single rule
       css += `.bg-${colorType}-${step}, .has-${slug}-background-color {\n`;
-      css += `  background-color: var(--wp--preset--color--${slug});\n`;
-      css += `  color: var(--${alias});\n`;
+      if (hasCounterpart) {
+        css += `  background-color: light-dark(var(--wp--preset--color--${slug}), var(--wp--preset--color--${colorType}-${counterpart}));\n`;
+        css += `  color: light-dark(${lightTextAlias}, ${darkTextAlias});\n`;
+      } else {
+        // Fallback to single value when no clear counterpart exists
+        css += `  background-color: var(--wp--preset--color--${slug});\n`;
+        // Use contrast-based utility for single mode as a fallback
+        const { textColor } = ensureAAAContrast(variation.hex);
+        const alias = textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase() ? darkTextAlias : lightTextAlias;
+        css += `  color: ${alias};\n`;
+      }
       css += `}\n\n`;
     });
   });
 
   // Generate classes for semantic colors (include base + variations)
   ['error', 'warning', 'success'].forEach((colorType) => {
-    // Use the chosen semantic var for classes
-    const chosenVar = `var(--wp--preset--color--${colorType})`;
-    const chosenHex = pickSemanticHex(colorType as 'error' | 'warning' | 'success') as string | null;
-    // Decide alias based on contrast against the actual chosen hex and merge selectors
-    const alias = (() => {
-      if (!chosenHex) return 'text-on-light';
-      const { textColor } = ensureAAAContrast(chosenHex);
-      return textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase() ? 'text-on-dark' : 'text-on-light';
-    })();
+    const { lightChoice, darkChoice } = pickSemanticHexLD(colorType as 'error' | 'warning' | 'success');
+    const chosenFallback = pickSemanticHex(colorType as 'error' | 'warning' | 'success') as string | null;
+    const lightHex = lightChoice ?? chosenFallback ?? NEAR_WHITE_HEX;
+    const darkHex = darkChoice ?? chosenFallback ?? NEAR_BLACK_HEX;
     css += `.bg-${colorType}, .has-${colorType}-background-color {\n`;
-    css += `  background-color: ${chosenVar};\n`;
-    css += `  color: var(--${alias});\n`;
+    css += `  background-color: light-dark(${lightHex}, ${darkHex});\n`;
+    css += `  color: light-dark(${lightTextAlias}, ${darkTextAlias});\n`;
     css += `}\n\n`;
   });
 
@@ -115,20 +159,38 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
   ['primary', 'secondary', 'tertiary', 'accent'].forEach((colorType) => {
     const colorData = palette[colorType as keyof PaletteWithVariations];
 
+    // Set up available steps map again for lookups
+    const stepsMap = new Set(
+      colorData.variations.map((v: { name: string }) => {
+        const vs = toSlug(v.name);
+        return vs.startsWith(`${colorType}-`) ? vs.slice(colorType.length + 1) : vs;
+      })
+    );
+
     colorData.variations.forEach((variation: { name: string; hex: string }) => {
       const varSlug = toSlug(variation.name);
       const step = varSlug.startsWith(`${colorType}-`) ? varSlug.slice(colorType.length + 1) : varSlug;
       const slug = `${colorType}-${step}`;
+      const counterpart = stepCounterpart(step);
+      const hasCounterpart = counterpart ? stepsMap.has(counterpart) : false;
       css += `.text-${colorType}-${step} {\n`;
-      css += `  color: var(--wp--preset--color--${slug});\n`;
+      if (hasCounterpart) {
+        css += `  color: light-dark(var(--wp--preset--color--${slug}), var(--wp--preset--color--${colorType}-${counterpart}));\n`;
+      } else {
+        css += `  color: var(--wp--preset--color--${slug});\n`;
+      }
       css += `}\n\n`;
     });
   });
 
   // Text classes for semantic colors (base only; no variants to avoid duplicates)
   ['error', 'warning', 'success'].forEach((colorType) => {
+    const { lightChoice, darkChoice } = pickSemanticHexLD(colorType as 'error' | 'warning' | 'success');
+    const chosenFallback = pickSemanticHex(colorType as 'error' | 'warning' | 'success') as string | null;
+    const lightHex = lightChoice ?? chosenFallback ?? NEAR_WHITE_HEX;
+    const darkHex = darkChoice ?? chosenFallback ?? NEAR_BLACK_HEX;
     css += `.text-${colorType} {\n`;
-    css += `  color: var(--wp--preset--color--${colorType});\n`;
+    css += `  color: light-dark(${lightHex}, ${darkHex});\n`;
     css += `}\n\n`;
   });
 

@@ -17,12 +17,44 @@ import {
 import { ColorInput } from '../components/ColorInput';
 import { ColorDisplay } from '../components/ColorDisplay';
 import { PreviewSection } from '../components/PreviewSection';
+import LightDarkPreview from '../components/LightDarkPreview';
 import { generateThemeJson } from '../helpers/themeJson';
 import { generateCssClasses, generateFilenameSuffix } from '../helpers/cssGenerator';
 import { Palette, ColorType, SemanticColorType, PaletteWithVariations } from '../helpers/types';
-import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio } from '../helpers/colorUtils';
-import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP } from '../helpers/config';
+import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio, matchBandFromPrimaryByS } from '../helpers/colorUtils';
+import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP, TARGET_LUM_DARK } from '../helpers/config';
 import { LuminanceTestStrips } from '../components/LuminanceTestStrips';
+
+// Smoothly scroll the Adjust panel to a target anchor id.
+// It detects the correct scroll container for both mobile (TabsContent with mobileTabPanel)
+// and desktop (tabsColumn) layouts, retrying briefly until the content mounts.
+function scrollAdjustTo(targetId: string) {
+  let tries = 0;
+  const maxTries = 12;
+  const tick = 50;
+  const doScroll = () => {
+    const el = document.getElementById(targetId);
+    if (!el) {
+      if (tries++ < maxTries) setTimeout(doScroll, tick);
+      return;
+    }
+    // Prefer the nearest scrollable Adjust container
+    const mobilePanel = el.closest(`.${styles.mobileTabPanel}`) as HTMLElement | null;
+    const desktopPanel = el.closest(`.${styles.tabsColumn}`) as HTMLElement | null;
+    const container = mobilePanel || desktopPanel;
+    if (container) {
+      const offsetTop = (el as HTMLElement).offsetTop;
+      // Leave room for sticky tab headers if any
+      const scrollMargin = 12;
+      container.scrollTo({ top: Math.max(0, offsetTop - scrollMargin), behavior: 'smooth' });
+      return;
+    }
+    // Fallback: scroll element into the page viewport
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  // give the Adjust tab time to mount
+  setTimeout(doScroll, tick);
+}
 import { useGeneratePalette } from '../helpers/useGeneratePalette';
 import { generateThemeVariations } from '../helpers/generateThemeVariations';
 import { generateAnalogousComplementaryPalette } from '../helpers/colorHarmony';
@@ -32,6 +64,24 @@ import styles from './generator.module.css';
 import { zipSync, strToU8 } from 'fflate';
 import { generateSemanticColors } from '../helpers/generateSemanticColors';
 import { buildWpVariationJson, validateBaseContrast } from '../helpers/themeJson';
+
+// Resolve a hex color for a given color key and variation step for the Demo tab.
+// Falls back to the base hex when the requested step isn't present.
+function demoStepHex(
+  pv: PaletteWithVariations,
+  key: keyof PaletteWithVariations,
+  step: 'light' | 'dark'
+): string {
+  try {
+    const entry: any = (pv as any)?.[key];
+    if (!entry) return '#808080';
+    const arr: Array<{ step: string; hex: string }> = Array.isArray(entry.variations) ? entry.variations : [];
+    const found = arr.find((v) => v.step === step)?.hex || entry.hex;
+    return typeof found === 'string' && /^#[0-9a-f]{6}$/i.test(found) ? found : '#808080';
+  } catch {
+    return '#808080';
+  }
+}
 
 const aiFormSchema = z.object({
   industry: z
@@ -81,7 +131,8 @@ const GeneratorPage = () => {
     Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
   >({});
   const generatePaletteMutation = useGeneratePalette();
-  const [activeTab, setActiveTab] = useState<'ai' | 'manual' | 'adjust' | 'preview' | 'export'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'manual' | 'adjust' | 'preview' | 'export' | 'demo'>('ai');
+  const [demoScheme, setDemoScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [themeName, setThemeName] = useState<string>('');
   const [themeConfig, setThemeConfig] = useState<any | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -94,6 +145,15 @@ const GeneratorPage = () => {
     warnings?: string[];
     error?: string;
   } | null>(null);
+  // Hydrate imported theme.json and import details
+  useEffect(() => {
+    try {
+      const rawTheme = localStorage.getItem('gl_imported_theme_json');
+      if (rawTheme) setThemeConfig(JSON.parse(rawTheme));
+      const rawDetails = localStorage.getItem('gl_import_details');
+      if (rawDetails) setImportDetails(JSON.parse(rawDetails));
+    } catch {}
+  }, []);
   // Default when nothing has been saved yet; a hydration effect below will
   // load persisted values from localStorage and overwrite these shortly.
   // Near-white for text on dark backgrounds (temporary default).
@@ -268,6 +328,8 @@ const GeneratorPage = () => {
     [getTintTargets]
   );
 
+
+
   // Load saved manual colors once
   useEffect(() => {
     try {
@@ -280,6 +342,9 @@ const GeneratorPage = () => {
         const v = (saved as any)[k];
         if (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) nextValues[k] = v;
       });
+      // Also restore themeName from saved manual colors if present
+      const savedThemeName = typeof (saved as any).themeName === 'string' ? (saved as any).themeName.trim() : '';
+      if (savedThemeName) nextValues.themeName = savedThemeName;
       manualForm.setValues(nextValues);
       setPalette((prev) => ({
         ...prev,
@@ -294,9 +359,19 @@ const GeneratorPage = () => {
       if ((nextValues as any).textOnDark) setTextOnDark((nextValues as any).textOnDark);
       if ((nextValues as any).textOnLight) setTextOnLight((nextValues as any).textOnLight);
       const tn = localStorage.getItem('gl_theme_name');
-      const manualName = typeof nextValues.themeName === 'string' ? nextValues.themeName : '';
-      const chosenName = manualName?.trim() ? manualName : (tn || '');
-      if (chosenName) setThemeName(chosenName);
+      const manualName = typeof nextValues.themeName === 'string' ? nextValues.themeName.trim() : '';
+      const chosenName = manualName || (tn || '');
+      if (chosenName) {
+        setThemeName(chosenName);
+        // Keep both storages in sync at load time
+        try {
+          localStorage.setItem('gl_theme_name', chosenName);
+          const rawSaved = localStorage.getItem('gl_palette_manual_colors');
+          const savedObj = rawSaved ? JSON.parse(rawSaved) as any : {};
+          savedObj.themeName = chosenName;
+          localStorage.setItem('gl_palette_manual_colors', JSON.stringify(savedObj));
+        } catch {}
+      }
     } catch { }
   }, []);
 
@@ -377,6 +452,54 @@ const GeneratorPage = () => {
     return fullPalette as PaletteWithVariations;
   }, [palette, selections, resolveTintYFromIndex]);
 
+  // Read Primary's dark band RGB from computed variations when available; otherwise approximate
+  // by solving Primary base to the TARGET_LUM_DARK while preserving H and S via solveHslLightnessForY.
+  const getPrimaryBandRgb = React.useCallback((band: 'lighter' | 'light' | 'dark' | 'darker') => {
+    const pv: any = paletteWithVariations as any;
+    const foundHex: string | undefined = (pv?.primary?.variations ?? []).find((x: any) => x.step === band)?.hex;
+    if (foundHex) return hexToRgb(foundHex);
+    const baseRgb = hexToRgb(palette.primary.hex);
+    const y = band === 'lighter' ? undefined
+      : band === 'light' ? undefined
+      : band === 'dark' ? TARGET_LUM_DARK
+      : undefined;
+    // For now we only need 'dark'; if others are needed later, import their targets and handle here.
+    if (y != null) return solveHslLightnessForY(baseRgb, y);
+    return baseRgb;
+  }, [palette.primary.hex, paletteWithVariations]);
+
+  // Create semantic base colors that match Primary's saturation at the dark band, with semantic hues
+  const handleMatchSemanticsToPrimary = React.useCallback(() => {
+    try {
+      const primaryDarkRgb = getPrimaryBandRgb('dark');
+      const H_ERROR = 8;    // red-ish
+      const H_WARNING = 48; // amber/yellow
+      const H_SUCCESS = 145; // green
+
+      const err = matchBandFromPrimaryByS(primaryDarkRgb, H_ERROR, TARGET_LUM_DARK);
+      const warn = matchBandFromPrimaryByS(primaryDarkRgb, H_WARNING, TARGET_LUM_DARK);
+      const succ = matchBandFromPrimaryByS(primaryDarkRgb, H_SUCCESS, TARGET_LUM_DARK);
+
+      const nextValues = {
+        ...manualForm.values,
+        error: rgbToHex(err.r, err.g, err.b),
+        warning: rgbToHex(warn.r, warn.g, warn.b),
+        success: rgbToHex(succ.r, succ.g, succ.b),
+      } as typeof manualForm.values;
+      manualForm.setValues(nextValues);
+      setPalette((prev) => ({
+        ...prev,
+        error: { ...prev.error, hex: nextValues.error! },
+        warning: { ...prev.warning, hex: nextValues.warning! },
+        success: { ...prev.success, hex: nextValues.success! },
+      }));
+      toast.success('Matched Error/Warning/Success to Primary (dark band)');
+    } catch (e) {
+      console.error('Failed to match semantic colors:', e);
+      toast.error('Failed to match semantic colors');
+    }
+  }, [getPrimaryBandRgb, manualForm, setPalette]);
+
   const themeVariations = useMemo(() => {
     return generateThemeVariations(paletteWithVariations);
   }, [paletteWithVariations]);
@@ -431,10 +554,22 @@ const GeneratorPage = () => {
     const baseTitle = themeName || 'Theme';
     const baseTheme = buildWpVariationJson(paletteWithVariations, baseTitle, mergedThemeConfig);
     const baseCss = generateCssClasses(paletteWithVariations);
-    files[`${prefix}.json`] = strToU8(baseTheme);
-    files[`${prefix}.css`] = strToU8(baseCss);
+    const baseJsonName = `${prefix}.json`;
+    const baseCssName = `${prefix}.css`;
+    files[baseJsonName] = strToU8(baseTheme);
+    files[baseCssName] = strToU8(baseCss);
 
     // Variations as flat files
+    const readmeLines: string[] = [];
+    // Inject the original Theme Name (not the slug)
+    readmeLines.push(`Theme Name: ${baseTitle}`);
+    readmeLines.push('');
+    readmeLines.push('This archive contains WordPress theme.json and CSS for the base palette and its variations.');
+    readmeLines.push('');
+    readmeLines.push('- Files:');
+    readmeLines.push(`  - ${baseJsonName} (base theme.json)`);
+    readmeLines.push(`  - ${baseCssName} (base CSS utilities for background/text, variables)`);
+
     themeVariations.forEach((tv: any) => {
       const sfx = suffixFor(tv.name);
       // Skip creating duplicate of base when sfx === '' and tv.name === 'Original'?
@@ -443,14 +578,20 @@ const GeneratorPage = () => {
       const varTitle = `${baseTitle} (${tv.description})`;
       const themeJson = buildWpVariationJson(tv.palette, varTitle, mergedThemeConfig);
       const cssText = generateCssClasses(tv.palette);
-      files[`${prefix}${sfx}.json`] = strToU8(themeJson);
-      files[`${prefix}${sfx}.css`] = strToU8(cssText);
+      const vJson = `${prefix}${sfx}.json`;
+      const vCss = `${prefix}${sfx}.css`;
+      files[vJson] = strToU8(themeJson);
+      files[vCss] = strToU8(cssText);
+      readmeLines.push(`  - ${vJson} (variation ${sfx.slice(1).toUpperCase()} theme.json)`);
+      readmeLines.push(`  - ${vCss} (variation ${sfx.slice(1).toUpperCase()} CSS variables/utilities)`);
     });
 
-    // Add a README
-    const readme = `This archive contains WordPress theme.json and CSS for the base palette and its variations.\n` +
-      `- Import theme.json files into your theme or use as Global Styles.\n` +
-      `- styles.css includes background and text utility classes with AAA contrast.\n`;
+    // Add usage notes to README
+    readmeLines.push('');
+    readmeLines.push('- Import the theme.json files into your theme\'s `styles` folder (Global Styles / Style Variations).');
+    readmeLines.push('- The CSS variant letter matches its theme.json variant letter and contains matching CSS custom properties.');
+    readmeLines.push('- CSS includes background/text utility classes designed for AAA contrast where applicable.\n- Include these settings as needed in your child theme\'s style.css or other software');
+    const readme = readmeLines.join('\n');
     files['README.txt'] = strToU8(readme);
 
     // Create ZIP and trigger download
@@ -493,6 +634,7 @@ const GeneratorPage = () => {
     const variationsOf = (k: string) => (pv?.[k]?.variations ?? []) as { name: string; hex: string }[];
     const byName = (arr: { name: string; hex: string }[]) =>
       Object.fromEntries(arr.map((x) => [x.name.toLowerCase(), x.hex]));
+
     const pickSemantic = (k: 'warning' | 'error' | 'success') => {
       const map = byName(variationsOf(k));
       // Always prefer the dark variant; fall back to darker, then light, then base hex
@@ -566,6 +708,7 @@ const GeneratorPage = () => {
                 <TabsTrigger value="adjust">Adjust</TabsTrigger>
                 <TabsTrigger value="preview">Preview</TabsTrigger>
                 <TabsTrigger value="export">Export</TabsTrigger>
+                <TabsTrigger value="demo">Demo</TabsTrigger>
               </TabsList>
 
               {/* AI Tab */}
@@ -692,7 +835,7 @@ const GeneratorPage = () => {
               <TabsContent value="manual" className={styles.mobileTabPanel}>
                 <Form {...manualForm}>
                   {/* Explanation + Import row */}
-                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)' }}>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1 }}>
                       <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import only the schema and version so exported files match your base theme.json. (Typography, gradients, and duotone are not imported into palette presets.)</p>
                       {importDetails && (
@@ -747,7 +890,7 @@ const GeneratorPage = () => {
                         e.currentTarget.value = '';
                       }}
                     />
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Import theme.json</Button>
+                    <Button variant="outline" wrap onClick={() => fileInputRef.current?.click()}>Import theme.json</Button>
                   </div>
 
                   {/* Details appear inline under the explanation (left column) */}
@@ -779,11 +922,20 @@ const GeneratorPage = () => {
                           if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
                           if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
                           if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
-                          toast.success('Theme name and colors saved');
+                          if (themeConfig) localStorage.setItem('gl_imported_theme_json', JSON.stringify(themeConfig));
+                          if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
+                          toast.success('Theme name, colors, and settings saved');
                         } catch { }
                       }}
                     >
-                      Save colors
+                      Save colors and settings
+                    </Button>
+                  </div>
+
+                  {/* Match semantic colors to Primary (desktop Manual tab) */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
+                    <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
+                      Match Primary → Error/Warning/Success
                     </Button>
                   </div>
                   <form className={styles.manualForm}>
@@ -830,7 +982,7 @@ const GeneratorPage = () => {
               </TabsContent>
               {/* Adjustments Tab */}
               <TabsContent value="adjust" className={styles.mobileTabPanel}>
-                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)' }}>
+                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -885,19 +1037,13 @@ const GeneratorPage = () => {
                   <ColorDisplay
                     palette={paletteWithVariations}
                     isLoading={generatePaletteMutation.isPending}
-                    onColorClick={(key) => {
+                    onVariationClick={(key, step) => {
                       setActiveTab('adjust');
-                      // allow tab content to mount, then scroll
-                      setTimeout(() => {
-                        const el = document.getElementById(`luminance-${key}`);
-                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }, 0);
+                      const targetId = (step === 'dark' || step === 'darker')
+                        ? `luminance-${key}-shades`
+                        : `luminance-${key}`;
+                      scrollAdjustTo(targetId);
                     }}
-                  />
-                  {/* Example Components: move directly after Color Palette */}
-                  <PreviewSection
-                    palette={paletteWithVariations}
-                    isLoading={generatePaletteMutation.isPending}
                   />
                   {/* Theme Variations removed */}
                 </div>
@@ -920,6 +1066,22 @@ const GeneratorPage = () => {
                   </div>
                 </div>
               </TabsContent>
+              {/* Demo Tab */}
+              <TabsContent value="demo" className={styles.mobileTabPanel}>
+                <LightDarkPreview
+                  palette={paletteWithVariations}
+                  textOnLight={textOnLight}
+                  textOnDark={textOnDark}
+                  scheme={demoScheme}
+                  onSchemeChange={setDemoScheme}
+                >
+                  <PreviewSection
+                    palette={paletteWithVariations}
+                    isLoading={generatePaletteMutation.isPending}
+                    scheme={demoScheme}
+                  />
+                </LightDarkPreview>
+              </TabsContent>
             </Tabs>
           </div>
         </div>
@@ -930,20 +1092,14 @@ const GeneratorPage = () => {
               <ColorDisplay
                 palette={paletteWithVariations}
                 isLoading={generatePaletteMutation.isPending}
-                onColorClick={(key) => {
+                onVariationClick={(key, step) => {
                   setActiveTab('adjust');
-                  setTimeout(() => {
-                    const el = document.getElementById(`luminance-${key}`);
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 0);
+                  const targetId = (step === 'dark' || step === 'darker')
+                    ? `luminance-${key}-shades`
+                    : `luminance-${key}`;
+                  scrollAdjustTo(targetId);
                 }}
               />
-              {/* Example Components: move directly after Color Palette */}
-              <PreviewSection
-                palette={paletteWithVariations}
-                isLoading={generatePaletteMutation.isPending}
-              />
-              {/* Luminance controls moved to Adjust tab in desktop */}
             </div>
           </div>
           <div className={styles.tabsColumn}>
@@ -952,6 +1108,7 @@ const GeneratorPage = () => {
                 <TabsTrigger value="ai">AI</TabsTrigger>
                 <TabsTrigger value="manual">Manual</TabsTrigger>
                 <TabsTrigger value="adjust">Adjust</TabsTrigger>
+                <TabsTrigger value="demo">Demo</TabsTrigger>
                 <TabsTrigger value="export">Export</TabsTrigger>
               </TabsList>
 
@@ -1079,7 +1236,7 @@ const GeneratorPage = () => {
               <TabsContent value="manual" className={styles.tabContent}>
                 <Form {...manualForm}>
                   {/* Explanation + Import row */}
-                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)' }}>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1 }}>
                       <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import from existing theme.json the schema/version to ensure exported files match your base theme.</p>
                       {importDetails && (
@@ -1134,7 +1291,7 @@ const GeneratorPage = () => {
                         e.currentTarget.value = '';
                       }}
                     />
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Import theme.json</Button>
+                    <Button variant="outline" wrap onClick={() => fileInputRef.current?.click()}>Import theme.json</Button>
                   </div>
 
                   {/* Theme Name block */}
@@ -1164,11 +1321,19 @@ const GeneratorPage = () => {
                           if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
                           if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
                           if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
-                          toast.success('Theme name and colors saved');
+                          if (themeConfig) localStorage.setItem('gl_imported_theme_json', JSON.stringify(themeConfig));
+                          if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
+                          toast.success('Theme name, colors, and settings saved');
                         } catch { }
                       }}
                     >
-                      Save colors
+                      Save colors and settings
+                    </Button>
+                  </div>
+                  {/* Match semantic colors to Primary (desktop Manual tab) */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
+                    <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
+                      Match Primary → Error/Warning/Success
                     </Button>
                   </div>
                   <form className={styles.manualForm}>
@@ -1215,9 +1380,10 @@ const GeneratorPage = () => {
               </TabsContent>
               {/* Adjustments Tab */}
               <TabsContent value="adjust" className={styles.tabContent}>
-                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)' }}>
+                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                   <Button
                     variant="outline"
+                    wrap
                     onClick={() => {
                       try {
                         localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
@@ -1275,6 +1441,22 @@ const GeneratorPage = () => {
                     </Button>
                   </div>
                 </div>
+              </TabsContent>
+              {/* Demo Tab */}
+              <TabsContent value="demo" className={styles.tabContent}>
+                <LightDarkPreview
+                  palette={paletteWithVariations}
+                  textOnLight={textOnLight}
+                  textOnDark={textOnDark}
+                  scheme={demoScheme}
+                  onSchemeChange={setDemoScheme}
+                >
+                  <PreviewSection
+                    palette={paletteWithVariations}
+                    isLoading={generatePaletteMutation.isPending}
+                    scheme={demoScheme}
+                  />
+                </LightDarkPreview>
               </TabsContent>
             </Tabs>
           </div>

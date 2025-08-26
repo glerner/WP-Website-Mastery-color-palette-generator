@@ -21,7 +21,7 @@
     color: var(--muted-foreground);
   }
 
-    .textarea:hover {
+  .textarea:hover {
     border-color: color-mix(in srgb, var(--primary) 80%, transparent);
     background-color: color-mix(in srgb, var(--card) 98%, var(--primary) 2%);
   }
@@ -60,7 +60,7 @@
     box-shadow: none;
   }
 
-    /* Dark mode adjustments */
+  /* Dark mode adjustments */
   :global(.dark) .textarea {
     background-color: color-mix(in srgb, var(--background) 80%, black);
   }

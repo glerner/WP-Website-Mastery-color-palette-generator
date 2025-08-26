@@ -174,3 +174,58 @@
   color: var(--muted-foreground);
   margin: 0;
 }
+
+/* Preview toggle for light/dark */
+.previewSection {
+  padding: var(--spacing-16) 0;
+}
+
+.previewControls {
+  display: inline-flex;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.previewButton {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--surface-foreground);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.previewButtonActive {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.previewWrapper {
+  margin-top: var(--spacing-6);
+  padding: var(--spacing-6);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-4);
+}
+
+@media (min-width: 600px) {
+  .previewGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.swatch {
+  border-radius: var(--radius-md);
+  padding: var(--spacing-6);
+  text-align: center;
+  box-shadow: var(--shadow);
+}

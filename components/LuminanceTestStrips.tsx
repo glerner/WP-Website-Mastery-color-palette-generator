@@ -400,6 +400,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.primary?.lightIndex}
           onSelect={onSelectTintIndex}
         />
+        <div id="luminance-primary-shades" />
         <RowShades
           name="Primary"
           baseHex={palette.primary.hex}
@@ -417,6 +418,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.secondary?.lightIndex}
           onSelect={onSelectTintIndex}
         />
+        <div id="luminance-secondary-shades" />
         <RowShades
           name="Secondary"
           baseHex={palette.secondary.hex}
@@ -434,6 +436,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.tertiary?.lightIndex}
           onSelect={onSelectTintIndex}
         />
+        <div id="luminance-tertiary-shades" />
         <RowShades
           name="Tertiary"
           baseHex={palette.tertiary.hex}
@@ -451,6 +454,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.accent?.lightIndex}
           onSelect={onSelectTintIndex}
         />
+        <div id="luminance-accent-shades" />
         <RowShades
           name="Accent"
           baseHex={palette.accent.hex}
