@@ -1003,6 +1003,7 @@ const GeneratorPage = () => {
                 <LuminanceTestStrips
                   palette={paletteWithVariations}
                   selections={selections}
+                  anchorPrefix="m-"
                   onSelectTintIndex={(colorKey, kind, index) => {
                     setSelections((prev) => {
                       const next = {
@@ -1039,10 +1040,10 @@ const GeneratorPage = () => {
                     isLoading={generatePaletteMutation.isPending}
                     onVariationClick={(key, step) => {
                       setActiveTab('adjust');
-                      const targetId = (step === 'dark' || step === 'darker')
+                      const baseId = (step === 'dark' || step === 'darker')
                         ? `luminance-${key}-shades`
                         : `luminance-${key}`;
-                      scrollAdjustTo(targetId);
+                      scrollAdjustTo(`d-${baseId}`);
                     }}
                   />
                   {/* Theme Variations removed */}
@@ -1094,10 +1095,10 @@ const GeneratorPage = () => {
                 isLoading={generatePaletteMutation.isPending}
                 onVariationClick={(key, step) => {
                   setActiveTab('adjust');
-                  const targetId = (step === 'dark' || step === 'darker')
+                  const baseId = (step === 'dark' || step === 'darker')
                     ? `luminance-${key}-shades`
                     : `luminance-${key}`;
-                  scrollAdjustTo(targetId);
+                  scrollAdjustTo(`d-${baseId}`);
                 }}
               />
             </div>
@@ -1402,6 +1403,7 @@ const GeneratorPage = () => {
                 <LuminanceTestStrips
                   palette={paletteWithVariations}
                   selections={selections}
+                  anchorPrefix="d-"
                   onSelectTintIndex={(colorKey, kind, index) =>
                     setSelections((prev) => ({
                       ...prev,

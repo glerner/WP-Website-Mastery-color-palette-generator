@@ -377,11 +377,13 @@ export function LuminanceTestStrips({
   selections,
   onSelectTintIndex,
   onSelectShadeY,
+  anchorPrefix = '',
 }: {
   palette: PaletteWithVariations;
   selections: Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>;
   onSelectTintIndex: (colorKey: ColorType, kind: 'lighter' | 'light', index: number) => void;
   onSelectShadeY: (colorKey: ColorType, kind: 'darker' | 'dark', y: number) => void;
+  anchorPrefix?: string;
 }) {
   return (
     <section className={styles.testStripsSection}>
@@ -391,7 +393,7 @@ export function LuminanceTestStrips({
       </div>
 
       <div className={styles.rows}>
-        <div id="luminance-primary" />
+        <div id={`${anchorPrefix}luminance-primary`} />
         <Row
           name="Primary"
           baseHex={palette.primary.hex}
@@ -400,7 +402,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.primary?.lightIndex}
           onSelect={onSelectTintIndex}
         />
-        <div id="luminance-primary-shades" />
+        <div id={`${anchorPrefix}luminance-primary-shades`} />
         <RowShades
           name="Primary"
           baseHex={palette.primary.hex}
@@ -409,7 +411,7 @@ export function LuminanceTestStrips({
           selectedDarkY={selections.primary?.darkY}
           onSelect={onSelectShadeY}
         />
-        <div id="luminance-secondary" />
+        <div id={`${anchorPrefix}luminance-secondary`} />
         <Row
           name="Secondary"
           baseHex={palette.secondary.hex}
@@ -418,7 +420,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.secondary?.lightIndex}
           onSelect={onSelectTintIndex}
         />
-        <div id="luminance-secondary-shades" />
+        <div id={`${anchorPrefix}luminance-secondary-shades`} />
         <RowShades
           name="Secondary"
           baseHex={palette.secondary.hex}
@@ -427,7 +429,7 @@ export function LuminanceTestStrips({
           selectedDarkY={selections.secondary?.darkY}
           onSelect={onSelectShadeY}
         />
-        <div id="luminance-tertiary" />
+        <div id={`${anchorPrefix}luminance-tertiary`} />
         <Row
           name="Tertiary"
           baseHex={palette.tertiary.hex}
@@ -436,7 +438,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.tertiary?.lightIndex}
           onSelect={onSelectTintIndex}
         />
-        <div id="luminance-tertiary-shades" />
+        <div id={`${anchorPrefix}luminance-tertiary-shades`} />
         <RowShades
           name="Tertiary"
           baseHex={palette.tertiary.hex}
@@ -445,7 +447,7 @@ export function LuminanceTestStrips({
           selectedDarkY={selections.tertiary?.darkY}
           onSelect={onSelectShadeY}
         />
-        <div id="luminance-accent" />
+        <div id={`${anchorPrefix}luminance-accent`} />
         <Row
           name="Accent"
           baseHex={palette.accent.hex}
@@ -454,7 +456,7 @@ export function LuminanceTestStrips({
           selectedLightIndex={selections.accent?.lightIndex}
           onSelect={onSelectTintIndex}
         />
-        <div id="luminance-accent-shades" />
+        <div id={`${anchorPrefix}luminance-accent-shades`} />
         <RowShades
           name="Accent"
           baseHex={palette.accent.hex}

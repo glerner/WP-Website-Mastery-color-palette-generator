@@ -152,6 +152,8 @@
   overscroll-behavior: contain; /* prevent scroll chaining */
   touch-action: pan-y; /* enable drag scroll vertically */
   scrollbar-gutter: stable;
+  /* DEBUG: visually indicate the mobile tab container */
+  background-color: crimson !important;
 }
 
 /* Desktop tabs column styles */
