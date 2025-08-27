@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input } from './Input';
 import styles from './ColorInput.module.css';
 
-interface ColorInputProps {
+type DivProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'>;
+
+interface ColorInputProps extends DivProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  /** Optional trailing element rendered inside the wrapper after inputs (e.g., a label) */
+  trailing?: React.ReactNode;
 }
 
-export const ColorInput = ({ value, onChange, className }: ColorInputProps) => {
+export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }: ColorInputProps) => {
   const [internalValue, setInternalValue] = useState(value);
   const colorPickerRef = useRef<HTMLInputElement>(null);
 
@@ -34,8 +38,11 @@ export const ColorInput = ({ value, onChange, className }: ColorInputProps) => {
     colorPickerRef.current?.click();
   };
 
+  // Extract ARIA and onBlur intended for the actual control (from FormControl Slot)
+  const { ['aria-invalid']: ariaInvalid, ['aria-describedby']: ariaDescribedBy, onBlur, ...divProps } = rest as any;
+
   return (
-    <div className={`${styles.wrapper} ${className || ''}`}>
+    <div {...divProps} className={`${styles.wrapper} ${className || ''}`}>
       <div
         className={styles.colorSwatch}
         style={{ backgroundColor: internalValue }}
@@ -50,11 +57,16 @@ export const ColorInput = ({ value, onChange, className }: ColorInputProps) => {
       />
       <Input
         type="text"
+        id={id}
         value={internalValue}
         onChange={handleTextChange}
+        onBlur={onBlur}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         className={styles.hexInput}
         maxLength={7}
       />
+      {trailing}
     </div>
   );
 };

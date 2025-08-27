@@ -29,4 +29,11 @@
 .hexInput {
   font-family: var(--font-family-monospace);
   text-transform: uppercase;
+  width: 7em;
+  min-width: 7em;
+}
+
+/* Compact width for small screens: 7em to fit a hex color like #FFFFFF */
+@media (max-width: 480px) {
+  /* Removed the styles for .hexInput here */
 }

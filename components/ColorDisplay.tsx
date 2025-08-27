@@ -206,11 +206,6 @@ export const ColorDisplay = ({ palette, isLoading, onVariationClick }: ColorDisp
   return (
     <section className={styles.section}>
       <h2 className={`${styles.sectionTitle} cf-font-600`}>Color Palette</h2>
-      <p className={styles.sectionInstructions}>
-        Click a color to adjust its tints and shades. Scroll down to see Example Components.
-        All colors are optimized for excellent contrast with near-white or near-black text.
-        The export will include multiple WordPress Theme Variations that swap which colors are used for headings, links, menus, and more.
-      </p>
       <div className={styles.paletteGrid}>
         {isLoading ? (
           <>

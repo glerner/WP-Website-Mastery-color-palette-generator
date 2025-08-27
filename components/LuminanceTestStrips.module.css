@@ -54,6 +54,8 @@
 .rowTitle {
   font-size: var(--cf-text-m);
   margin-bottom: var(--spacing-2);
+  /* Ensure smooth-scroll to headings leaves them visible below sticky headers */
+  scroll-margin-top: 16px;
 }
 
 .warningTitle {
@@ -98,7 +100,8 @@
 }
 
 .swatchColor {
-  min-height: clamp(72px, 12vh, 128px);
+  /* Remove fixed/clamped min-height so content defines height for compact UI */
+  /* min-height: clamp(72px, 12vh, 128px); */
   padding: var(--cf-space-3xs) var(--cf-space-2xs);
   display: flex;
   flex-direction: column;
@@ -154,4 +157,18 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--cf-space-4xs);
+}
+
+/* On ultra-small screens, hide the HSL line to reduce vertical height */
+@media (max-width: 480px) {
+  .metaLine {
+    display: none;
+  }
+}
+
+/* On mobile widths, increase scroll margin to clear the sticky mobile tabs header */
+@media (max-width: 1024px) {
+  .rowTitle {
+    scroll-margin-top: 56px;
+  }
 }

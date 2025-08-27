@@ -58,9 +58,10 @@ type RowProps = {
   selectedLighterIndex?: number;
   selectedLightIndex?: number;
   onSelect: (colorKey: ColorType, kind: 'lighter' | 'light', index: number) => void;
+  anchorId?: string;
 };
 
-function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex, onSelect }: RowProps) {
+function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex, onSelect, anchorId }: RowProps) {
   const baseRgb = hexToRgb(baseHex);
   const filterForBlackTextAAA = React.useCallback((ys: number[]) => {
     return ys
@@ -156,7 +157,7 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
 
   return (
     <div>
-      <div className={`${styles.rowTitle} cf-font-600`}>
+      <div id={anchorId} className={`${styles.rowTitle} cf-font-600`}>
         {name}: Y-gap (white→lighter): {lighterYSelected != null ? (1 - lighterYSelected).toFixed(3) : '-'} (min: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})
       </div>
       <div className={styles.stripGrid}>
@@ -226,9 +227,10 @@ type RowShadesProps = {
   selectedDarkerY?: number; // we will still honor both selections mapping into same 10-strip
   selectedDarkY?: number;
   onSelect: (colorKey: ColorType, kind: 'darker' | 'dark', y: number) => void;
+  anchorId?: string;
 };
 
-function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, onSelect }: RowShadesProps) {
+function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, onSelect, anchorId }: RowShadesProps) {
   const baseRgb = hexToRgb(baseHex);
   const filterForWhiteTextAAA = React.useCallback((ys: number[]) => {
     return ys
@@ -305,7 +307,7 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
 
   return (
     <div>
-      <div className={`${styles.rowTitle} cf-font-600`}>
+      <div id={anchorId} className={`${styles.rowTitle} cf-font-600`}>
         {name}: Y-gap (black→darker): {selectedDarkerY != null ? (selectedDarkerY - 0).toFixed(3) : '-'} (min: {HARD_MIN_SHADE_Y_GAP.toFixed(3)})
       </div>
       <div className={styles.stripGrid}>
@@ -393,7 +395,6 @@ export function LuminanceTestStrips({
       </div>
 
       <div className={styles.rows}>
-        <div id={`${anchorPrefix}luminance-primary`} />
         <Row
           name="Primary"
           baseHex={palette.primary.hex}
@@ -401,8 +402,8 @@ export function LuminanceTestStrips({
           selectedLighterIndex={selections.primary?.lighterIndex}
           selectedLightIndex={selections.primary?.lightIndex}
           onSelect={onSelectTintIndex}
+          anchorId={`${anchorPrefix}luminance-primary`}
         />
-        <div id={`${anchorPrefix}luminance-primary-shades`} />
         <RowShades
           name="Primary"
           baseHex={palette.primary.hex}
@@ -410,8 +411,8 @@ export function LuminanceTestStrips({
           selectedDarkerY={selections.primary?.darkerY}
           selectedDarkY={selections.primary?.darkY}
           onSelect={onSelectShadeY}
+          anchorId={`${anchorPrefix}luminance-primary-shades`}
         />
-        <div id={`${anchorPrefix}luminance-secondary`} />
         <Row
           name="Secondary"
           baseHex={palette.secondary.hex}
@@ -419,8 +420,8 @@ export function LuminanceTestStrips({
           selectedLighterIndex={selections.secondary?.lighterIndex}
           selectedLightIndex={selections.secondary?.lightIndex}
           onSelect={onSelectTintIndex}
+          anchorId={`${anchorPrefix}luminance-secondary`}
         />
-        <div id={`${anchorPrefix}luminance-secondary-shades`} />
         <RowShades
           name="Secondary"
           baseHex={palette.secondary.hex}
@@ -428,8 +429,8 @@ export function LuminanceTestStrips({
           selectedDarkerY={selections.secondary?.darkerY}
           selectedDarkY={selections.secondary?.darkY}
           onSelect={onSelectShadeY}
+          anchorId={`${anchorPrefix}luminance-secondary-shades`}
         />
-        <div id={`${anchorPrefix}luminance-tertiary`} />
         <Row
           name="Tertiary"
           baseHex={palette.tertiary.hex}
@@ -437,8 +438,8 @@ export function LuminanceTestStrips({
           selectedLighterIndex={selections.tertiary?.lighterIndex}
           selectedLightIndex={selections.tertiary?.lightIndex}
           onSelect={onSelectTintIndex}
+          anchorId={`${anchorPrefix}luminance-tertiary`}
         />
-        <div id={`${anchorPrefix}luminance-tertiary-shades`} />
         <RowShades
           name="Tertiary"
           baseHex={palette.tertiary.hex}
@@ -446,8 +447,8 @@ export function LuminanceTestStrips({
           selectedDarkerY={selections.tertiary?.darkerY}
           selectedDarkY={selections.tertiary?.darkY}
           onSelect={onSelectShadeY}
+          anchorId={`${anchorPrefix}luminance-tertiary-shades`}
         />
-        <div id={`${anchorPrefix}luminance-accent`} />
         <Row
           name="Accent"
           baseHex={palette.accent.hex}
@@ -455,8 +456,8 @@ export function LuminanceTestStrips({
           selectedLighterIndex={selections.accent?.lighterIndex}
           selectedLightIndex={selections.accent?.lightIndex}
           onSelect={onSelectTintIndex}
+          anchorId={`${anchorPrefix}luminance-accent`}
         />
-        <div id={`${anchorPrefix}luminance-accent-shades`} />
         <RowShades
           name="Accent"
           baseHex={palette.accent.hex}
@@ -464,6 +465,7 @@ export function LuminanceTestStrips({
           selectedDarkerY={selections.accent?.darkerY}
           selectedDarkY={selections.accent?.darkY}
           onSelect={onSelectShadeY}
+          anchorId={`${anchorPrefix}luminance-accent-shades`}
         />
       </div>
     </section>

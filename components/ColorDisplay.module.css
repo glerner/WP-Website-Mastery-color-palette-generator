@@ -89,8 +89,8 @@
   gap: var(--spacing-2);
   width: 100%;
   box-sizing: border-box;
-  align-items: stretch; /* make all items in a row equal height */
-  grid-auto-rows: 1fr;  /* equalize row heights */
+  align-items: start; /* let items size to their content */
+  grid-auto-rows: auto; /* rows height based on tallest item naturally */
 }
 
 .variationBlock {
@@ -104,6 +104,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
+  align-self: flex-end; /* bottom-align card in its grid cell so rows look even when names wrap */
 }
 
 .variationHeaderBar {
@@ -130,7 +131,7 @@
   justify-content: flex-start;
   position: relative;
   z-index: 2;
-  min-height: 2.5rem;
+  min-height: 0; /* content-based height */
 }
 
 @media (max-width: 480px) {
@@ -156,7 +157,7 @@
     padding: var(--spacing-2);
   }
   .variationContent {
-    min-height: 3rem;
+    min-height: 0; /* content-based height on mobile */
   }
 }
 
@@ -200,6 +201,13 @@
   font-family: var(--font-family-monospace);
   /* inherit computed contrast color from parent */
   color: inherit;
+}
+
+/* Mobile: hide HSL codes to simplify UI */
+@media (max-width: 1023px) {
+  .variationHsl {
+    display: none;
+  }
 }
 
 .variationContrast {
