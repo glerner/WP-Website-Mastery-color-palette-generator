@@ -236,6 +236,13 @@
   margin-bottom: 1rem;
 }
 
+/* Standard section heading for tab contents */
+.sectionTitle {
+  font-size: var(--cf-text-xl);
+  color: var(--foreground);
+  margin-bottom: var(--spacing-6);
+}
+
 .submitButton {
   margin-top: var(--spacing-4);
   width: 100%;
@@ -319,7 +326,7 @@
   border-top-style: solid;
   border-top-width: 6px;
   width: 75%;
-  margin: var(--spacing-2) 0;
+  margin: var(--cf-space-s) 0 var(--cf-space-s) var(--cf-space-4xl);
 }
 
 /* Subtle notice banner used in AI tab */

@@ -21,7 +21,7 @@ import LightDarkPreview from '../components/LightDarkPreview';
 import { generateThemeJson } from '../helpers/themeJson';
 import { generateCssClasses, generateFilenameSuffix } from '../helpers/cssGenerator';
 import { Palette, ColorType, SemanticColorType, PaletteWithVariations } from '../helpers/types';
-import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio, matchBandFromPrimaryByS } from '../helpers/colorUtils';
+import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio, matchBandFromPrimaryByS, luminance } from '../helpers/colorUtils';
 import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP, TARGET_LUM_DARK } from '../helpers/config';
 import { LuminanceTestStrips } from '../components/LuminanceTestStrips';
 
@@ -133,7 +133,7 @@ const initialPalette: Palette = {
   tertiary: { name: 'Tertiary', hex: '#059669' },
   accent: { name: 'Accent', hex: '#db2777' },
   error: { name: 'Error', hex: '#c53030' },
-  warning: { name: 'Warning', hex: '#d69e2e' },
+  warning: { name: 'Warning', hex: '#fff700' },
   success: { name: 'Success', hex: '#38a169' },
 };
 
@@ -451,12 +451,18 @@ const GeneratorPage = () => {
     (Object.keys(baseWithSemantic) as (ColorType | SemanticColorType)[]).forEach((key) => {
       const color = baseWithSemantic[key as keyof Palette];
       const sel = selections[key as ColorType] || {};
+      // Compute base luminance for potential semantic pinning
+      const { r: br, g: bg, b: bb } = hexToRgb(color.hex);
+      const baseY = luminance(br, bg, bb);
+      const isError = key === 'error';
+      const isSuccess = key === 'success';
+      const isWarning = key === 'warning';
       fullPalette[key] = {
         ...color,
         variations: generateShades(color.hex, color.name, {
           targetLighterY: resolveTintYFromIndex(color.hex, 'lighter', sel.lighterIndex),
-          targetLightY: resolveTintYFromIndex(color.hex, 'light', sel.lightIndex),
-          targetDarkY: sel.darkY,
+          targetLightY: isWarning ? baseY : resolveTintYFromIndex(color.hex, 'light', sel.lightIndex),
+          targetDarkY: (isError || isSuccess) ? baseY : sel.darkY,
           targetDarkerY: sel.darkerY,
         }),
       };
@@ -484,13 +490,24 @@ const GeneratorPage = () => {
   const handleMatchSemanticsToPrimary = React.useCallback(() => {
     try {
       const primaryDarkRgb = getPrimaryBandRgb('dark');
-      const H_ERROR = 8;    // red-ish
-      const H_WARNING = 48; // amber/yellow
-      const H_SUCCESS = 145; // green
+      const primaryLightRgb = getPrimaryBandRgb('light');
+      // Derive hues from current Manual values (fallback to palette values)
+      const pickHex = (manual?: string, fallback?: string) =>
+        (manual && /^#[0-9a-f]{6}$/i.test(manual) ? manual : fallback) || '#000000';
+      const errHex = pickHex(manualForm.values.error, palette.error.hex);
+      const warnHex = pickHex(manualForm.values.warning, palette.warning.hex);
+      const succHex = pickHex(manualForm.values.success, palette.success.hex);
+      const { h: ERR_H } = rgbToHslNorm(...Object.values(hexToRgb(errHex)) as [number, number, number]);
+      const { h: WARN_H } = rgbToHslNorm(...Object.values(hexToRgb(warnHex)) as [number, number, number]);
+      const { h: SUCC_H } = rgbToHslNorm(...Object.values(hexToRgb(succHex)) as [number, number, number]);
 
-      const err = matchBandFromPrimaryByS(primaryDarkRgb, H_ERROR, TARGET_LUM_DARK);
-      const warn = matchBandFromPrimaryByS(primaryDarkRgb, H_WARNING, TARGET_LUM_DARK);
-      const succ = matchBandFromPrimaryByS(primaryDarkRgb, H_SUCCESS, TARGET_LUM_DARK);
+      // Derive target Y dynamically
+      const targetDarkY = luminance(primaryDarkRgb.r, primaryDarkRgb.g, primaryDarkRgb.b);
+      const targetLightY = luminance(primaryLightRgb.r, primaryLightRgb.g, primaryLightRgb.b);
+
+      const err = matchBandFromPrimaryByS(primaryDarkRgb, ERR_H, targetDarkY);
+      const warn = matchBandFromPrimaryByS(primaryDarkRgb, WARN_H, targetLightY);
+      const succ = matchBandFromPrimaryByS(primaryDarkRgb, SUCC_H, targetDarkY);
 
       const nextValues = {
         ...manualForm.values,
@@ -505,12 +522,12 @@ const GeneratorPage = () => {
         warning: { ...prev.warning, hex: nextValues.warning! },
         success: { ...prev.success, hex: nextValues.success! },
       }));
-      toast.success('Matched Error/Warning/Success to Primary (dark band)');
+      toast.success('Matched Error/Warning/Success to Primary (current dark band)');
     } catch (e) {
       console.error('Failed to match semantic colors:', e);
       toast.error('Failed to match semantic colors');
     }
-  }, [getPrimaryBandRgb, manualForm, setPalette]);
+  }, [getPrimaryBandRgb, manualForm, setPalette, palette.error.hex, palette.warning.hex, palette.success.hex]);
 
   const themeVariations = useMemo(() => {
     return generateThemeVariations(paletteWithVariations);
@@ -899,6 +916,7 @@ const GeneratorPage = () => {
                 </TabsContent>
                 {/* Palette Tab (desktop) */}
                 <TabsContent value="palette" className={styles.tabContent}>
+                  <h2 className={styles.sectionTitle}>Palette</h2>
                   <div className={styles.previewContent}>
                     <ColorDisplay
                       palette={paletteWithVariations}
@@ -957,6 +975,7 @@ const GeneratorPage = () => {
                                     </div>
                                   ))}
                                 </div>
+
                               </div>
                             )}
                           </div>
@@ -977,7 +996,12 @@ const GeneratorPage = () => {
                         }}
                       />
                     </div>
-
+                    <hr
+                      className={styles.tertiaryDivider}
+                      style={{
+                        borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                      }}
+                    />
                     {/* Details appear inline under the explanation (left column) */}
 
                     {/* Theme Name block */}
@@ -1060,7 +1084,14 @@ const GeneratorPage = () => {
                             <ColorInput
                               value={manualForm.values[key]}
                               onChange={(hex) => handleManualColorChange(key as ColorType | SemanticColorType, hex)}
-                              trailing={<FormLabel>{palette[key].name}</FormLabel>}
+                              trailing={
+                                <FormLabel>
+                                  {palette[key].name}
+                                  {(['error','warning','success'] as Array<ColorType | SemanticColorType>).includes(key)
+                                    ? ` - Default ${initialPalette[key as keyof Palette].hex}`
+                                    : ''}
+                                </FormLabel>
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -1204,7 +1235,7 @@ const GeneratorPage = () => {
               {/* Instructions Tab (desktop) */}
               <TabsContent value="instructions" className={styles.tabContent}>
                 <div className={styles.instructionsContent}>
-                  <h3>How to use</h3>
+                  <h2 className={styles.sectionTitle}>Instructions</h2>
                   <ul>
                     <li>Use <strong>AI</strong> or <strong>Manual</strong> to set your basic colors. These will be adjusted for proper text color contrast.</li>
                     <li>Open the <strong>Palette</strong> tab to review variations. Click any swatch to jump to its <strong>Adjust</strong> section.</li>
@@ -1217,6 +1248,7 @@ const GeneratorPage = () => {
 
               {/* AI Tab */}
               <TabsContent value="ai" className={styles.tabContent}>
+                <h2 className={styles.sectionTitle}>Use AI to pick starting colors for your Palette</h2>
                 <p className={styles.aiNotice}>AI palette generation is coming soon.</p>
                 <Form {...aiForm}>
                   <form onSubmit={aiForm.handleSubmit(handleAiSubmit)} className={styles.aiForm}>
@@ -1354,11 +1386,12 @@ const GeneratorPage = () => {
               </TabsContent>
               {/* Manual Tab */}
               <TabsContent value="manual" className={styles.tabContent}>
+                <h2 className={styles.sectionTitle}>Manual Settings for your Palette</h2>
                 <Form {...manualForm}>
                   {/* Explanation + Import row */}
                   <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                     <div>
-                      <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import, from your child theme's existing theme.json, the schema/version to ensure exported files match your base theme.</p>
+                      <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import the schema and version from your child theme's theme.json,  to ensure exported files match it.</p>
                       <Button variant="outline" wrap onClick={() => fileInputRef.current?.click()} style={{ marginTop: 'var(--spacing-2)' }}>Import theme.json</Button>
                       {importDetails && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
@@ -1401,6 +1434,12 @@ const GeneratorPage = () => {
                         </div>
                       )}
                     </div>
+                    <hr
+                                className={styles.tertiaryDivider}
+                                style={{
+                                  borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                                }}
+                              />
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -1415,7 +1454,7 @@ const GeneratorPage = () => {
                   </div>
 
                   {/* Theme Name block */}
-                  
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                     <label className={styles.formLabel} style={{ margin: 0 }}>Theme Name</label>
                     <Input
@@ -1465,15 +1504,21 @@ const GeneratorPage = () => {
                     }}
                   />
                   {/* Match semantic colors to Primary (desktop Manual tab) */}
-                  
+
                   <p className={styles.formHelp} style={{ marginTop: '0', marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
-                    Adjusts the saturation and brightness (luminance) if the Error, Warning, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Warning). See the Palette page for the "adusted for contrast" versions.
+                    Adjusts the saturation and brightness (luminance) of the Error, Warning, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Warning). <br></br>See the Palette page for the "adusted for contrast" versions.
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
                     <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
-                      Match Primary → Error/Warning/Success
+                      Match Error/Warning/Success to Primary
                     </Button>
                   </div>
+                  <hr
+                    className={styles.tertiaryDivider}
+                    style={{
+                      borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                    }}
+                  />
                   {/* Instruction under Match Primary (desktop only) */}
                   <p className={styles.formHelp} style={{ marginTop: '0', marginBottom: 'var(--spacing-3)', fontSize: 'var(--cf-text-s)' }}>
                     Enter hexadecimal color numbers, or click the color swatch to enter HSL, RGB, or Hex (format selector on the bottom).
@@ -1511,7 +1556,14 @@ const GeneratorPage = () => {
                           <ColorInput
                             value={manualForm.values[key]}
                             onChange={(hex) => handleManualColorChange(key as ColorType | SemanticColorType, hex)}
-                            trailing={<FormLabel>{palette[key].name}</FormLabel>}
+                            trailing={
+                              <FormLabel>
+                                {palette[key].name}
+                                {(['error','warning','success'] as Array<ColorType | SemanticColorType>).includes(key)
+                                  ? ` - Default ${initialPalette[key as keyof Palette].hex}`
+                                  : ''}
+                              </FormLabel>
+                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -1522,7 +1574,8 @@ const GeneratorPage = () => {
               </TabsContent>
               {/* Adjustments Tab */}
               <TabsContent value="adjust" className={styles.tabContent}>
-                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-end', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
+                <h2 className={styles.sectionTitle}>Adjust the Tints and Shades</h2>
+                <div style={{ display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'flex-start', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                   <Button
                     variant="outline"
                     wrap
@@ -1535,7 +1588,7 @@ const GeneratorPage = () => {
                     Save selections
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => setSelections({})}
                   >
                     Clear selections
@@ -1570,7 +1623,7 @@ const GeneratorPage = () => {
               {/* Export Tab */}
               <TabsContent value="export" className={styles.tabContent}>
                 <div className={styles.exportSection}>
-                  <h3 className={styles.exportTitle}>Export</h3>
+                  <h2 className={styles.sectionTitle}>Export</h2>
                   <p className={styles.exportDescription}>
                     Download a ZIP containing the base palette and all theme variations. Each folder includes a WordPress theme.json and a CSS file with contrast-optimized utilities.
                   </p>
@@ -1587,6 +1640,7 @@ const GeneratorPage = () => {
               </TabsContent>
               {/* Demo Tab */}
               <TabsContent value="demo" className={styles.tabContent}>
+                <h2 className={styles.sectionTitle}>Demo</h2>
                 <LightDarkPreview
                   palette={paletteWithVariations}
                   textOnLight={textOnLight}

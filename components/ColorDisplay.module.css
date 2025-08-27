@@ -232,6 +232,11 @@
   letter-spacing: 0.01em;
 }
 
+/* In the contrast badge, allow the label to wrap to the next line so content isn't clipped */
+.contrastBadge .metaFixed {
+  white-space: normal;
+}
+
 /* Small inline tag to indicate overlay applied */
 .overlayTag {
   display: inline-flex;

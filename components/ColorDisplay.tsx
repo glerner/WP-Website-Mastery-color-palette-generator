@@ -71,8 +71,12 @@ const VariationBlock = ({ variation, onClick }: { variation: any; onClick?: () =
         )}
         {/* In-swatch contrast badge with aligned fixed-width meta spans (no wrap) */}
         <div className={styles.contrastBadge} style={{ color: contrastSolution.textColor }}>
-          <span className={styles.metaFixed}>{level} {ratio.toFixed(2)}</span>
-          <span className={styles.metaFixed}>Y={y.toFixed(3)}</span>
+          <span className={styles.metaFixed}>
+            <span>{level}</span>
+            <span> </span>
+            <span>{ratio.toFixed(2)}</span>
+            <span> Y={y.toFixed(3)}</span>
+          </span>
         </div>
         <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
           <div className={styles.variationCodesContainer}>
