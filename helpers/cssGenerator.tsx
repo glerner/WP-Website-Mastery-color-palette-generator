@@ -2,7 +2,14 @@ import { PaletteWithVariations } from './types';
 import { ensureAAAContrast } from './ensureAAAContrast';
 import { NEAR_WHITE_HEX, NEAR_BLACK_HEX } from './config';
 
-export const generateCssClasses = (palette: PaletteWithVariations): string => {
+type Band = 'lighter' | 'light' | 'dark' | 'darker';
+type SemanticPerScheme = { light: Band; dark: Band };
+type SemanticBandSelection = { error: SemanticPerScheme; warning: SemanticPerScheme; success: SemanticPerScheme };
+
+export const generateCssClasses = (
+  palette: PaletteWithVariations,
+  semanticBandSelection?: SemanticBandSelection
+): string => {
   let css = '/* ';
   css += 'NOTE: For developer use only. WordPress does not load these generated CSS files by default.\n';
   css += "  Only your (child) theme's main style.css is used by WordPress automatically.\n";
@@ -43,7 +50,7 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
       // No on-* variables exported; use utilities to set readable text color per use site
     });
   });
-  // Semantic: export exactly ONE preset var per semantic, choosing light/dark
+  // Semantic: export exactly ONE preset var per semantic, choosing based on provided selection when available
   const pickSemanticHex = (ct: 'error' | 'warning' | 'success') => {
     const v = (palette as any)[ct].variations as { name: string; hex: string }[];
     // Normalize keys to step-only (strip leading family if present)
@@ -54,12 +61,18 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
         return [step, x.hex];
       })
     ) as Record<string, string>;
+    const sel = semanticBandSelection?.[ct];
+    if (sel) {
+      // theme.json style single var can't be conditional; pick dark for error/success, light for warning by convention
+      const preferred: Band = ct === 'warning' ? sel.light : sel.dark;
+      const picked = byStep[preferred];
+      if (picked) return picked;
+    }
+    // Fallback heuristics when selection missing
     if (ct === 'warning') {
-      // Prefer light, then lighter; if neither exists, fall back to base hex; then darks
       const baseHex = (palette as any)[ct].hex as string | undefined;
       return byStep['light'] ?? byStep['lighter'] ?? baseHex ?? byStep['dark'] ?? byStep['darker'] ?? null;
     }
-    // error/success prefer dark; fallback to light; no base fallback
     return byStep['dark'] ?? byStep['darker'] ?? byStep['light'] ?? byStep['lighter'] ?? null;
   };
   // For light/dark output, compute separate semantic choices
@@ -73,14 +86,9 @@ export const generateCssClasses = (palette: PaletteWithVariations): string => {
       })
     ) as Record<string, string>;
     const baseHex = (palette as any)[ct].hex as string | undefined;
-    const lightChoice =
-      ct === 'warning'
-        ? byStep['light'] ?? byStep['lighter'] ?? baseHex ?? byStep['dark'] ?? byStep['darker'] ?? null
-        : byStep['light'] ?? byStep['lighter'] ?? baseHex ?? null;
-    const darkChoice =
-      ct === 'warning'
-        ? byStep['dark'] ?? byStep['darker'] ?? baseHex ?? byStep['light'] ?? byStep['lighter'] ?? null
-        : byStep['dark'] ?? byStep['darker'] ?? baseHex ?? null;
+    const sel = semanticBandSelection?.[ct];
+    const lightChoice = sel?.light ? (byStep[sel.light] ?? null) : (byStep['light'] ?? byStep['lighter'] ?? baseHex ?? null);
+    const darkChoice = sel?.dark ? (byStep[sel.dark] ?? null) : (byStep['dark'] ?? byStep['darker'] ?? baseHex ?? null);
     return { lightChoice, darkChoice } as { lightChoice: string | null; darkChoice: string | null };
   };
   (['error', 'warning', 'success'] as const).forEach((ct) => {

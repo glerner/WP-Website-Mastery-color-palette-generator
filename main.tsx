@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import GeneratorPage from './pages/generator'
 import { GlobalContextProviders } from './components/_globalContextProviders'
 import { BrowserRouter } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 
 console.log('[floot] main.tsx booting')
 const rootEl = document.getElementById('root')!
@@ -40,7 +41,9 @@ createRoot(rootEl).render(
     <BrowserRouter>
       <GlobalContextProviders>
         <RootErrorBoundary>
-          <GeneratorPage />
+          <HelmetProvider>
+            <GeneratorPage />
+          </HelmetProvider>
         </RootErrorBoundary>
       </GlobalContextProviders>
     </BrowserRouter>

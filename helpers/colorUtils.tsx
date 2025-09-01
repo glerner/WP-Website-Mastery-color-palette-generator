@@ -503,10 +503,33 @@ export const generateShades = (
     const allAAA = ratios.every(r => r >= minContrast && r <= MAX_CAP);
     const allAA = ratios.every(r => r >= AA_SMALL_MIN);
     if (!allAAA) {
-      if (allAA) {
-        console.warn(`${colorName} ${label}: AAA contrast could not be achieved while keeping 2 distinct ${label}. Falling back to highest possible contrast ≥ AA.`);
-      } else {
-        console.warn(`${colorName} ${label}: Could not reach AA for small text at both levels; selected the highest achievable contrast while keeping them visually distinct.`);
+      const details = band.map((i) => {
+        const ratio = getContrastRatio(i.rgb, textRgb);
+        const level = ratio >= minContrast && ratio <= MAX_CAP ? 'AAA' : ratio >= AA_SMALL_MIN ? 'AA' : 'FAIL';
+        return {
+          step: i.step,
+          hex: rgbToHex(i.rgb.r, i.rgb.g, i.rgb.b),
+          y: i.y.toFixed(3),
+          ratio,
+          level,
+        };
+      });
+      const msgAA = `${colorName} ${label}: AAA contrast could not be achieved while keeping 2 distinct ${label}. Falling back to highest possible contrast ≥ AA.`;
+      const msgFail = `${colorName} ${label}: Could not reach AA for small text at both levels; selected the highest achievable contrast while keeping them visually distinct.`;
+      console.warn(allAA ? msgAA : msgFail);
+      // Provide actionable diagnostics for debugging the exact colors
+      // Example: which steps, their hex, Y, and contrast vs. ${prefer} text
+      try {
+        // Group in dev consoles to reduce noise
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(`${colorName} ${label} diagnostics (text=${prefer})`);
+        // eslint-disable-next-line no-console
+        console.table(details);
+      } catch {
+        // eslint-disable-next-line no-console
+        console.info(`${colorName} ${label} diagnostics (text=${prefer}):`, details);
+      } finally {
+        try { console.groupEnd && console.groupEnd(); } catch {}
       }
     }
   };

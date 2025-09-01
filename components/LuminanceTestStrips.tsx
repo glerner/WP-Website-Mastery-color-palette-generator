@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styles from './LuminanceTestStrips.module.css';
-import { PaletteWithVariations, ColorType } from '../helpers/types';
+import { PaletteWithVariations, ColorType, SemanticColorType } from '../helpers/types';
 import { hexToRgb, rgbToHex, rgbToHslNorm, solveHslLightnessForY, luminance, getContrastRatio } from '../helpers/colorUtils';
 import { NEAR_WHITE_RGB, NEAR_BLACK_RGB, TINT_TARGET_COUNT, SHADE_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, DARKER_MIN_Y, DARKER_MAX_Y, DARK_OVERLAP_MIN_Y, DARK_MAX_Y, Y_TARGET_DECIMALS, Y_DISPLAY_DECIMALS, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, HARD_MIN_SHADE_Y_GAP, TARGET_LUM_LIGHTER, TARGET_LUM_LIGHT, TARGET_LUM_DARK, TARGET_LUM_DARKER, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_TINTS_FROM_WHITE, MIN_DELTA_LUM_SHADES, AAA_MIN, AA_SMALL_MIN, MAX_CONTRAST_TINTS, MAX_CONTRAST_SHADES } from '../helpers/config';
 
@@ -54,10 +54,10 @@ function findClosestIndex(values: number[], target: number) {
 type RowProps = {
   name: string;
   baseHex: string;
-  colorKey: ColorType;
+  colorKey: ColorType | SemanticColorType;
   selectedLighterIndex?: number;
   selectedLightIndex?: number;
-  onSelect: (colorKey: ColorType, kind: 'lighter' | 'light', index: number) => void;
+  onSelect: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', index: number) => void;
   anchorId?: string;
 };
 
@@ -223,10 +223,10 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
 type RowShadesProps = {
   name: string;
   baseHex: string;
-  colorKey: ColorType;
+  colorKey: ColorType | SemanticColorType;
   selectedDarkerY?: number; // we will still honor both selections mapping into same 10-strip
   selectedDarkY?: number;
-  onSelect: (colorKey: ColorType, kind: 'darker' | 'dark', y: number) => void;
+  onSelect: (colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', y: number) => void;
   anchorId?: string;
 };
 
@@ -382,15 +382,15 @@ export function LuminanceTestStrips({
   anchorPrefix = '',
 }: {
   palette: PaletteWithVariations;
-  selections: Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>;
-  onSelectTintIndex: (colorKey: ColorType, kind: 'lighter' | 'light', index: number) => void;
-  onSelectShadeY: (colorKey: ColorType, kind: 'darker' | 'dark', y: number) => void;
+  selections: Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>;
+  onSelectTintIndex: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', index: number) => void;
+  onSelectShadeY: (colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', y: number) => void;
   anchorPrefix?: string;
 }) {
   return (
     <section className={styles.testStripsSection}>
       <div className={styles.sectionHeader}>
-        <h2 className={`${styles.sectionTitle} cf-font-600`}>Luminance test strips</h2>
+        <h2 className={styles.sectionTitle}>Luminance test strips</h2>
         <div className={styles.sectionNote}>Each group: tint choices and shade choices (all have at least AAA contrast with black or white text). "Y values" are the luminance.</div>
       </div>
 
@@ -466,6 +466,60 @@ export function LuminanceTestStrips({
           selectedDarkY={selections.accent?.darkY}
           onSelect={onSelectShadeY}
           anchorId={`${anchorPrefix}luminance-accent-shades`}
+        />
+        <Row
+          name="Error"
+          baseHex={palette.error.hex}
+          colorKey="error"
+          selectedLighterIndex={selections.error?.lighterIndex}
+          selectedLightIndex={selections.error?.lightIndex}
+          onSelect={onSelectTintIndex}
+          anchorId={`${anchorPrefix}luminance-error`}
+        />
+        <RowShades
+          name="Error"
+          baseHex={palette.error.hex}
+          colorKey="error"
+          selectedDarkerY={selections.error?.darkerY}
+          selectedDarkY={selections.error?.darkY}
+          onSelect={onSelectShadeY}
+          anchorId={`${anchorPrefix}luminance-error-shades`}
+        />
+        <Row
+          name="Warning"
+          baseHex={palette.warning.hex}
+          colorKey="warning"
+          selectedLighterIndex={selections.warning?.lighterIndex}
+          selectedLightIndex={selections.warning?.lightIndex}
+          onSelect={onSelectTintIndex}
+          anchorId={`${anchorPrefix}luminance-warning`}
+        />
+        <RowShades
+          name="Warning"
+          baseHex={palette.warning.hex}
+          colorKey="warning"
+          selectedDarkerY={selections.warning?.darkerY}
+          selectedDarkY={selections.warning?.darkY}
+          onSelect={onSelectShadeY}
+          anchorId={`${anchorPrefix}luminance-warning-shades`}
+        />
+        <Row
+          name="Success"
+          baseHex={palette.success.hex}
+          colorKey="success"
+          selectedLighterIndex={selections.success?.lighterIndex}
+          selectedLightIndex={selections.success?.lightIndex}
+          onSelect={onSelectTintIndex}
+          anchorId={`${anchorPrefix}luminance-success`}
+        />
+        <RowShades
+          name="Success"
+          baseHex={palette.success.hex}
+          colorKey="success"
+          selectedDarkerY={selections.success?.darkerY}
+          selectedDarkY={selections.success?.darkY}
+          onSelect={onSelectShadeY}
+          anchorId={`${anchorPrefix}luminance-success-shades`}
         />
       </div>
     </section>

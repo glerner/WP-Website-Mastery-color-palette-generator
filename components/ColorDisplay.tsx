@@ -7,6 +7,10 @@ import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_WHITE_RGB, NEAR_BLACK_RGB, AAA_MIN
 import { hexToRgb, getContrastRatio, luminance } from '../helpers/colorUtils';
 import styles from './ColorDisplay.module.css';
 
+type Band = 'lighter' | 'light' | 'dark' | 'darker';
+type SemanticPerScheme = { light: Band; dark: Band };
+type SemanticBandSelection = { error: SemanticPerScheme; warning: SemanticPerScheme; success: SemanticPerScheme };
+
 interface ColorDisplayProps {
   palette: PaletteWithVariations;
   isLoading: boolean;
@@ -14,6 +18,7 @@ interface ColorDisplayProps {
     key: 'primary' | 'secondary' | 'tertiary' | 'accent',
     step: 'lighter' | 'light' | 'dark' | 'darker'
   ) => void;
+  semanticBandSelection?: SemanticBandSelection;
 }
 
 const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
@@ -206,7 +211,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-export const ColorDisplay = ({ palette, isLoading, onVariationClick }: ColorDisplayProps) => {
+export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBandSelection }: ColorDisplayProps) => {
   return (
     <section className={styles.section}>
       <h2 className={`${styles.sectionTitle} cf-font-600`}>Color Palette</h2>
@@ -254,9 +259,25 @@ export const ColorDisplay = ({ palette, isLoading, onVariationClick }: ColorDisp
           </>
         ) : (
           <>
-            <SemanticBlock color={palette.error} name="Error" step="dark" />
-            <SemanticBlock color={palette.warning} name="Warning" step="light" />
-            <SemanticBlock color={palette.success} name="Success" step="dark" />
+            {/* Show the selected Light and Dark bands for each semantic */}
+            {(() => {
+              const sel = {
+                error: { light: 'light' as Band, dark: 'dark' as Band },
+                warning: { light: 'light' as Band, dark: 'dark' as Band },
+                success: { light: 'light' as Band, dark: 'dark' as Band },
+                ...(semanticBandSelection || {}),
+              } as SemanticBandSelection;
+              return (
+                <>
+                  <SemanticBlock color={palette.error} name={`Error (Light)`} step={sel.error.light} />
+                  <SemanticBlock color={palette.error} name={`Error (Dark)`} step={sel.error.dark} />
+                  <SemanticBlock color={palette.warning} name={`Warning (Light)`} step={sel.warning.light} />
+                  <SemanticBlock color={palette.warning} name={`Warning (Dark)`} step={sel.warning.dark} />
+                  <SemanticBlock color={palette.success} name={`Success (Light)`} step={sel.success.light} />
+                  <SemanticBlock color={palette.success} name={`Success (Dark)`} step={sel.success.dark} />
+                </>
+              );
+            })()}
           </>
         )}
       </div>

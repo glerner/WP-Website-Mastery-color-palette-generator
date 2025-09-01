@@ -53,10 +53,15 @@ export const validateBaseContrast = (
 //   * base (#D6D2CE) and contrast (#1A1514) unless overridden by fossil.settings.color.palette
 //   * for primary/secondary/tertiary/accent: lighter, light, base, dark, darker
 //   * semantic colors: error, warning, success (single entries)
+type Band = 'lighter' | 'light' | 'dark' | 'darker';
+type SemanticPerScheme = { light: Band; dark: Band };
+type SemanticBandSelection = { error: SemanticPerScheme; warning: SemanticPerScheme; success: SemanticPerScheme };
+
 export const buildWpVariationJson = (
   palette: PaletteWithVariations,
   title: string,
-  themeConfig?: any
+  themeConfig?: any,
+  opts?: { semanticBandSelection?: SemanticBandSelection }
 ): string => {
   const schema = typeof themeConfig?.$schema === 'string' ? themeConfig.$schema : 'https://schemas.wp.org/trunk/theme.json';
   let version: number = 3;
@@ -131,10 +136,10 @@ export const buildWpVariationJson = (
   // Order: lighter(all), light(all), dark(all), darker(all)
   const familyOrder: Array<'primary' | 'secondary' | 'tertiary' | 'accent'> = ['primary','secondary','tertiary','accent'];
   const steps: Array<{ step: 'lighter'|'light'|'dark'|'darker'; labelSuffix: string }> = [
-    { step: 'lighter', labelSuffix: 'Lighter' },
-    { step: 'light', labelSuffix: 'Light' },
     { step: 'dark', labelSuffix: 'Dark' },
     { step: 'darker', labelSuffix: 'Darker' },
+    { step: 'light', labelSuffix: 'Light' },
+    { step: 'lighter', labelSuffix: 'Lighter' },
   ];
   const labels: Record<string, { full: string; short: string }> = {
     primary: { full: 'Primary', short: 'P' },
@@ -155,11 +160,27 @@ export const buildWpVariationJson = (
       }
     });
   });
-  // Semantic singles next
+  // Semantic singles next – respect selected bands when available
+  const pickSemantic = (ct: 'error' | 'warning' | 'success') => {
+    const vars = ((palette as any)[ct]?.variations || []) as { name: string; hex: string; step?: string }[];
+    const map = byName(vars);
+    const sel = opts?.semanticBandSelection?.[ct];
+    if (sel) {
+      // Single exported value cannot be conditional; use dark for error/success, light for warning
+      const preferred: Band = ct === 'warning' ? sel.light : sel.dark;
+      const fromSel = map[preferred];
+      if (fromSel) return fromSel;
+    }
+    // Fallback: prefer dark for error/success, light for warning, then others, then base hex
+    if (ct === 'warning') {
+      return map['light'] ?? map['lighter'] ?? (palette as any)[ct]?.hex ?? map['dark'] ?? map['darker'] ?? (palette as any)[ct]?.hex;
+    }
+    return map['dark'] ?? map['darker'] ?? map['light'] ?? map['lighter'] ?? (palette as any)[ct]?.hex;
+  };
   paletteEntries.push(
-    { slug: 'error', color: (palette as any).error?.hex, name: 'Error' },
-    { slug: 'warning', color: (palette as any).warning?.hex, name: 'Warning' },
-    { slug: 'success', color: (palette as any).success?.hex, name: 'Success' },
+    { slug: 'error', color: pickSemantic('error'), name: 'Error' },
+    { slug: 'warning', color: pickSemantic('warning'), name: 'Warning' },
+    { slug: 'success', color: pickSemantic('success'), name: 'Success' },
   );
   // Then text on dark (base) and text on light (contrast)
   paletteEntries.push(

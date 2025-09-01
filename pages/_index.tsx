@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '../components/Button';
 import { ArrowRight, Bot, Brush, Code } from 'lucide-react';
 import styles from './_index.module.css';

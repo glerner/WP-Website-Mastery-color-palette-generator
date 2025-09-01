@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import * as z from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
 import { Button } from '../components/Button';
@@ -140,12 +140,22 @@ const initialPalette: Palette = {
 const GeneratorPage = () => {
   const [palette, setPalette] = useState<Palette>(initialPalette);
   const [selections, setSelections] = useState<
-    Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
+    Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
   >({});
   const generatePaletteMutation = useGeneratePalette();
   const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo'>('ai');
   const [demoScheme, setDemoScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [themeName, setThemeName] = useState<string>('');
+  // Per-scheme selection of which band to export/use for semantic colors
+  type Band = 'lighter' | 'light' | 'dark' | 'darker';
+  type SemanticPerScheme = { light: Band; dark: Band };
+  type SemanticBandSelection = { error: SemanticPerScheme; warning: SemanticPerScheme; success: SemanticPerScheme };
+  const SEMANTIC_BAND_DEFAULTS: SemanticBandSelection = {
+    error: { light: 'light', dark: 'dark' },
+    warning: { light: 'light', dark: 'dark' },
+    success: { light: 'light', dark: 'dark' },
+  };
+  const [semanticBandSelection, setSemanticBandSelection] = useState<SemanticBandSelection>(SEMANTIC_BAND_DEFAULTS);
   const [themeConfig, setThemeConfig] = useState<any | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Details parsed from an imported theme.json (for display only)
@@ -180,8 +190,8 @@ const GeneratorPage = () => {
       if (raw) {
         const parsed = JSON.parse(raw);
         // If the saved object contains lighterY/lightY, preserve as-is for shades and drop tints (they'll init per component)
-        const migrated: Partial<Record<ColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>> = {};
-        (['primary', 'secondary', 'tertiary', 'accent'] as ColorType[]).forEach((k) => {
+        const migrated: Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>> = {};
+        (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[]).forEach((k) => {
           const v = parsed?.[k] || {};
           migrated[k] = {
             darkerY: v.darkerY,
@@ -236,6 +246,27 @@ const GeneratorPage = () => {
       success: palette.success.hex,
     },
   });
+
+  // Load/save semantic band selection
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('gl_semantic_band_selection');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // shallow validate keys/values
+        const bands: Band[] = ['lighter', 'light', 'dark', 'darker'];
+        const ok = (x: any): x is SemanticPerScheme => x && bands.includes(x.light) && bands.includes(x.dark);
+        if (parsed && ok(parsed.error) && ok(parsed.warning) && ok(parsed.success)) {
+          setSemanticBandSelection(parsed);
+        }
+      }
+    } catch { }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem('gl_semantic_band_selection', JSON.stringify(semanticBandSelection));
+    } catch { }
+  }, [semanticBandSelection]);
 
   // Import an existing theme.json to read schema/version and surface base/contrast colors for the user to copy
   const handleImportThemeJson = useCallback(async (file: File) => {
@@ -450,19 +481,13 @@ const GeneratorPage = () => {
     const fullPalette: Record<string, any> = {};
     (Object.keys(baseWithSemantic) as (ColorType | SemanticColorType)[]).forEach((key) => {
       const color = baseWithSemantic[key as keyof Palette];
-      const sel = selections[key as ColorType] || {};
-      // Compute base luminance for potential semantic pinning
-      const { r: br, g: bg, b: bb } = hexToRgb(color.hex);
-      const baseY = luminance(br, bg, bb);
-      const isError = key === 'error';
-      const isSuccess = key === 'success';
-      const isWarning = key === 'warning';
+      const sel = selections[key as ColorType | SemanticColorType] || {};
       fullPalette[key] = {
         ...color,
         variations: generateShades(color.hex, color.name, {
           targetLighterY: resolveTintYFromIndex(color.hex, 'lighter', sel.lighterIndex),
-          targetLightY: isWarning ? baseY : resolveTintYFromIndex(color.hex, 'light', sel.lightIndex),
-          targetDarkY: (isError || isSuccess) ? baseY : sel.darkY,
+          targetLightY: resolveTintYFromIndex(color.hex, 'light', sel.lightIndex),
+          targetDarkY: sel.darkY,
           targetDarkerY: sel.darkerY,
         }),
       };
@@ -531,7 +556,7 @@ const GeneratorPage = () => {
 
   const themeVariations = useMemo(() => {
     return generateThemeVariations(paletteWithVariations);
-  }, [paletteWithVariations]);
+  }, [paletteWithVariations, semanticBandSelection]);
 
   // Build a filename suffix using dark hexes for base colors
   const darkHexSuffix = useMemo(() => {
@@ -550,12 +575,17 @@ const GeneratorPage = () => {
     const safe = (name: string) => name.toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
     const prefix = themeName ? safe(themeName) : 'themes';
 
-    // Helper to map variation name to suffix
-    const suffixFor = (name: string) => {
-      const m = name.match(/Variant\s+([A-E])/i);
-      if (m) return `-${m[1].toLowerCase()}`;
-      // Original has no suffix
-      return '';
+    // Compute order abbreviation (p/s/t/a) for a palette relative to base
+    const orderAbbr = (base: PaletteWithVariations, pal: PaletteWithVariations) => {
+      const lettersByHex = new Map<string, string>([
+        [base.primary.hex.toLowerCase(), 'p'],
+        [base.secondary.hex.toLowerCase(), 's'],
+        [base.tertiary.hex.toLowerCase(), 't'],
+        [base.accent.hex.toLowerCase(), 'a'],
+      ]);
+      const src = (hex?: string) => lettersByHex.get(String(hex || '').toLowerCase()) || 'x';
+      const seq = [pal.primary.hex, pal.secondary.hex, pal.tertiary.hex, pal.accent.hex];
+      return seq.map((h) => src(h)).join('');
     };
 
     // Build effective themeConfig with textOnDark/textOnLight from Manual tab and validate
@@ -581,10 +611,11 @@ const GeneratorPage = () => {
 
     // Base (current palette) as flat files (WordPress style variation JSON v2)
     const baseTitle = themeName || 'Theme';
-    const baseTheme = buildWpVariationJson(paletteWithVariations, baseTitle, mergedThemeConfig);
-    const baseCss = generateCssClasses(paletteWithVariations);
-    const baseJsonName = `${prefix}.json`;
-    const baseCssName = `${prefix}.css`;
+    const baseTheme = buildWpVariationJson(paletteWithVariations, baseTitle, mergedThemeConfig, { semanticBandSelection });
+    const baseCss = generateCssClasses(paletteWithVariations, semanticBandSelection);
+    const baseAbbr = orderAbbr(paletteWithVariations, paletteWithVariations) || 'psta';
+    const baseJsonName = `${prefix}-${baseAbbr}.json`;
+    const baseCssName = `${prefix}-${baseAbbr}.css`;
     files[baseJsonName] = strToU8(baseTheme);
     files[baseCssName] = strToU8(baseCss);
 
@@ -596,29 +627,28 @@ const GeneratorPage = () => {
     readmeLines.push('This archive contains WordPress theme.json and CSS for the base palette and its variations.');
     readmeLines.push('');
     readmeLines.push('- Files:');
-    readmeLines.push(`  - ${baseJsonName} (base theme.json)`);
-    readmeLines.push(`  - ${baseCssName} (base CSS utilities for background/text, variables)`);
+    readmeLines.push(`  - ${baseJsonName} (base theme.json; order ${baseAbbr.toUpperCase()})`);
+    readmeLines.push(`  - ${baseCssName} (base CSS utilities; order ${baseAbbr.toUpperCase()})`);
 
     themeVariations.forEach((tv: any) => {
-      const sfx = suffixFor(tv.name);
-      // Skip creating duplicate of base when sfx === '' and tv.name === 'Original'?
-      // We'll only add variations where sfx is non-empty to avoid duplicates.
-      if (!sfx) return;
       const varTitle = `${baseTitle} (${tv.description})`;
+      const abbr = orderAbbr(paletteWithVariations, tv.palette);
+      // Avoid duplicate of base variant if abbreviation matches base
+      if (!abbr || abbr === baseAbbr) return;
       const themeJson = buildWpVariationJson(tv.palette, varTitle, mergedThemeConfig);
       const cssText = generateCssClasses(tv.palette);
-      const vJson = `${prefix}${sfx}.json`;
-      const vCss = `${prefix}${sfx}.css`;
+      const vJson = `${prefix}-${abbr}.json`;
+      const vCss = `${prefix}-${abbr}.css`;
       files[vJson] = strToU8(themeJson);
       files[vCss] = strToU8(cssText);
-      readmeLines.push(`  - ${vJson} (variation ${sfx.slice(1).toUpperCase()} theme.json)`);
-      readmeLines.push(`  - ${vCss} (variation ${sfx.slice(1).toUpperCase()} CSS variables/utilities)`);
+      readmeLines.push(`  - ${vJson} (variation order ${abbr.toUpperCase()} theme.json)`);
+      readmeLines.push(`  - ${vCss} (variation order ${abbr.toUpperCase()} CSS variables/utilities)`);
     });
 
     // Add usage notes to README
     readmeLines.push('');
     readmeLines.push('- Import the theme.json files into your theme\'s `styles` folder (Global Styles / Style Variations).');
-    readmeLines.push('- The CSS variant letter matches its theme.json variant letter and contains matching CSS custom properties.');
+    readmeLines.push('- The CSS variant letters matches its theme.json variant letters and contains matching CSS custom properties.');
     readmeLines.push('- CSS includes background/text utility classes designed for AAA contrast where applicable.\n- Include these settings as needed in your child theme\'s style.css or other software');
     const readme = readmeLines.join('\n');
     files['README.txt'] = strToU8(readme);
@@ -666,7 +696,9 @@ const GeneratorPage = () => {
 
     const pickSemantic = (k: 'warning' | 'error' | 'success') => {
       const map = byName(variationsOf(k));
-      // Always prefer the dark variant; fall back to darker, then light, then base hex
+      // Prefer the user-selected DARK band for live vars; fallback to legacy chain
+      const sel = semanticBandSelection[k]?.dark as Band | undefined;
+      if (sel && map[sel]) return map[sel];
       return map['dark'] ?? map['darker'] ?? map['light'] ?? pv?.[k]?.hex;
     };
 
@@ -921,6 +953,7 @@ const GeneratorPage = () => {
                     <ColorDisplay
                       palette={paletteWithVariations}
                       isLoading={generatePaletteMutation.isPending}
+                      semanticBandSelection={semanticBandSelection}
                       onVariationClick={(key, step) => {
                         setActiveTab('adjust');
                         const baseId = (step === 'dark' || step === 'darker')
@@ -1107,6 +1140,7 @@ const GeneratorPage = () => {
                     <ColorDisplay
                       palette={paletteWithVariations}
                       isLoading={generatePaletteMutation.isPending}
+                      semanticBandSelection={semanticBandSelection}
                       onVariationClick={(key, step) => {
                         setActiveTab('adjust');
                         const baseId = (step === 'dark' || step === 'darker')
@@ -1374,6 +1408,7 @@ const GeneratorPage = () => {
                   <ColorDisplay
                     palette={paletteWithVariations}
                     isLoading={generatePaletteMutation.isPending}
+                    semanticBandSelection={semanticBandSelection}
                     onVariationClick={(key, step) => {
                       setActiveTab('adjust');
                       const baseId = (step === 'dark' || step === 'darker')
@@ -1567,6 +1602,44 @@ const GeneratorPage = () => {
                           />
                         </FormControl>
                         <FormMessage />
+                        {(['error','warning','success'] as Array<ColorType | SemanticColorType>).includes(key) && (
+                          <div style={{ display: 'flex', gap: 'var(--spacing-2)', marginTop: '6px', flexWrap: 'wrap' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 'var(--cf-text-s)' }}>Light scheme band:</span>
+                              <select
+                                value={semanticBandSelection[key as 'error'|'warning'|'success'].light}
+                                onChange={(e) => {
+                                  const v = e.target.value as Band;
+                                  setSemanticBandSelection((prev) => ({
+                                    ...prev,
+                                    [key as 'error'|'warning'|'success']: { ...prev[key as 'error'|'warning'|'success'], light: v },
+                                  }));
+                                }}
+                              >
+                                {(['lighter','light','dark','darker'] as Band[]).map((b) => (
+                                  <option key={b} value={b}>{b}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 'var(--cf-text-s)' }}>Dark scheme band:</span>
+                              <select
+                                value={semanticBandSelection[key as 'error'|'warning'|'success'].dark}
+                                onChange={(e) => {
+                                  const v = e.target.value as Band;
+                                  setSemanticBandSelection((prev) => ({
+                                    ...prev,
+                                    [key as 'error'|'warning'|'success']: { ...prev[key as 'error'|'warning'|'success'], dark: v },
+                                  }));
+                                }}
+                              >
+                                {(['lighter','light','dark','darker'] as Band[]).map((b) => (
+                                  <option key={b} value={b}>{b}</option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                        )}
                       </FormItem>
                     ))}
                   </form>
