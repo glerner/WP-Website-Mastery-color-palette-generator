@@ -165,10 +165,3 @@
     display: none;
   }
 }
-
-/* On mobile widths, increase scroll margin to clear the sticky mobile tabs header */
-@media (max-width: 1024px) {
-  .rowTitle {
-    scroll-margin-top: 56px;
-  }
-}

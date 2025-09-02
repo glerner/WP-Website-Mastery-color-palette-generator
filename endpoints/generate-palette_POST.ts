@@ -90,10 +90,15 @@ export async function handle(request: Request): Promise<Response> {
       throw new Error("The AI returned an invalid data format. Please try again.");
     }
 
-    // Combine AI-generated colors with fixed semantic colors
+    // Combine AI-generated colors with fixed semantic colors (explicit shape to satisfy Palette)
     const basePalette: Palette = {
-      ...aiBasePalette,
-      ...semanticColors
+      primary: { name: aiBasePalette.primary.name, hex: aiBasePalette.primary.hex },
+      secondary: { name: aiBasePalette.secondary.name, hex: aiBasePalette.secondary.hex },
+      tertiary: { name: aiBasePalette.tertiary.name, hex: aiBasePalette.tertiary.hex },
+      accent: { name: aiBasePalette.accent.name, hex: aiBasePalette.accent.hex },
+      error: { name: semanticColors.error.name, hex: semanticColors.error.hex },
+      warning: { name: semanticColors.warning.name, hex: semanticColors.warning.hex },
+      success: { name: semanticColors.success.name, hex: semanticColors.success.hex },
     };
 
     const paletteWithVariations: PaletteWithVariations = {

@@ -55,33 +55,7 @@
   }
 }
 
-/* Mobile tabbed layout (visible below 1024px) */
-.mobileLayout {
-  /* Visible on mobile; hidden on desktop via media query below */
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  /* allow children to size */
-  /* Make the whole mobile page scrollable */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  /* momentum scroll in iOS & device emulation */
-  overscroll-behavior: contain;
-  /* avoid chaining into browser UI */
-  touch-action: pan-y;
-  /* enable drag scroll */
-  scrollbar-gutter: stable;
-  /* Visual tripwire: if mobile ever renders, this will be obvious */
-  background: crimson !important;
-}
-
-@media (min-width: 1024px) {
-  .mobileLayout {
-    display: none;
-  }
-}
+/* Mobile layout removed: unified responsive desktop layout is used at all widths */
 
 .controlsColumn {
   width: 100%;
@@ -150,57 +124,7 @@
   margin: 0;
 }
 
-/* Mobile tabs specific */
-.mobileTabs {
-  display: flex;
-  flex-direction: column;
-  /* allow it to size naturally under the preview; overall page scrolls on .mobileLayout */
-  min-height: 0;
-}
-
-.mobileTabsHeader {
-  flex: 0 0 auto;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--background);
-}
-
-/* Optional duplicate mobile tabs header shown above the Palette section */
-.mobileTabsHeaderClone {
-  flex: 0 0 auto;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--background);
-}
-
-.mobileTabsQuick {
-  display: flex;
-  gap: var(--spacing-3);
-  padding: var(--spacing-2) var(--spacing-5);
-}
-
-.mobileTabsQuick button {
-  background-color: var(--primary);
-  border: none;
-  padding: var(--spacing-1) var(--spacing-2);
-  border-bottom: 2px solid transparent;
-  color: var(--card);
-  border-radius: var(--radius-sm);
-}
-
-.mobileTabsQuick button.active {
-  border-bottom-color: rgba(0, 0, 0, 0.15);
-}
-
-.mobileTabPanel {
-  flex: 1 1 auto;
-  min-height: 0;
-  /* let the page (mobileLayout) handle scrolling to avoid nested scroll areas */
-  overflow: visible;
-  padding: var(--spacing-5);
-}
+/* Mobile tabs removed */
 
 /* Desktop tabs column styles */
 .tabsColumn {

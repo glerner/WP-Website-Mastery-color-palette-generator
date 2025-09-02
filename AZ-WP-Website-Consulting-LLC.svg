@@ -9,23 +9,14 @@
    id="svg188879"
    inkscape:version="1.4.2 (ebf0e94, 2025-05-08)"
    sodipodi:docname="AZ-WP-Website-Consulting-LLC.svg"
-   inkscape:export-filename="/home/george/Downloads/GL-logo-2024.png"
-   inkscape:export-xdpi="55.700001"
-   inkscape:export-ydpi="55.700001"
+   inkscape:export-filename="../sites/floot-palette/favicon-32x32"
+   inkscape:export-xdpi="5.4186668"
+   inkscape:export-ydpi="5.4186668"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <style>
-    /* Defaults (fallbacks); can be overridden by page CSS if inlined */
-    svg {
-      --logo-left:  #253a4b;
-      --logo-right: #4d3212;
-      --logo-text: #220001;
-      --spacer-red: #ff0000;
-    }
-  </style>
   <sodipodi:namedview
      id="namedview188881"
      pagecolor="#ffffff"
@@ -37,25 +28,38 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="0.51276156"
-     inkscape:cx="-200.87309"
-     inkscape:cy="295.45897"
+     inkscape:cx="266.2056"
+     inkscape:cy="296.43408"
      inkscape:window-width="1920"
-     inkscape:window-height="1048"
+     inkscape:window-height="1005"
      inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-y="1080"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer2"
      height="150mm"
      inkscape:showpageshadow="2"
-     inkscape:deskcolor="#d1d1d1" />
+     inkscape:deskcolor="#d1d1d1">
+    <inkscape:page
+       x="0"
+       y="0"
+       width="150"
+       height="150"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <style
+     id="style1">
+    /* Defaults (fallbacks); can be overridden by page CSS if inlined */
+    svg {
+      --logo-left:  #253a4b;
+      --logo-right: #4d3212;
+      --logo-text: #220001;
+      --spacer-red: #ff0000;
+    }
+  </style>
   <defs
      id="defs188876">
-    <rect
-       x="231.77982"
-       y="684.69214"
-       width="391.46817"
-       height="53.883636"
-       id="rect84231" />
     <!-- cleaned unused defs -->
   </defs>
   <!-- Layer: Outer Ring (two-color, split vertically) -->
@@ -67,18 +71,19 @@
     <!-- Outer ring near document edge: radius 70.3333 (~2pt margin), stroke-width 4 -->
     <!-- Left half (blue) -->
     <path
-       d="M 75,4.6667 A 70.3333,70.3333 0 0 0 75,145.3333"
+       d="m 75,4.6667 a 70.3333,70.3333 0 0 0 0,140.6666"
        fill="none"
-       stroke="var(--logo-left, #89A77F)"
+       stroke="#253a4b"
        stroke-width="4"
        id="ring-left" />
     <!-- Right half (brown) -->
     <path
-       d="M 75,4.6667 A 70.3333,70.3333 0 0 1 75,145.3333"
+       d="m 75,4.6667 a 70.3333,70.3333 0 0 1 0,140.6666"
        fill="none"
-       stroke="var(--logo-right, #517FA4)"
+       stroke="#4d3212"
        stroke-width="4"
-       id="ring-right" />
+       id="ring-right"
+       inkscape:label="ring-right" />
   </g>
   <!-- Removed: temporary 'Ring (Centered)' layer to avoid duplicate rings and coordinate mismatch -->
   <g
@@ -86,27 +91,29 @@
      inkscape:groupmode="layer"
      id="layer1"
      style="display:inline"
-     transform="translate(8.232,0)">
+     transform="translate(8.232)">
     <g
        id="g1"
-       transform="translate(-3.5,6.5)">
+       transform="translate(-3.5,6.5)"
+       stroke="#253a4b"
+       fill="#253a4b">
       <path
-         style="display:inline;fill:var(--logo-left, #89A77F);stroke:none;stroke-width:0.264582"
+         style="display:inline;stroke:none;stroke-width:0.264582"
          d="m 29.462,40.241923 5.47523,12.964634 9.873354,23.018829 4.230378,9.789614 c 1.711572,-1.121044 2.654802,-4.506395 3.476325,-6.350022 1.025514,-2.301358 3.088978,-5.371588 3.088713,-7.937527 0,-2.075927 -1.544886,-4.486555 -2.368789,-6.350022 -2.035948,-4.605086 -4.135131,-9.180541 -6.231138,-13.758377 -1.243264,-2.714899 -2.375139,-5.480069 -3.602265,-8.202118 -0.419889,-0.931863 -0.806176,-2.557729 -1.675323,-3.167601 -0.847187,-0.594522 -2.551351,-0.271991 -3.535327,-0.271991 -2.921233,0 -5.832149,-0.10186 -8.731158,0.264581"
          id="path6"
          sodipodi:nodetypes="ccccccccccsc" />
       <path
-         style="display:inline;fill:var(--logo-left, #89A77F);stroke:none;stroke-width:0.264583"
+         style="display:inline;stroke:none;stroke-width:0.264583"
          d="m 81.584906,99.24358 c 1.58115,0.29342 4.53761,0.82206 5.98118,-0.0841 1.03266,-0.64797 1.47002,-2.54609 1.90314,-3.62003 1.24884,-3.09668 2.51196,-6.19337 3.8317,-9.26042 6.54447,-15.21169 13.848554,-30.54588 18.975654,-46.30208 -1.46817,-0.43391 -5.51683,-0.88582 -6.76857,0.15955 -0.98187,0.8202 -1.30307,2.64874 -1.69889,3.8092 -0.94298,2.7649 -2.07619,5.46338 -3.0898,8.20208 -3.536694,9.55543 -7.572914,18.99338 -11.689034,28.31042 -2.69108,6.09097 -5.94995,12.26264 -7.44538,18.78542"
          id="path5"
          sodipodi:nodetypes="cccccccccc" />
       <path
-         style="display:inline;fill:var(--logo-left, #89A77F);stroke:none;stroke-width:0.264583"
+         style="display:inline;stroke:none;stroke-width:0.264583"
          d="m 76.028666,25.954 v 5.82083 c 2.05634,2.6e-4 4.15898,0.12726 6.08541,0.91387 8.22193,3.35703 8.50583,13.18524 5.70177,20.25279 -0.94985,2.39448 -3.37979,5.62875 -3.4417,8.20209 -0.0519,2.15027 2.21351,6.31163 3.56076,7.9375 1.75816,-3.01281 3.05303,-6.33836 4.46088,-9.525 2.47544,-5.60282 5.54249,-11.9507 4.72308,-18.25625 -0.47255,-3.63591 -2.37332,-6.31349 -3.89229,-9.525 L 104.0745,31.51025 V 25.954 H 76.028666"
          id="path4"
          sodipodi:nodetypes="cccccccccccc" />
       <path
-         style="display:inline;fill:var(--logo-left, #89A77F);stroke:none;stroke-width:0.264583"
+         style="display:inline;stroke:none;stroke-width:0.264583"
          d="m 36.076583,25.954 v 5.55625 c 3.802591,0 8.884178,-0.82524 12.435416,0.76861 2.568575,1.15279 4.171156,3.75735 5.516562,6.11055 2.363523,4.13385 4.332552,8.44391 6.455039,12.7 1.389327,2.7858 2.704836,5.62875 3.984356,8.46667 0.51806,1.14908 1.31577,2.40215 0.99113,3.70416 -1.93119,7.74674 -6.996638,15.19344 -10.180104,22.48959 -0.922602,2.11455 -3.771635,5.61049 -3.477154,7.9375 0.225425,1.78276 2.367756,7.69752 5.005122,5.81342 1.819804,-1.29963 2.99085,-6.39313 3.876146,-8.45926 3.00038,-7.0022 6.33518,-13.86707 9.26015,-20.90208 h 0.52917 c 1.92616,6.68629 5.45438,14.22638 8.73124,20.37292 h 0.52917 c 1.60629,-4.1402 5.64065,-9.55067 5.74437,-14.02292 0.0339,-1.46817 -1.08109,-3.20781 -1.7108,-4.49792 -1.2782,-2.61858 -2.47147,-5.28928 -3.68723,-7.9375 -4.91543,-10.70636 -10.50687,-21.209 -15.163,-32.01458 1.05013,0 3.21177,0.4109 4.07378,-0.27199 1.05067,-0.83211 0.42413,-4.56512 0.42413,-5.81342 H 36.076583"
          id="path3"
          sodipodi:nodetypes="cccccccscccccccccccccc" />
@@ -114,19 +121,15 @@
   </g>
   <g
      inkscape:groupmode="layer"
-     id="layer6"
-     inkscape:label="Color 3 area"
-     style="display:inline" />
-  <g
-     inkscape:groupmode="layer"
      id="layer5"
      inkscape:label="W Overlay (brown)"
      style="display:inline"
-     transform="translate(8.232,0)">
+     transform="translate(8.232)">
     <path
-       style="display:inline;vector-effect:non-scaling-stroke;fill:var(--logo-right, #517FA4);stroke:var(--logo-right, #517FA4);stroke-width:0.000243385;-inkscape-stroke:hairline;paint-order:markers fill stroke"
+       style="display:inline;vector-effect:non-scaling-stroke;stroke-width:0.000243385;-inkscape-stroke:hairline;paint-order:markers fill stroke"
        d="M 44.688768,89.724038 C 38.712254,75.919714 26.362,46.947776 26.362,46.73205 c 0,-0.155925 0.767542,-0.191824 6.15213,-0.287723 4.578195,-0.08154 5.238751,-0.07587 5.619866,0.04831 0.751671,0.244903 1.017543,0.659911 2.0835,3.25217 0.959418,2.333164 3.130694,7.251372 5.312825,12.034193 1.164115,2.551525 2.762895,6.079902 3.552843,7.840837 0.78995,1.760937 1.676823,3.683192 1.970828,4.271679 0.749365,1.499931 1.165477,2.589817 1.351259,3.539209 0.315471,1.612133 -0.06118,2.9569 -1.827762,6.52559 -0.652428,1.317976 -1.476637,3.119753 -1.831579,4.003946 -0.954216,2.37705 -1.531186,3.471718 -2.219152,4.21032 -0.562855,0.604279 -0.454991,0.747859 -1.83799,-2.446543 z"
-       id="path199113" />
+       id="path199113"
+       fill="#4d3212" />
   </g>
   <g
      inkscape:groupmode="layer"
@@ -142,7 +145,7 @@
        fill="none"
        stroke="var(--spacer-red, #ff0000)"
        stroke-width="4"
-       style="opacity:0;display:inline" />
+       style="display:inline;opacity:0" />
     <!-- Invisible path used by textPath (no stroke/fill), matching the red guide geometry -->
     <path
        id="innerTextPath"
@@ -154,11 +157,14 @@
     <text
        id="textCompany"
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.8167px;line-height:1.25;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-anchor:middle;display:inline;fill:var(--logo-text, #220001);stroke:none"
-       text-anchor="middle"><textPath
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.8167px;line-height:1.25;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-anchor:middle;display:inline"
+       text-anchor="middle"
+       fill="#220001"><textPath
          xlink:href="#innerTextPath"
          startOffset="75%"
-         id="textPath1"><tspan
+         id="textPath1"
+         stroke="#220001"
+         stroke-width="0"><tspan
            id="tspan1">AZ WP Website Consulting LLC</tspan></textPath></text>
   </g>
 </svg>

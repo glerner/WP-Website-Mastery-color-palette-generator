@@ -73,11 +73,11 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
         __html: `
 [data-chart=${id}] {
 ${colorConfig
-  .map(([key, itemConfig]) => {
-    const color = itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
+            .map(([key, itemConfig]) => {
+              const color = itemConfig.color
+              return color ? `  --color-${key}: ${color};` : null
+            })
+            .join("\n")}
 }
 `
       }}
@@ -87,16 +87,37 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip
 
+type TooltipItem = {
+  color?: string
+  name?: string
+  dataKey?: string
+  value?: number | string
+  payload?: Record<string, unknown>
+}
+
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-    React.ComponentProps<"div"> & {
-      hideLabel?: boolean
-      hideIndicator?: boolean
-      indicator?: "line" | "dot" | "dashed"
-      nameKey?: string
-      labelKey?: string
-    }
+  React.ComponentProps<"div"> & {
+    active?: boolean
+    payload?: TooltipItem[]
+    label?: string | number
+    className?: string
+    color?: string
+    hideLabel?: boolean
+    hideIndicator?: boolean
+    indicator?: "line" | "dot" | "dashed"
+    nameKey?: string
+    labelKey?: string
+    labelFormatter?: (value: unknown, payload?: TooltipItem[]) => React.ReactNode
+    labelClassName?: string
+    formatter?: (
+      value: unknown,
+      name: unknown,
+      item: TooltipItem,
+      index: number,
+      rawPayload?: unknown
+    ) => React.ReactNode
+  }
 >(
   (
     {
@@ -225,13 +246,21 @@ ChartTooltipContent.displayName = "ChartTooltip"
 
 const ChartLegend = RechartsPrimitive.Legend
 
+type LegendItem = {
+  value?: string
+  dataKey?: string
+  color?: string
+  payload?: Record<string, unknown>
+}
+
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  React.ComponentProps<"div"> & {
+    payload?: LegendItem[]
+    verticalAlign?: "top" | "middle" | "bottom"
+    hideIcon?: boolean
+    nameKey?: string
+  }
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
@@ -289,8 +318,8 @@ function getPayloadConfigFromPayload(
 
   const payloadPayload =
     "payload" in payload &&
-    typeof payload.payload === "object" &&
-    payload.payload !== null
+      typeof payload.payload === "object" &&
+      payload.payload !== null
       ? payload.payload
       : undefined
 
