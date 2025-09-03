@@ -363,12 +363,7 @@ export const generateShades = (
   const baseRgb = hexToRgb(hex);
   const baseY = luminance(baseRgb.r, baseRgb.g, baseRgb.b);
 
-  // Inform if base is extreme
-  if (baseY >= 0.95) {
-    console.warn(`${colorName}: Base color is very light (Y=${baseY.toFixed(3)}). Generating darker shades to ensure contrast.`);
-  } else if (baseY <= 0.05) {
-    console.warn(`${colorName}: Base color is very dark (Y=${baseY.toFixed(3)}). Generating lighter tints to ensure contrast.`);
-  }
+  // Previously logged when base luminance was extreme; removed per UX preference to avoid console noise.
 
   // Target the requested bands; if user provided targets, respect them exactly
   // Otherwise, adjust for contrast around the defaults

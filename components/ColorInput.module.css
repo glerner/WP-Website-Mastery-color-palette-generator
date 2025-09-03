@@ -37,3 +37,80 @@
 @media (max-width: 480px) {
   /* Removed the styles for .hexInput here */
 }
+
+/* Popover for the HSL picker */
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--spacing-2);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+/* Minimal react-colorful styles (scoped globally) */
+:global(.react-colorful) {
+  width: 220px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  font-family: inherit;
+}
+
+:global(.react-colorful__saturation) {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  border-radius: 8px;
+  /* Base color is provided inline by the component; we overlay S/L gradients */
+  background-image:
+    linear-gradient(0deg, #000, rgba(0, 0, 0, 0)),
+    linear-gradient(90deg, #fff, rgba(255, 255, 255, 0));
+}
+
+:global(.react-colorful__saturation-pointer) {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.5);
+  transform: translate(-6px, -6px);
+  background: transparent;
+}
+
+:global(.react-colorful__hue) {
+  position: relative;
+  height: 12px;
+  margin-top: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    to right,
+    #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%
+  );
+}
+
+:global(.react-colorful__hue-pointer) {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.5);
+  transform: translate(-6px, -50%);
+  background: transparent;
+}
+
+/* Accessibility tweaks for high-contrast themes */
+@media (prefers-contrast: more) {
+  :global(.react-colorful__saturation-pointer),
+  :global(.react-colorful__hue-pointer) {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.6);
+  }
+}

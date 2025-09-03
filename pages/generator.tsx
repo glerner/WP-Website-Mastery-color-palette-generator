@@ -69,6 +69,7 @@ import styles from './generator.module.css';
 import { zipSync, strToU8 } from 'fflate';
 import { generateSemanticColors } from '../helpers/generateSemanticColors';
 import { buildWpVariationJson, validateBaseContrast } from '../helpers/themeJson';
+import AZLogo from '../AZ-WP-Website-Consulting-LLC.svg';
 
 // Resolve a hex color for a given color key and variation step for the Demo tab.
 // Falls back to the base hex when the requested step isn't present.
@@ -136,7 +137,7 @@ const GeneratorPage = () => {
     Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
   >({});
   const generatePaletteMutation = useGeneratePalette();
-  const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo'>('ai');
+  const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo'>('instructions');
   const [demoScheme, setDemoScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [themeName, setThemeName] = useState<string>('');
   // Per-scheme selection of which band to export/use for semantic colors
@@ -783,6 +784,14 @@ const GeneratorPage = () => {
                     <li>When satisfied, go to <strong>Export</strong> to download the theme.json Palette files, with combinations of the Primary, Secondary and Tertiary colors.</li>
                     <li>Use <strong>Demo</strong> to preview components in light/dark schemes.</li>
                   </ul>
+                  <img
+                    src={AZLogo}
+                    alt="AZ WP Website Consulting LLC"
+                    style={{ maxWidth: '8em', width: '100%', height: 'auto', display: 'block', margin: 'var(--spacing-3) 0' }}
+                  />
+                  <p style={{ color: textOnLight, fontSize: 'var(--cf-text-s)', margin: 0 }}>
+                    Copyright © 2025 AZ WP Website Consulting LLC.
+                  </p>
                 </div>
               </TabsContent>
 
@@ -929,226 +938,300 @@ const GeneratorPage = () => {
               <TabsContent value="manual" className={styles.tabContent}>
                 <h2 className={styles.sectionTitle}>Manual Settings for your Palette</h2>
                 <Form {...manualForm}>
-                  {/* Explanation + Import row */}
-                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
-                    <div>
-                      <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import the schema and version from your child theme's theme.json,  to ensure exported files match it.</p>
-                      <Button variant="outline" wrap onClick={() => fileInputRef.current?.click()} style={{ marginTop: 'var(--spacing-2)' }}>Import theme.json</Button>
-                      {importDetails && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
-                          {(importDetails.schema || importDetails.version != null || importDetails.title) && (
-                            <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
-                              {importDetails.title ? (<>
-                                <strong>Title:</strong> {importDetails.title} {' '}
-                              </>) : null}
-                              {importDetails.schema ? (<>
-                                <strong>Schema:</strong> {importDetails.schema} {' '}
-                              </>) : null}
-                              {importDetails.version != null ? (<>
-                                <strong>Version:</strong> {String(importDetails.version)}
-                              </>) : null}
-                            </p>
-                          )}
-                          {importDetails.warnings && importDetails.warnings.length > 0 && (
-                            <ul className={styles.formHelp} style={{ margin: 0, paddingLeft: '1.2em', fontSize: 'var(--cf-text-s)' }}>
-                              {importDetails.warnings.map((w, i) => (
-                                <li key={i}>{w}</li>
-                              ))}
-                            </ul>
-                          )}
-                          {importDetails.error && (
-                            <p className={styles.formHelp} style={{ color: 'var(--error-text, #b00020)', fontSize: 'var(--cf-text-s)' }}>{importDetails.error}</p>
-                          )}
-                          {importDetails.colors && importDetails.colors.length > 0 && (
-                            <div>
-                              <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Detected palette entries (copy/paste if desired):</p>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-3)' }}>
-                                {importDetails.colors.map((c) => (
-                                  <div key={`${c.slug}:${c.color}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ width: 14, height: 14, borderRadius: 3, background: c.color, border: '1px solid #ccc', display: 'inline-block' }} />
-                                    <code style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}: {c.color}</code>
+                  <div className={styles.manualGrid}>
+                    {/* Left column: explanatory content and actions */}
+                    <div className={styles.manualCol}>
+                      {/* Explanation + Import row */}
+                      <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
+                        <div>
+                          <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import the schema and version from your child theme's theme.json,  to ensure exported files match it.</p>
+                          <Button variant="outline" wrap onClick={() => fileInputRef.current?.click()} style={{ marginTop: 'var(--spacing-2)' }}>Import theme.json</Button>
+                          {importDetails && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
+                              {(importDetails.schema || importDetails.version != null || importDetails.title) && (
+                                <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
+                                  {importDetails.title ? (<>
+                                    <strong>Title:</strong> {importDetails.title} {' '}
+                                  </>) : null}
+                                  {importDetails.schema ? (<>
+                                    <strong>Schema:</strong> {importDetails.schema} {' '}
+                                  </>) : null}
+                                  {importDetails.version != null ? (<>
+                                    <strong>Version:</strong> {String(importDetails.version)}
+                                  </>) : null}
+                                </p>
+                              )}
+                              {importDetails.warnings && importDetails.warnings.length > 0 && (
+                                <ul className={styles.formHelp} style={{ margin: 0, paddingLeft: '1.2em', fontSize: 'var(--cf-text-s)' }}>
+                                  {importDetails.warnings.map((w, i) => (
+                                    <li key={i}>{w}</li>
+                                  ))}
+                                </ul>
+                              )}
+                              {importDetails.error && (
+                                <p className={styles.formHelp} style={{ color: 'var(--error-text, #b00020)', fontSize: 'var(--cf-text-s)' }}>{importDetails.error}</p>
+                              )}
+                              {importDetails.colors && importDetails.colors.length > 0 && (
+                                <div>
+                                  <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Detected palette entries (copy/paste if desired):</p>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-3)' }}>
+                                    {importDetails.colors.map((c) => (
+                                      <div key={`${c.slug}:${c.color}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ width: 14, height: 14, borderRadius: 3, background: c.color, border: '1px solid #ccc', display: 'inline-block' }} />
+                                        <code style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}: {c.color}</code>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                    <hr
-                                className={styles.tertiaryDivider}
+                        <hr
+                          className={styles.tertiaryDivider}
+                          style={{
+                            borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                          }}
+                        />
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="application/json,.json"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleImportThemeJson(f);
+                            e.currentTarget.value = '';
+                          }}
+                        />
+                      </div>
+
+                      {/* Theme Name block */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
+                        <label className={styles.formLabel} style={{ margin: 0 }}>Theme Name</label>
+                        <Input
+                          placeholder="e.g., Business Calm"
+                          value={manualForm.values.themeName}
+                          onChange={(e) => {
+                            manualForm.setValues({ ...manualForm.values, themeName: e.target.value });
+                            setThemeName(e.target.value);
+                          }}
+                          style={{ width: 'min(15em, 100%)' }}
+                        />
+                      </div>
+                      <hr
+                        className={styles.tertiaryDivider}
+                        style={{
+                          borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                        }}
+                      />
+
+                      {/* Match semantic colors to Primary (desktop Manual tab) */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
+                        <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
+                          Match Error/Warning/Success to Primary
+                        </Button>
+                      </div>
+                      <hr
+                        className={styles.tertiaryDivider}
+                        style={{
+                          borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                        }}
+                      />
+                      {/* Color Wheel (non-interactive) */}
+                      <div className={styles.wheelRow}>
+                        <div className={styles.colorWheel}>
+                          {/* ticks at 0/90/180/270 */}
+                          {([0, 90, 180, 270] as number[]).map((deg) => (
+                            <span
+                              key={`tick-${deg}`}
+                              className={`${styles.wheelTick} ${([90, 270].includes(deg) ? styles.wheelTickVertical : '')}`}
+                              style={{ transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(--tick-radius)) rotate(-${(360 - deg) % 360}deg)` }}
+                            />
+                          ))}
+                          {/* Labels every 45° (0..315). Keep text horizontal; add extra radius for 90/270. */}
+                          {([0,45,90,135,180,225,270,315] as number[]).map((deg) => (
+                            <span
+                              key={`tick-label-${deg}`}
+                              className={styles.wheelTickLabel}
+                              style={{
+                                transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(${[90,270].includes(deg) ? '--tick-label-radius-vertical' : '--tick-label-radius'})) rotate(0deg)`
+                              }}
+                            >
+                              {deg}
+                            </span>
+                          ))}
+
+                          {/* markers positioned via inline transforms */}
+                          {(['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[]).map((key) => {
+                            const hex = manualForm.values[key] || (palette as any)[key]?.hex;
+                            const rgb = hexToRgb(hex);
+                            const { h } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                            const angle = (360 - h) % 360;
+                            return (
+                              <span
+                                key={`marker-${key}`}
+                                className={styles.wheelMarker}
+                                title={`${(palette as any)[key]?.name}`}
                                 style={{
-                                  borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                                  background: `hsl(${Math.round(h)}, 50%, 50%)`,
+                                  transform: `translate(-50%, -50%) rotate(${angle}deg) translate(var(--wheel-radius)) rotate(-${angle}deg)`,
                                 }}
                               />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="application/json,.json"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleImportThemeJson(f);
-                        e.currentTarget.value = '';
-                      }}
-                    />
-                  </div>
+                            );
+                          })}
 
-                  {/* Theme Name block */}
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
-                    <label className={styles.formLabel} style={{ margin: 0 }}>Theme Name</label>
-                    <Input
-                      placeholder="e.g., Business Calm"
-                      value={manualForm.values.themeName}
-                      onChange={(e) => {
-                        manualForm.setValues({ ...manualForm.values, themeName: e.target.value });
-                        setThemeName(e.target.value);
-                      }}
-                      style={{ width: 'min(15em, 100%)' }}
-                    />
-                  </div>
-                  <hr
-                    className={styles.tertiaryDivider}
-                    style={{
-                      borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
-                    }}
-                  />
-
-                  {/* Save colors block */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 'var(--spacing-3)' }}>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        try {
-                          localStorage.setItem('gl_palette_manual_colors', JSON.stringify(manualForm.values));
-                          const mv: any = manualForm.values || {};
-                          localStorage.setItem('gl_theme_name', (mv.themeName ?? themeName ?? '') as string);
-                          if (mv.textOnDark) localStorage.setItem('gl_theme_text_on_dark_hex', mv.textOnDark);
-                          if (mv.textOnLight) localStorage.setItem('gl_theme_text_on_light_hex', mv.textOnLight);
-                          if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
-                          if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
-                          if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
-                          if (themeConfig) localStorage.setItem('gl_imported_theme_json', JSON.stringify(themeConfig));
-                          if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
-                          toast.success('Theme name, colors, and settings saved');
-                        } catch { }
-                      }}
-                    >
-                      Save colors and settings
-                    </Button>
-                  </div>
-                  <hr
-                    className={styles.tertiaryDivider}
-                    style={{
-                      borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
-                    }}
-                  />
-                  {/* Match semantic colors to Primary (desktop Manual tab) */}
-
-                  <p className={styles.formHelp} style={{ marginTop: '0', marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
-                    Adjusts the saturation and brightness (luminance) of the Error, Warning, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Warning). <br></br>See the Palette page for the "adusted for contrast" versions.
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
-                    <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
-                      Match Error/Warning/Success to Primary
-                    </Button>
-                  </div>
-                  <hr
-                    className={styles.tertiaryDivider}
-                    style={{
-                      borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
-                    }}
-                  />
-                  {/* Instruction under Match Primary (desktop only) */}
-                  <p className={styles.formHelp} style={{ marginTop: '0', marginBottom: 'var(--spacing-3)', fontSize: 'var(--cf-text-s)' }}>
-                    Enter hexadecimal color numbers, or click the color swatch to enter HSL, RGB, or Hex (format selector on the bottom).
-                  </p>
-                  <form className={styles.manualForm}>
-                    <FormItem name="textOnDark">
-                      <FormControl>
-                        <ColorInput
-                          value={manualForm.values.textOnDark}
-                          onChange={(hex) => {
-                            manualForm.setValues({ ...manualForm.values, textOnDark: hex });
-                            setTextOnDark(hex);
-                          }}
-                          trailing={<FormLabel>Text on Dark (near white)</FormLabel>}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                    <FormItem name="textOnLight">
-                      <FormControl>
-                        <ColorInput
-                          value={manualForm.values.textOnLight}
-                          onChange={(hex) => {
-                            manualForm.setValues({ ...manualForm.values, textOnLight: hex });
-                            setTextOnLight(hex);
-                          }}
-                          trailing={<FormLabel>Text on Light (near black)</FormLabel>}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                    {(Object.keys(palette) as (ColorType | SemanticColorType)[]).map((key) => (
-                      <FormItem key={key} name={key}>
-                        <FormControl>
-                          <ColorInput
-                            value={manualForm.values[key]}
-                            onChange={(hex) => handleManualColorChange(key as ColorType | SemanticColorType, hex)}
-                            trailing={
-                              <FormLabel>
-                                {palette[key].name}
-                                {(['error','warning','success'] as Array<ColorType | SemanticColorType>).includes(key)
-                                  ? ` - Default ${initialPalette[key as keyof Palette].hex}`
-                                  : ''}
-                              </FormLabel>
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        {(['error','warning','success'] as Array<ColorType | SemanticColorType>).includes(key) && (
-                          <div style={{ display: 'flex', gap: 'var(--spacing-2)', marginTop: '6px', flexWrap: 'wrap' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 'var(--cf-text-s)' }}>Light scheme band:</span>
-                              <select
-                                value={semanticBandSelection[key as 'error'|'warning'|'success'].light}
-                                onChange={(e) => {
-                                  const v = e.target.value as Band;
-                                  setSemanticBandSelection((prev) => ({
-                                    ...prev,
-                                    [key as 'error'|'warning'|'success']: { ...prev[key as 'error'|'warning'|'success'], light: v },
-                                  }));
-                                }}
+                          {/* pointer-style labels for markers (like degree labels) */}
+                          {(['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[]).map((key) => {
+                            const hex = manualForm.values[key] || (palette as any)[key]?.hex;
+                            const rgb = hexToRgb(hex);
+                            const { h } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                            const angle = (360 - h) % 360;
+                            const name = (palette as any)[key]?.name || String(key);
+                            return (
+                              <span
+                                key={`marker-label-${key}`}
+                                className={styles.wheelMarkerLabel}
+                                style={{ transform: `translate(0, -50%) rotate(${angle}deg) translate(var(--marker-label-radius)) rotate(0deg)` }}
                               >
-                                {(['lighter','light','dark','darker'] as Band[]).map((b) => (
-                                  <option key={b} value={b}>{b}</option>
-                                ))}
-                              </select>
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 'var(--cf-text-s)' }}>Dark scheme band:</span>
-                              <select
-                                value={semanticBandSelection[key as 'error'|'warning'|'success'].dark}
-                                onChange={(e) => {
-                                  const v = e.target.value as Band;
-                                  setSemanticBandSelection((prev) => ({
-                                    ...prev,
-                                    [key as 'error'|'warning'|'success']: { ...prev[key as 'error'|'warning'|'success'], dark: v },
-                                  }));
-                                }}
-                              >
-                                {(['lighter','light','dark','darker'] as Band[]).map((b) => (
-                                  <option key={b} value={b}>{b}</option>
-                                ))}
-                              </select>
-                            </label>
-                          </div>
-                        )}
-                      </FormItem>
-                    ))}
-                  </form>
+                                {name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {/* Legend grid removed in favor of pointer-style labels */}
+                      </div>
+                      {/* Description moved after wheel */}
+                      <p className={styles.formHelp} style={{ marginTop: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
+                        Optional: Adjust the saturation and brightness (luminance) of the Error, Warning, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Warning). See the Palette page for the "adusted for contrast" versions.
+                      </p>
+                      {/* Save colors */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', flexWrap: 'wrap', marginBottom: 'var(--spacing-3)' }}>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            try {
+                              localStorage.setItem('gl_palette_manual_colors', JSON.stringify(manualForm.values));
+                              const mv: any = manualForm.values || {};
+                              localStorage.setItem('gl_theme_name', (mv.themeName ?? themeName ?? '') as string);
+                              if (mv.textOnDark) localStorage.setItem('gl_theme_text_on_dark_hex', mv.textOnDark);
+                              if (mv.textOnLight) localStorage.setItem('gl_theme_text_on_light_hex', mv.textOnLight);
+                              if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
+                              if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
+                              if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
+                              if (themeConfig) localStorage.setItem('gl_imported_theme_json', JSON.stringify(themeConfig));
+                              if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
+                              toast.success('Theme name, colors, and settings saved');
+                            } catch { }
+                          }}
+                        >
+                          Save colors and settings
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Right column: color entry controls */}
+                    <div className={styles.manualCol}>
+                      <form className={styles.manualForm}>
+                        <p className={styles.formHelp} style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
+                          Enter hexadecimal color numbers, or click the color swatch to enter HSL (up/down arrows in fields, or drag in the color picker).
+                        </p>
+                        <FormItem name="textOnDark">
+                          <FormControl>
+                            <ColorInput
+                              value={manualForm.values.textOnDark}
+                              onChange={(hex) => {
+                                manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                                setTextOnDark(hex);
+                              }}
+                              trailing={<FormLabel>Text on Dark (near white)</FormLabel>}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                        <FormItem name="textOnLight">
+                          <FormControl>
+                            <ColorInput
+                              value={manualForm.values.textOnLight}
+                              onChange={(hex) => {
+                                manualForm.setValues({ ...manualForm.values, textOnLight: hex });
+                                setTextOnLight(hex);
+                              }}
+                              trailing={<FormLabel>Text on Light (near black)</FormLabel>}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                        {(Object.keys(palette) as (ColorType | SemanticColorType)[]).map((key) => (
+                          <FormItem key={key} name={key}>
+                            <FormControl>
+                              <ColorInput
+                                value={manualForm.values[key]}
+                                onChange={(hex) => handleManualColorChange(key as ColorType | SemanticColorType, hex)}
+                                trailing={
+                                  <FormLabel>
+                                    {palette[key].name}
+                                    {(['primary', 'secondary', 'tertiary', 'accent'] as Array<ColorType | SemanticColorType>).includes(key) && (() => {
+                                      const rgb = hexToRgb(manualForm.values[key]);
+                                      const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                                      return (
+                                        <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: 'var(--muted-foreground, #666)' }}>
+                                          HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                        </span>
+                                      );
+                                    })()}
+                                    {(['error', 'warning', 'success'] as Array<ColorType | SemanticColorType>).includes(key)
+                                      ? ` - Default ${initialPalette[key as keyof Palette].hex}`
+                                      : ''}
+                                  </FormLabel>
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                            {false && (<></>)}
+                            {(['error', 'warning', 'success'] as Array<ColorType | SemanticColorType>).includes(key) && (
+                              <div style={{ display: 'flex', gap: 'var(--spacing-2)', marginTop: '6px', flexWrap: 'wrap' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ fontSize: 'var(--cf-text-s)' }}>Light scheme band:</span>
+                                  <select
+                                    value={semanticBandSelection[key as 'error' | 'warning' | 'success'].light}
+                                    onChange={(e) => {
+                                      const v = e.target.value as Band;
+                                      setSemanticBandSelection((prev) => ({
+                                        ...prev,
+                                        [key as 'error' | 'warning' | 'success']: { ...prev[key as 'error' | 'warning' | 'success'], light: v },
+                                      }));
+                                    }}
+                                  >
+                                    {(['lighter', 'light', 'dark', 'darker'] as Band[]).map((b) => (
+                                      <option key={b} value={b}>{b}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ fontSize: 'var(--cf-text-s)' }}>Dark scheme band:</span>
+                                  <select
+                                    value={semanticBandSelection[key as 'error' | 'warning' | 'success'].dark}
+                                    onChange={(e) => {
+                                      const v = e.target.value as Band;
+                                      setSemanticBandSelection((prev) => ({
+                                        ...prev,
+                                        [key as 'error' | 'warning' | 'success']: { ...prev[key as 'error' | 'warning' | 'success'], dark: v },
+                                      }));
+                                    }}
+                                  >
+                                    {(['lighter', 'light', 'dark', 'darker'] as Band[]).map((b) => (
+                                      <option key={b} value={b}>{b}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                              </div>
+                            )}
+                          </FormItem>
+                        ))}
+                      </form>
+                    </div>
+                  </div>
                 </Form>
               </TabsContent>
               {/* Adjustments Tab */}
@@ -1199,22 +1282,214 @@ const GeneratorPage = () => {
                   }
                 />
               </TabsContent>
-              {/* Export Tab */}
               <TabsContent value="export" className={styles.tabContent}>
                 <div className={styles.exportSection}>
                   <h2 className={styles.sectionTitle}>Export</h2>
-                  <p className={styles.exportDescription}>
-                    Download a ZIP containing the base palette and all theme variations. Each folder includes a WordPress theme.json and a CSS file with contrast-optimized utilities.
+                  <p
+                    className={styles.exportDescription}
+                    style={{ color: `light-dark(${textOnLight}, ${textOnDark})` }}
+                  >
+                    Download a ZIP containing the base palette and all theme variations (all combinations of the main 3 colors). <br/>The file includes a WordPress theme.json and a CSS file with CSS variables and contrast-optimized utilities, for each variation.<br/>Copy each file in it, into your child theme's `styles` folder.<br/>Below see the colors, the hex number, and the hsl values. 
                   </p>
-                  <div style={{ marginTop: 'var(--spacing-2)' }}>
-                    <Button
-                      variant="primary"
-                      onClick={handleExportGzipAll}
-                      className={styles.exportButton}
-                    >
-                      Download .zip file
-                    </Button>
+                  {/* Export preview and details */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: 'var(--spacing-4)',
+                    marginTop: 'var(--spacing-3)'
+                  }}>
+                    {/* Metadata */}
+                    <div style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: 'var(--spacing-3)'
+                    }}>
+                      <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>Details to be exported</h3>
+                      {(() => {
+                        const safe = (name: string) => name.toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
+                        const prefix = themeName ? safe(themeName) : 'themes';
+                        const effectiveSchema = (themeConfig && typeof (themeConfig as any).$schema === 'string')
+                          ? (themeConfig as any).$schema
+                          : 'https://schemas.wp.org/trunk/theme.json';
+                        const effectiveVersion = (themeConfig && (themeConfig as any).version != null)
+                          ? (themeConfig as any).version
+                          : 3;
+                        const filename = `${prefix}-${darkHexSuffix}.zip`;
+                        return (
+                          <>
+                            <ul style={{ margin: 0, paddingLeft: '1.2em', lineHeight: 1.5 }}>
+                              <li><strong>Theme Name:</strong> {themeName || 'Theme'}</li>
+                              <li><strong>Schema & Version:</strong> {String(effectiveSchema)}, {String(effectiveVersion)}</li>
+                              <li><strong>Suggested file name:</strong> {filename}</li>
+                              <li><strong>Destination:</strong> You will be prompted to choose a save location (or your browser will save to the default downloads folder).</li>
+                            </ul>
+                            <div style={{ marginTop: 'var(--spacing-3)' }}>
+                              <Button
+                                variant="primary"
+                                onClick={handleExportGzipAll}
+                                className={styles.exportButton}
+                              >
+                                Download .zip file
+                              </Button>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    {/* 3-column flex: Swatches | HEX | HSL */}
+                    <div style={{ display: 'flex', gap: 'var(--spacing-3)', flexWrap: 'wrap' }}>
+                    {/* Swatch preview */}
+                    <div style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: 'var(--spacing-3)',
+                      flex: '1 1 340px',
+                      minWidth: '340px'
+                    }}>
+                      <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>Colors to be exported</h3>
+                      {/* Text on Light/Dark preview */}
+                      <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', marginBottom: 'var(--spacing-3)' }}>
+                        {[{ label: 'text-on-light', hex: textOnLight }, { label: 'text-on-dark', hex: textOnDark }].map(({ label, hex }) => (
+                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 6, padding: 6 }}>
+                            <span title={hex} style={{ display: 'inline-block', width: '2.5rem', height: '2.5rem', borderRadius: 4, background: hex, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
+                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                              <span style={{ fontSize: 'var(--cf-text-s)' }}>{label}</span>
+                              <span style={{ fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace', fontSize: 'var(--cf-text-s)' }}>{(hex || '').toUpperCase()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'grid', gap: 'var(--spacing-3)' }}>
+                        {(['primary','secondary','tertiary','accent','error','warning','success'] as const).map((key) => {
+                          const entry: any = (paletteWithVariations as any)?.[key];
+                          if (!entry) return null;
+                          const isSemantic = key === 'error' || key === 'warning' || key === 'success';
+                          const items: Array<{ label: string; hex: string }> = [];
+                          const pushItem = (label: string, hex: string | undefined) => {
+                            if (!hex) return;
+                            items.push({ label, hex });
+                          };
+                          if (Array.isArray(entry.variations)) {
+                            if (isSemantic) {
+                              // Only show the chosen light/dark bands for semantic colors
+                              const sel = semanticBandSelection[key];
+                              const findHex = (step: string) => entry.variations.find((v: any) => v.step === step)?.hex;
+                              pushItem(`Light (${sel.light})`, findHex(sel.light));
+                              pushItem(`Dark (${sel.dark})`, findHex(sel.dark));
+                            } else {
+                              entry.variations.forEach((v: any) => pushItem(v.step || v.name || 'step', v.hex));
+                            }
+                          } else {
+                            pushItem('base', entry.hex);
+                          }
+                          const toHsl = (hex: string) => {
+                            try {
+                              const { r, g, b } = hexToRgb(hex);
+                              const { h, s, l } = rgbToHslNorm(r, g, b);
+                              const H = Math.round(h);
+                              const S = Math.round(s * 100);
+                              const L = Math.round(l * 100);
+                              return `hsl(${H}, ${S}%, ${L}%)`;
+                            } catch {
+                              return 'hsl(0, 0%, 0%)';
+                            }
+                          };
+                          return (
+                            <div key={key}>
+                              <h4 style={{ margin: 0, marginBottom: 6 }}>{entry?.name || key}</h4>
+                              <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                                {items.map(({ label, hex }) => (
+                                  <div key={label + hex} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 6, padding: 6 }}>
+                                    <span title={hex} style={{ display: 'inline-block', width: '2.5rem', height: '2.5rem', borderRadius: 4, background: hex, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
+                                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                                      <span style={{ fontSize: 'var(--cf-text-s)' }}>{label}</span>
+                                      <span style={{ fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace', fontSize: 'var(--cf-text-s)' }}>{hex.toUpperCase()}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* Copy-friendly lists (HEX and HSL as separate cards) */}
+                    <div style={{ display: 'contents' }}>
+                      {(() => {
+                        type Key = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'error' | 'warning' | 'success';
+                        const keys: Key[] = ['primary','secondary','tertiary','accent','error','warning','success'];
+                        const linesHex: string[] = [];
+                        const linesHsl: string[] = [];
+                        const slugFor = (key: Key, step: string) => `${key}-${step}`;
+                        const toHsl = (hex: string) => {
+                          try {
+                            const { r, g, b } = hexToRgb(hex);
+                            const { h, s, l } = rgbToHslNorm(r, g, b);
+                            const H = Math.round(h);
+                            const S = Math.round(s * 100);
+                            const L = Math.round(l * 100);
+                            return `hsl(${H}, ${S}%, ${L}%)`;
+                          } catch {
+                            return 'hsl(0, 0%, 0%)';
+                          }
+                        };
+                        // Add text-on light/dark first
+                        if (textOnLight) {
+                          linesHex.push(`text-on-light: ${textOnLight.toUpperCase()}`);
+                          linesHsl.push(`text-on-light: ${toHsl(textOnLight)}`);
+                        }
+                        if (textOnDark) {
+                          linesHex.push(`text-on-dark: ${textOnDark.toUpperCase()}`);
+                          linesHsl.push(`text-on-dark: ${toHsl(textOnDark)}`);
+                        }
+                        keys.forEach((key) => {
+                          const entry: any = (paletteWithVariations as any)?.[key];
+                          if (!entry) return;
+                          const isSemantic = key === 'error' || key === 'warning' || key === 'success';
+                          const pairs: Array<{ step: string; hex: string }> = [];
+                          // Always include base first
+                          if (entry.hex) pairs.push({ step: 'base', hex: entry.hex });
+                          const add = (step: string, hex?: string) => { if (hex) pairs.push({ step, hex }); };
+                          if (Array.isArray(entry.variations)) {
+                            if (isSemantic) {
+                              const sel = semanticBandSelection[key];
+                              const findHex = (step: string) => entry.variations.find((v: any) => v.step === step)?.hex;
+                              add(sel.light, findHex(sel.light));
+                              add(sel.dark, findHex(sel.dark));
+                            } else {
+                              entry.variations.forEach((v: any) => add(v.step || v.name || 'step', v.hex));
+                            }
+                          }
+                          pairs.forEach(({ step, hex }) => {
+                            const slug = slugFor(key, step);
+                            linesHex.push(`${slug}: ${hex.toUpperCase()}`);
+                            linesHsl.push(`${slug}: ${toHsl(hex)}`);
+                          });
+                        });
+                        return (
+                          <>
+                            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-3)', flex: '0 0 320px', minWidth: '320px' }}>
+                              <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>HEX</h3>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--cf-text-s)', fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace' }}>
+{linesHex.join('\n')}
+                              </pre>
+                            </div>
+                            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-3)', flex: '0 0 440px', minWidth: '440px' }}>
+                              <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>HSL</h3>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--cf-text-s)', fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace' }}>
+{linesHsl.join('\n')}
+                              </pre>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    </div>
                   </div>
+
                 </div>
               </TabsContent>
               {/* Demo Tab */}

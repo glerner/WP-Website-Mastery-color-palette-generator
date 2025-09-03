@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from './Input';
 import styles from './ColorInput.module.css';
+import { HslColorPicker } from 'react-colorful';
+import { hexToRgb, rgbToHex, rgbToHslNorm, hslNormToRgb } from '../helpers/colorUtils';
 
 type DivProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'>;
 
@@ -16,13 +18,42 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
   const [internalValue, setInternalValue] = useState(value);
   const lastValidRef = useRef<string>(/^#[0-9a-f]{6}$/i.test(value) ? value : '#000000');
   const colorPickerRef = useRef<HTMLInputElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [showPopover, setShowPopover] = useState(false);
+  // h in degrees [0,360), s/l in [0,1]
+  const [hsl, setHsl] = useState<{ h: number; s: number; l: number }>(() => {
+    const { r, g, b } = hexToRgb(/^#[0-9a-f]{6}$/i.test(value) ? value : '#000000');
+    return rgbToHslNorm(r, g, b);
+  });
+  const fromPickerRef = useRef(false);
+  const rafIdRef = useRef<number | null>(null);
+  const pendingHslRef = useRef<{ h: number; s: number; l: number } | null>(null);
+  const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
   useEffect(() => {
     setInternalValue(value);
     if (isValidHex(value)) {
       lastValidRef.current = value;
     }
+    // Skip syncing HSL if the change is originating from the picker drag this frame
+    if (fromPickerRef.current) return;
+    // Keep HSL in sync with external value
+    try {
+      const { r, g, b } = hexToRgb(isValidHex(value) ? value : lastValidRef.current);
+      setHsl(rgbToHslNorm(r, g, b));
+    } catch {}
   }, [value]);
+
+  // Cleanup any pending rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current != null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    };
+  }, []);
 
   const isValidHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
   const isSixHexNoHash = (v: string) => /^[0-9a-f]{6}$/i.test(v);
@@ -46,7 +77,8 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
   };
 
   const handlePickerClick = () => {
-    colorPickerRef.current?.click();
+    // Open custom HSL popover by default
+    setShowPopover(true);
   };
 
   // Extract ARIA and onBlur intended for the actual control (from FormControl Slot)
@@ -85,8 +117,70 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
     }
   };
 
+  // Close popover when clicking outside
+  useEffect(() => {
+    if (!showPopover) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (wrapperRef.current && !wrapperRef.current.contains(t)) {
+        setShowPopover(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowPopover(false);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showPopover]);
+
+  // react-colorful's HslColorPicker uses h in degrees, s/l in [0,100].
+  // Our helpers expect h in degrees, s/l in [0,1].
+  const handleHslChange = (next: { h: number; s: number; l: number }) => {
+    // Throttle updates to once per animation frame
+    pendingHslRef.current = next;
+    if (rafIdRef.current == null) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        rafIdRef.current = null;
+        const latest = pendingHslRef.current!;
+        pendingHslRef.current = null;
+        fromPickerRef.current = true;
+        const normalized = {
+          h: latest.h, // degrees
+          s: round3(latest.s / 100),
+          l: round3(latest.l / 100),
+        };
+        // Only update state if meaningfully changed to reduce jitter
+        setHsl((prev) => {
+          if (
+            Math.abs(prev.h - normalized.h) < 0.01 &&
+            Math.abs(prev.s - normalized.s) < 0.001 &&
+            Math.abs(prev.l - normalized.l) < 0.001
+          ) {
+            return prev;
+          }
+          return normalized;
+        });
+        const rgb = hslNormToRgb(normalized.h, normalized.s, normalized.l);
+        const hex = rgbToHex(rgb.r, rgb.g, rgb.b).toUpperCase();
+        if (hex !== lastValidRef.current) {
+          setInternalValue(hex);
+          lastValidRef.current = hex;
+          onChange(hex);
+        }
+        // Allow external sync on next frame after state settles
+        requestAnimationFrame(() => {
+          fromPickerRef.current = false;
+        });
+      });
+    }
+  };
+
   return (
-    <div {...divProps} className={`${styles.wrapper} ${className || ''}`}>
+    <div {...divProps} className={`${styles.wrapper} ${className || ''}`} ref={wrapperRef}>
       <div
         className={styles.colorSwatch}
         style={{ backgroundColor: isValidHex(internalValue) ? internalValue : lastValidRef.current }}
@@ -99,6 +193,73 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
         onChange={handleColorChange}
         className={styles.nativeColorPicker}
       />
+      {showPopover && (
+        <div ref={popoverRef} className={styles.popover} role="dialog" aria-modal="true">
+          <HslColorPicker
+            color={{ h: hsl.h, s: hsl.s * 100, l: hsl.l * 100 }}
+            onChange={handleHslChange}
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)' }}>
+              <span>H</span>
+              <input
+                type="number"
+                min={0}
+                max={360}
+                step={1}
+                value={Math.round(hsl.h)}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  const h = isFinite(v) ? Math.max(0, Math.min(360, v)) : 0;
+                  handleHslChange({ h, s: hsl.s * 100, l: hsl.l * 100 });
+                }}
+                style={{ width: '4.5em' }}
+              />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)' }}>
+              <span>S</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round(hsl.s * 100)}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  const s = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+                  handleHslChange({ h: hsl.h, s, l: hsl.l * 100 });
+                }}
+                style={{ width: '4.5em' }}
+              />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)' }}>
+              <span>L</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round(hsl.l * 100)}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  const l = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+                  handleHslChange({ h: hsl.h, s: hsl.s * 100, l });
+                }}
+                style={{ width: '4.5em' }}
+              />
+            </label>
+          </div>
+          {/* Fallback access to native picker */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+            <button type="button" onClick={() => setShowPopover(false)} style={{ fontSize: 'var(--cf-text-s)' }}>
+              Close
+            </button>
+            <button type="button" onClick={() => { setShowPopover(false); colorPickerRef.current?.click(); }} style={{ fontSize: 'var(--cf-text-s)' }}>
+              Native Picker
+            </button>
+          </div>
+        </div>
+      )}
       <Input
         type="text"
         id={id}

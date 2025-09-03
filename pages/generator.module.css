@@ -153,7 +153,7 @@
 
 .tabContent {
   /* add horizontal padding so selected outlines are fully visible */
-  padding: var(--spacing-3) var(--spacing-4) var(--spacing-5);
+  padding: var(--spacing-2) var(--spacing-4) var(--spacing-4);
   overflow-x: visible;
   /* avoid horizontal scrollbar from wide inner rows */
   /* ensure bottom breathing room on AI/Demo and long forms */
@@ -164,7 +164,7 @@
 .sectionTitle {
   font-size: var(--cf-text-xl);
   color: var(--foreground);
-  margin-bottom: var(--spacing-6);
+  margin: 0 0 var(--spacing-4);
 }
 
 .submitButton {
@@ -182,6 +182,153 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+}
+
+/* Manual tab: responsive two-column wrapper */
+.manualGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-6);
+  align-items: flex-start;
+}
+
+/* Manual tab: column that grows and wraps under */
+.manualCol {
+  flex: 1 1 340px;
+  min-width: 300px;
+}
+
+/* Color wheel row: wheel + legend */
+.wheelRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cf-space-m);
+  flex-wrap: wrap;
+  /* Extra vertical/left space so outer labels don’t overlap neighbors or page edge */
+  margin: var(--cf-space-xs);
+  padding-top: var(--cf-space-xl);
+  padding-bottom: var(--cf-space-2xl);
+  padding-left: var(--cf-space-2xl);
+  padding-right: var(--cf-space-2xl);
+  position: relative;
+  /* Reserve space for labels without changing the circle's aspect */
+  min-height: calc(var(--wheel-size) + 72px);
+}
+
+.colorWheel {
+  --wheel-size: 220px;
+  /* Marker and band sizing */
+  --marker-size: 18px;
+  --ring-width: var(--marker-size);
+  /* Place marker center so entire marker sits within the band */
+  --wheel-radius: calc(var(--wheel-size) / 2 - var(--marker-size));
+  /* Pointer label radius (outside the ring) */
+  --marker-label-radius: calc(var(--wheel-size) / 2 + 0px);
+  position: relative;
+  flex: 0 0 auto; /* prevent shrinking/squishing */
+  width: var(--wheel-size);
+  height: var(--wheel-size);
+  border-radius: 50%;
+  /* Math convention: 0° at right, angles increase CCW so 90° is at top.
+     conic-gradient increases clockwise, so we reverse color order to make hues increase CCW. */
+  background: conic-gradient(from 90deg,
+    red, magenta, blue, cyan, lime, yellow, red
+  );
+  box-shadow: inset 0 0 0 10px rgba(255,255,255,0.7), 0 0 0 1px var(--border);
+  margin-right: var(--cf-space-l);
+  /* Tick placement */
+  --tick-radius: calc(var(--wheel-size) / 2 - 6px);
+  /* Move labels slightly outside the wheel to fit 3-digit values */
+  --tick-label-radius: calc(var(--wheel-size) / 2 + 16px);
+  /* Extra margin for top/bottom labels (90/270) */
+  --tick-label-radius-vertical: calc(var(--wheel-size) / 2 + 24px);
+  overflow: visible;
+}
+
+.wheelMarker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--marker-size);
+  height: var(--marker-size);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 3px var(--foreground);
+  transform-origin: center center;
+}
+
+.wheelLegend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: var(--spacing-2) var(--spacing-4);
+  min-width: 280px;
+}
+
+/* Faint ticks at cardinal angles */
+.wheelTick {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  background: color-mix(in lab, var(--foreground) 40%, transparent);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.wheelTickVertical {
+  width: 2px;
+  height: 10px;
+}
+
+.wheelTickLabel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: var(--cf-text-s);
+  line-height: 1;
+  /* Use foreground which is our text-on-light equivalent in this context */
+  color: var(--foreground);
+  transform-origin: center center;
+  pointer-events: none;
+  z-index: 2; /* sits above wheel; marker labels will sit above this */
+}
+
+/* Pointer-style labels for each semantic marker */
+.wheelMarkerLabel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: var(--cf-text-s);
+  line-height: 1;
+  color: var(--foreground);
+  transform-origin: left center; /* anchor left edge at the radial point so text grows outward */
+  pointer-events: none;
+  z-index: 3;
+  white-space: nowrap;
+  /* Ensure text remains readable atop degree labels and wheel in both schemes */
+  background: light-dark(
+    color-mix(in lab, var(--background) 92%, transparent),
+    color-mix(in lab, var(--background) 85%, transparent)
+  );
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.legendHsl {
+  margin-left: 8px;
+  font-size: var(--cf-text-s);
+  color: var(--muted-foreground, #666);
 }
 
 /* Inline manual fields at all sizes */
@@ -250,7 +397,7 @@
   border-top-style: solid;
   border-top-width: 6px;
   width: 75%;
-  margin: var(--cf-space-s) 0 var(--cf-space-s) var(--cf-space-4xl);
+  margin: 0 auto;
 }
 
 /* Subtle notice banner used in AI tab */
