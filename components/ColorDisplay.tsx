@@ -3,7 +3,7 @@ import { Badge } from './Badge';
 import { Skeleton } from './Skeleton';
 import { PaletteWithVariations } from '../helpers/types';
 import { ensureAAAContrast } from '../helpers/ensureAAAContrast';
-import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_WHITE_RGB, NEAR_BLACK_RGB, AAA_MIN, AA_SMALL_MIN, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP } from '../helpers/config';
+import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_BLACK_RGB, NEAR_WHITE_RGB, AAA_MIN, AA_SMALL_MIN, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP } from '../helpers/config';
 import { hexToRgb, getContrastRatio, luminance } from '../helpers/colorUtils';
 import styles from './ColorDisplay.module.css';
 
@@ -53,7 +53,7 @@ const VariationBlock = ({ variation, onClick }: { variation: any; onClick?: () =
   const textRgb = textIsWhite ? NEAR_WHITE_RGB : NEAR_BLACK_RGB;
   const ratio = getContrastRatio(bg, textRgb);
   const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN ? 'AAA' : ratio >= AA_SMALL_MIN ? 'AA' : 'FAIL';
-  const hsl = hexToHslString(variation.hex, true);
+  const hslInt = hexToHslString(variation.hex, false).replace(/^hsl/i, 'HSL');
   const y = luminance(...Object.values(hexToRgb(variation.hex)) as [number, number, number]);
 
   const badgeBg = textIsWhite ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
@@ -86,7 +86,7 @@ const VariationBlock = ({ variation, onClick }: { variation: any; onClick?: () =
         <div className={styles.variationContent} style={{ color: contrastSolution.textColor }}>
           <div className={styles.variationCodesContainer}>
             <div className={styles.variationCodes}>
-              <span className={styles.variationHsl}>{hsl}</span>
+              <span className={styles.variationHsl}>{hslInt}</span>
             </div>
           </div>
         </div>

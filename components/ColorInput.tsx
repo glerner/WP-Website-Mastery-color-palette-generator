@@ -199,54 +199,87 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
             color={{ h: hsl.h, s: hsl.s * 100, l: hsl.l * 100 }}
             onChange={handleHslChange}
           />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)', justifyContent: 'space-between' }}>
               <span>H</span>
-              <input
-                type="number"
-                min={0}
-                max={360}
-                step={1}
-                value={Math.round(hsl.h)}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  const h = isFinite(v) ? Math.max(0, Math.min(360, v)) : 0;
-                  handleHslChange({ h, s: hsl.s * 100, l: hsl.l * 100 });
-                }}
-                style={{ width: '4.5em' }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={360}
+                  step={1}
+                  value={Math.round(hsl.h)}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    const h = isFinite(v) ? Math.max(0, Math.min(360, v)) : 0;
+                    handleHslChange({ h, s: hsl.s * 100, l: hsl.l * 100 });
+                  }}
+                />
+                <div className={styles.stepper}>
+                  <button type="button" aria-label="Increase hue" onClick={() => {
+                    const h = Math.min(360, Math.round(hsl.h) + 1);
+                    handleHslChange({ h, s: hsl.s * 100, l: hsl.l * 100 });
+                  }}>▲</button>
+                  <button type="button" aria-label="Decrease hue" onClick={() => {
+                    const h = Math.max(0, Math.round(hsl.h) - 1);
+                    handleHslChange({ h, s: hsl.s * 100, l: hsl.l * 100 });
+                  }}>▼</button>
+                </div>
+              </div>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)', justifyContent: 'space-between' }}>
               <span>S</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                value={Math.round(hsl.s * 100)}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  const s = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
-                  handleHslChange({ h: hsl.h, s, l: hsl.l * 100 });
-                }}
-                style={{ width: '4.5em' }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(hsl.s * 100)}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    const s = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+                    handleHslChange({ h: hsl.h, s, l: hsl.l * 100 });
+                  }}
+                />
+                <div className={styles.stepper}>
+                  <button type="button" aria-label="Increase saturation" onClick={() => {
+                    const s = Math.min(100, Math.round(hsl.s * 100) + 1);
+                    handleHslChange({ h: hsl.h, s, l: hsl.l * 100 });
+                  }}>▲</button>
+                  <button type="button" aria-label="Decrease saturation" onClick={() => {
+                    const s = Math.max(0, Math.round(hsl.s * 100) - 1);
+                    handleHslChange({ h: hsl.h, s, l: hsl.l * 100 });
+                  }}>▼</button>
+                </div>
+              </div>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--cf-text-s)', justifyContent: 'space-between' }}>
               <span>L</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                value={Math.round(hsl.l * 100)}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  const l = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
-                  handleHslChange({ h: hsl.h, s: hsl.s * 100, l });
-                }}
-                style={{ width: '4.5em' }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(hsl.l * 100)}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    const l = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+                    handleHslChange({ h: hsl.h, s: hsl.s * 100, l });
+                  }}
+                />
+                <div className={styles.stepper}>
+                  <button type="button" aria-label="Increase lightness" onClick={() => {
+                    const l = Math.min(100, Math.round(hsl.l * 100) + 1);
+                    handleHslChange({ h: hsl.h, s: Math.round(hsl.s * 100), l });
+                  }}>▲</button>
+                  <button type="button" aria-label="Decrease lightness" onClick={() => {
+                    const l = Math.max(0, Math.round(hsl.l * 100) - 1);
+                    handleHslChange({ h: hsl.h, s: Math.round(hsl.s * 100), l });
+                  }}>▼</button>
+                </div>
+              </div>
             </label>
           </div>
           {/* Fallback access to native picker */}

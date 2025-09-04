@@ -22,7 +22,7 @@ import { generateThemeJson } from '../helpers/themeJson';
 import { generateCssClasses, generateFilenameSuffix } from '../helpers/cssGenerator';
 import { Palette, ColorType, SemanticColorType, PaletteWithVariations } from '../helpers/types';
 import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio, matchBandFromPrimaryByS, luminance } from '../helpers/colorUtils';
-import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP, TARGET_LUM_DARK } from '../helpers/config';
+import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP, TARGET_LUM_DARK, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
 import { LuminanceTestStrips } from '../components/LuminanceTestStrips';
 
 // Smoothly scroll the Adjust panel to a target anchor id.
@@ -138,6 +138,7 @@ const GeneratorPage = () => {
   >({});
   const generatePaletteMutation = useGeneratePalette();
   const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo'>('instructions');
+  const savedManualJsonRef = useRef<string>('');
   const [demoScheme, setDemoScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [themeName, setThemeName] = useState<string>('');
   // Per-scheme selection of which band to export/use for semantic colors
@@ -172,10 +173,12 @@ const GeneratorPage = () => {
   }, []);
   // Default when nothing has been saved yet; a hydration effect below will
   // load persisted values from localStorage and overwrite these shortly.
-  // Near-white for text on dark backgrounds (temporary default).
-  const [textOnDark, setTextOnDark] = useState<string>('#D6D2CE');
-  // Near-black for text on light backgrounds (temporary default).
-  const [textOnLight, setTextOnLight] = useState<string>('#1A1514');
+  // Defaults per request
+  const [textOnDark, setTextOnDark] = useState<string>('#F7F3EE');
+  const [textOnLight, setTextOnLight] = useState<string>('#453521');
+
+
+  
 
   // Load saved selections once, with migration from Y-based tints to index-based
   useEffect(() => {
@@ -240,6 +243,27 @@ const GeneratorPage = () => {
       success: palette.success.hex,
     },
   });
+
+  // Track whether Manual form has unsaved changes compared to last saved snapshot
+  const isManualDirty = useMemo(() => {
+    try {
+      const current = JSON.stringify(manualForm.values);
+      return !!(savedManualJsonRef.current && current !== savedManualJsonRef.current);
+    } catch {
+      return false;
+    }
+  }, [manualForm.values]);
+
+  // Warn on page unload only when there are unsaved changes
+  useEffect(() => {
+    if (!isManualDirty) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isManualDirty]);
 
   // Load/save semantic band selection
   useEffect(() => {
@@ -395,6 +419,8 @@ const GeneratorPage = () => {
       }));
       if ((nextValues as any).textOnDark) setTextOnDark((nextValues as any).textOnDark);
       if ((nextValues as any).textOnLight) setTextOnLight((nextValues as any).textOnLight);
+      // Track the last saved snapshot for unsaved-changes warning
+      try { savedManualJsonRef.current = JSON.stringify({ ...nextValues }); } catch { savedManualJsonRef.current = raw; }
       const tn = localStorage.getItem('gl_theme_name');
       const manualName = typeof nextValues.themeName === 'string' ? nextValues.themeName.trim() : '';
       const chosenName = manualName || (tn || '');
@@ -488,6 +514,38 @@ const GeneratorPage = () => {
     });
     return fullPalette as PaletteWithVariations;
   }, [palette, selections, resolveTintYFromIndex]);
+
+  // Commonly-used derived hexes for UI styling (safe: after paletteWithVariations)
+  const accentDarkHex = useMemo(() => {
+    try {
+      return (
+        paletteWithVariations.accent.variations.find((v: any) => v.step === 'dark')?.hex ||
+        paletteWithVariations.accent.hex
+      );
+    } catch {
+      return '#000';
+    }
+  }, [paletteWithVariations]);
+  const warningDarkHex = useMemo(() => {
+    try {
+      return (
+        paletteWithVariations.warning.variations.find((v: any) => v.step === 'dark')?.hex ||
+        paletteWithVariations.warning.hex
+      );
+    } catch {
+      return '#7a5d00';
+    }
+  }, [paletteWithVariations]);
+  const warningLightHex = useMemo(() => {
+    try {
+      return (
+        paletteWithVariations.warning.variations.find((v: any) => v.step === 'light')?.hex ||
+        paletteWithVariations.warning.hex
+      );
+    } catch {
+      return '#e6b800';
+    }
+  }, [paletteWithVariations]);
 
   // Read Primary's dark band RGB from computed variations when available; otherwise approximate
   // by solving Primary base to the TARGET_LUM_DARK while preserving H and S via solveHslLightnessForY.
@@ -756,11 +814,18 @@ const GeneratorPage = () => {
         {/* Desktop: 2-column layout */}
         <div className={styles.desktopLayout}>
           <div className={styles.tabsColumn}>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className={styles.tabs}>
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => {
+                setActiveTab(v as any);
+              }}
+              className={styles.tabs}
+            >
               <TabsList
                 className={styles.tabsHeader}
                 style={{
-                  ['--primary' as any]: (paletteWithVariations.primary.variations.find((v: any) => v.step === 'dark')?.hex || paletteWithVariations.primary.hex),
+                  // Menu should use Accent-dark instead of Primary-dark
+                  ['--primary' as any]: accentDarkHex,
                   ['--card' as any]: textOnDark,
                 }}
               >
@@ -769,25 +834,31 @@ const GeneratorPage = () => {
                 <TabsTrigger value="manual">Manual</TabsTrigger>
                 <TabsTrigger value="palette">Palette</TabsTrigger>
                 <TabsTrigger value="adjust">Adjust</TabsTrigger>
-                <TabsTrigger value="export">Export</TabsTrigger>
                 <TabsTrigger value="demo">Demo</TabsTrigger>
+                <TabsTrigger value="export">Export</TabsTrigger>
               </TabsList>
 
               {/* Instructions Tab (desktop) */}
               <TabsContent value="instructions" className={styles.tabContent}>
                 <div className={styles.instructionsContent}>
                   <h2 className={styles.sectionTitle}>Instructions</h2>
-                  <ul>
-                    <li>Use <strong>AI</strong> or <strong>Manual</strong> to set your basic colors. These will be adjusted for proper text color contrast.</li>
-                    <li>Open the <strong>Palette</strong> tab to review variations. Click any swatch to jump to its <strong>Adjust</strong> section.</li>
-                    <li>In <strong>Adjust</strong>, fine-tune light and dark luminance. Your selections are saved locally.</li>
-                    <li>When satisfied, go to <strong>Export</strong> to download the theme.json Palette files, with combinations of the Primary, Secondary and Tertiary colors.</li>
-                    <li>Use <strong>Demo</strong> to preview components in light/dark schemes.</li>
-                  </ul>
+                  <p>Use the <strong>AI</strong> tab (coming soon) or <strong>Manual</strong> tab to set your basic colors.</p>
+                  <p>In the <strong>Manual</strong> tab, enter your Theme Name (brief, appears in WordPress tooltip in Palette selection).</p>
+                  <p>Upload your child theme's <code>theme.json</code> file (needed so your generated theme variations match the version).</p>
+                  <p>In the <strong>Manual</strong> tab, enter hex color numbers, or click on the color swatch for HSL adjustment slider and picker.</p>
+                  <p>These will all be adjusted for proper text color contrast.</p>
+                  <p>Click the "Save colors and settings" button so your choices are there when you restart.</p>
+                  <p>Open the <strong>Palette</strong> tab to review color variations. Click any swatch to jump to its <strong>Adjust</strong> section.</p>
+                  <p>In the <strong>Adjust</strong> tab, fine-tune tints and shades (luminance). Your selections are saved locally, since you will likely use the same selection even as you change hues.</p>
+                  <p>Use the <strong>Demo</strong> tab to preview components in light/dark schemes.</p>
+                  <p>When satisfied, go to <strong>Export</strong> to download your ZIP file with all the <code>theme.json</code> Palette files, with combinations of the Primary, Secondary and Tertiary colors. Also has companion CSS variables and color classes. The file name has the dark color numbers.</p>
+                  <p>The Export tab also shows Hex and HSL, convenient for copying. </p>
+                  <p>Copy the <code>theme.json</code> files into your child theme's <code>styles</code> folder (create it if there isn't one). They will show as Palettes in your WordPress Site Editor.</p>
+                  <p>You can also copy the CSS files to the styles folder, but WordPress won't use them. When you've chosen which Palette you prefer, copy the corresponding CSS to add to your existing <code>style.css</code> file.</p>
                   <img
                     src={AZLogo}
                     alt="AZ WP Website Consulting LLC"
-                    style={{ maxWidth: '8em', width: '100%', height: 'auto', display: 'block', margin: 'var(--spacing-3) 0' }}
+                    style={{ maxWidth: '8em', width: '100%', height: 'auto', display: 'block', margin: 'var(--cf-space-3xl) 0 var(--cf-space-xs) 0' }}
                   />
                   <p style={{ color: textOnLight, fontSize: 'var(--cf-text-s)', margin: 0 }}>
                     Copyright © 2025 AZ WP Website Consulting LLC.
@@ -1018,6 +1089,34 @@ const GeneratorPage = () => {
                           }}
                           style={{ width: 'min(15em, 100%)' }}
                         />
+                        {isManualDirty && (
+                          <span className={styles.unsavedIndicator} title="You have unsaved changes. Click Save to persist locally.">
+                            <span className={styles.unsavedDot} />
+                            Unsaved changes
+                          </span>
+                        )}
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            try {
+                              localStorage.setItem('gl_palette_manual_colors', JSON.stringify(manualForm.values));
+                              const mv: any = manualForm.values || {};
+                              localStorage.setItem('gl_theme_name', (mv.themeName ?? themeName ?? '') as string);
+                              if (mv.textOnDark) localStorage.setItem('gl_theme_text_on_dark_hex', mv.textOnDark);
+                              if (mv.textOnLight) localStorage.setItem('gl_theme_text_on_light_hex', mv.textOnLight);
+                              if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
+                              if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
+                              if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
+                              if (themeConfig) localStorage.setItem('gl_imported_theme_json', JSON.stringify(themeConfig));
+                              if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
+                              // Update last-saved snapshot
+                              try { savedManualJsonRef.current = JSON.stringify({ ...manualForm.values }); } catch { }
+                              toast.success('Theme name, colors, and settings saved');
+                            } catch { }
+                          }}
+                        >
+                          Save colors and settings
+                        </Button>
                       </div>
                       <hr
                         className={styles.tertiaryDivider}
@@ -1027,7 +1126,8 @@ const GeneratorPage = () => {
                       />
 
                       {/* Match semantic colors to Primary (desktop Manual tab) */}
-                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
+                      <div style={{ display: 'block', marginTop: 'var(--cf-space-2xs)', marginBottom: 'var(--cf-space-2xs)' }}>
+                        <p>Optional: Adjust the saturation and brightness (luminance) of the Error, Warning, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Warning). See the Palette page for the "adusted for contrast" versions.</p>
                         <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
                           Match Error/Warning/Success to Primary
                         </Button>
@@ -1101,54 +1201,16 @@ const GeneratorPage = () => {
                         </div>
                         {/* Legend grid removed in favor of pointer-style labels */}
                       </div>
-                      {/* Description moved after wheel */}
-                      <p className={styles.formHelp} style={{ marginTop: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
-                        Optional: Adjust the saturation and brightness (luminance) of the Error, Warning, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Warning). See the Palette page for the "adusted for contrast" versions.
-                      </p>
-                      {/* Save colors */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', flexWrap: 'wrap', marginBottom: 'var(--spacing-3)' }}>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            try {
-                              localStorage.setItem('gl_palette_manual_colors', JSON.stringify(manualForm.values));
-                              const mv: any = manualForm.values || {};
-                              localStorage.setItem('gl_theme_name', (mv.themeName ?? themeName ?? '') as string);
-                              if (mv.textOnDark) localStorage.setItem('gl_theme_text_on_dark_hex', mv.textOnDark);
-                              if (mv.textOnLight) localStorage.setItem('gl_theme_text_on_light_hex', mv.textOnLight);
-                              if (mv.error) localStorage.setItem('gl_theme_semantic_error_hex', mv.error);
-                              if (mv.warning) localStorage.setItem('gl_theme_semantic_warning_hex', mv.warning);
-                              if (mv.success) localStorage.setItem('gl_theme_semantic_success_hex', mv.success);
-                              if (themeConfig) localStorage.setItem('gl_imported_theme_json', JSON.stringify(themeConfig));
-                              if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
-                              toast.success('Theme name, colors, and settings saved');
-                            } catch { }
-                          }}
-                        >
-                          Save colors and settings
-                        </Button>
-                      </div>
+                      {/* Save button moved above, next to Theme Name */}
                     </div>
 
                     {/* Right column: color entry controls */}
                     <div className={styles.manualCol}>
                       <form className={styles.manualForm}>
                         <p className={styles.formHelp} style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
-                          Enter hexadecimal color numbers, or click the color swatch to enter HSL (up/down arrows in fields, or drag in the color picker).
+                          Enter hexadecimal color numbers, or click the color swatch to enter HSL (type or up/down arrow keys in fields, or drag in the color picker).
                         </p>
-                        <FormItem name="textOnDark">
-                          <FormControl>
-                            <ColorInput
-                              value={manualForm.values.textOnDark}
-                              onChange={(hex) => {
-                                manualForm.setValues({ ...manualForm.values, textOnDark: hex });
-                                setTextOnDark(hex);
-                              }}
-                              trailing={<FormLabel>Text on Dark (near white)</FormLabel>}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                        {/* Order: Text on Light above Text on Dark */}
                         <FormItem name="textOnLight">
                           <FormControl>
                             <ColorInput
@@ -1157,7 +1219,98 @@ const GeneratorPage = () => {
                                 manualForm.setValues({ ...manualForm.values, textOnLight: hex });
                                 setTextOnLight(hex);
                               }}
-                              trailing={<FormLabel>Text on Light (near black)</FormLabel>}
+                              trailing={(() => {
+                                const rgb = hexToRgb(manualForm.values.textOnLight);
+                                const y = luminance(rgb.r, rgb.g, rgb.b);
+                                const ok = y <= CLOSE_ENOUGH_TO_BLACK_MAX_LUM;
+                                const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                                return (
+                                  <div>
+                                    <FormLabel>
+                                      Text on Light (near black)
+                                      <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: manualForm.values.textOnLight || 'var(--foreground)' }}>
+                                        HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                      </span>
+                                    </FormLabel>
+                                    {!ok && (
+                                      <div style={{ marginTop: 2, fontSize: 'var(--cf-text-s)', color: `light-dark(${warningDarkHex}, ${warningLightHex})` }}>
+                                        Consider a darker color for readability (Y ≤ {CLOSE_ENOUGH_TO_BLACK_MAX_LUM}).
+                                      </div>
+                                    )}
+                                    {/* Suggestions */}
+                                    <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                                      {[{ label: 'Almost black', hex: '#333333' }, { label: 'Neutral', hex: '#453521' }].map(s => (
+                                        <button
+                                          key={s.hex}
+                                          type="button"
+                                          onClick={() => { manualForm.setValues({ ...manualForm.values, textOnLight: s.hex }); setTextOnLight(s.hex); }}
+                                          style={{
+                                            padding: '2px 6px',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 4,
+                                            background: 'transparent',
+                                            color: 'inherit',
+                                            cursor: 'pointer',
+                                            fontSize: 'var(--cf-text-s)'
+                                          }}
+                                        >{s.label}</button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                        <FormItem name="textOnDark">
+                          <FormControl>
+                            <ColorInput
+                              value={manualForm.values.textOnDark}
+                              onChange={(hex) => {
+                                manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                                setTextOnDark(hex);
+                              }}
+                              trailing={(() => {
+                                const rgb = hexToRgb(manualForm.values.textOnDark);
+                                const y = luminance(rgb.r, rgb.g, rgb.b);
+                                const ok = y >= CLOSE_ENOUGH_TO_WHITE_MIN_LUM;
+                                const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                                return (
+                                  <div>
+                                    <FormLabel>
+                                      Text on Dark (near white)
+                                      <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: manualForm.values.textOnLight || 'var(--foreground)' }}>
+                                        HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                      </span>
+                                    </FormLabel>
+                                    {!ok && (
+                                      <div style={{ marginTop: 2, fontSize: 'var(--cf-text-s)', color: `light-dark(${warningDarkHex}, ${warningLightHex})` }}>
+                                        Consider a lighter color for readability (Y ≥ {CLOSE_ENOUGH_TO_WHITE_MIN_LUM}).
+                                      </div>
+                                    )}
+                                    {/* Suggestions */}
+                                    <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                                      {[{ label: 'Almost white', hex: '#F7F3EE' }, { label: 'Neutral', hex: '#EFEEEC' }, { label: 'Off-white', hex: '#F1EEE9' }].map(s => (
+                                        <button
+                                          key={s.hex}
+                                          type="button"
+                                          onClick={() => { manualForm.setValues({ ...manualForm.values, textOnDark: s.hex }); setTextOnDark(s.hex); }}
+                                          style={{
+                                            padding: '2px 6px',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 4,
+                                            background: 'transparent',
+                                            color: 'inherit',
+                                            cursor: 'pointer',
+                                            fontSize: 'var(--cf-text-s)'
+                                          }}
+                                        >{s.label}</button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1171,18 +1324,20 @@ const GeneratorPage = () => {
                                 trailing={
                                   <FormLabel>
                                     {palette[key].name}
-                                    {(['primary', 'secondary', 'tertiary', 'accent'] as Array<ColorType | SemanticColorType>).includes(key) && (() => {
+                                    {(() => {
                                       const rgb = hexToRgb(manualForm.values[key]);
                                       const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
                                       return (
-                                        <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: 'var(--muted-foreground, #666)' }}>
+                                        <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: manualForm.values.textOnLight || 'var(--foreground)' }}>
                                           HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
                                         </span>
                                       );
                                     })()}
-                                    {(['error', 'warning', 'success'] as Array<ColorType | SemanticColorType>).includes(key)
-                                      ? ` - Default ${initialPalette[key as keyof Palette].hex}`
-                                      : ''}
+                                    {(['error', 'warning', 'success'] as Array<ColorType | SemanticColorType>).includes(key) && (
+                                      <div style={{ marginTop: 2, fontSize: 'var(--cf-text-s)', color: 'var(--foreground)' }}>
+                                        Default {initialPalette[key as keyof Palette].hex}
+                                      </div>
+                                    )}
                                   </FormLabel>
                                 }
                               />
@@ -1289,7 +1444,10 @@ const GeneratorPage = () => {
                     className={styles.exportDescription}
                     style={{ color: `light-dark(${textOnLight}, ${textOnDark})` }}
                   >
-                    Download a ZIP containing the base palette and all theme variations (all combinations of the main 3 colors). <br/>The file includes a WordPress theme.json and a CSS file with CSS variables and contrast-optimized utilities, for each variation.<br/>Copy each file in it, into your child theme's `styles` folder.<br/>Below see the colors, the hex number, and the hsl values. 
+                    Download a ZIP containing the contrast-adjusted theme variations (all combinations of the main 3 colors).<br/>
+                    The file includes a WordPress theme.json and a CSS file with CSS variables and contrast-optimized utilities, for each variation.<br/>
+                    Copy each file in it, into your child theme's <code>styles</code> folder.<br/>
+                    Below see the exported colors, their hex numbers, and HSL values.
                   </p>
                   {/* Export preview and details */}
                   <div style={{
@@ -1326,9 +1484,13 @@ const GeneratorPage = () => {
                             </ul>
                             <div style={{ marginTop: 'var(--spacing-3)' }}>
                               <Button
-                                variant="primary"
                                 onClick={handleExportGzipAll}
                                 className={styles.exportButton}
+                                style={{
+                                  background: accentDarkHex,
+                                  color: textOnDark,
+                                  borderColor: accentDarkHex
+                                }}
                               >
                                 Download .zip file
                               </Button>
@@ -1349,7 +1511,7 @@ const GeneratorPage = () => {
                       flex: '1 1 340px',
                       minWidth: '340px'
                     }}>
-                      <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>Colors to be exported</h3>
+                      <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>Colors to be exported (contrast-adjusted only)</h3>
                       {/* Text on Light/Dark preview */}
                       <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', marginBottom: 'var(--spacing-3)' }}>
                         {[{ label: 'text-on-light', hex: textOnLight }, { label: 'text-on-dark', hex: textOnDark }].map(({ label, hex }) => (
@@ -1380,10 +1542,12 @@ const GeneratorPage = () => {
                               pushItem(`Light (${sel.light})`, findHex(sel.light));
                               pushItem(`Dark (${sel.dark})`, findHex(sel.dark));
                             } else {
-                              entry.variations.forEach((v: any) => pushItem(v.step || v.name || 'step', v.hex));
+                              // Exclude base; only include adjusted bands. Prefer ordering: dark, darker, light, lighter
+                              const order = ['dark','darker','light','lighter'];
+                              const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
+                              adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
+                              adjusted.forEach((v: any) => pushItem(v.step || v.name || 'step', v.hex));
                             }
-                          } else {
-                            pushItem('base', entry.hex);
                           }
                           const toHsl = (hex: string) => {
                             try {
@@ -1445,29 +1609,30 @@ const GeneratorPage = () => {
                           linesHex.push(`text-on-dark: ${textOnDark.toUpperCase()}`);
                           linesHsl.push(`text-on-dark: ${toHsl(textOnDark)}`);
                         }
+                        // Add adjusted color bands for each key (exclude base)
                         keys.forEach((key) => {
                           const entry: any = (paletteWithVariations as any)?.[key];
                           if (!entry) return;
                           const isSemantic = key === 'error' || key === 'warning' || key === 'success';
-                          const pairs: Array<{ step: string; hex: string }> = [];
-                          // Always include base first
-                          if (entry.hex) pairs.push({ step: 'base', hex: entry.hex });
-                          const add = (step: string, hex?: string) => { if (hex) pairs.push({ step, hex }); };
+                          const add = (step: string, hex?: string) => {
+                            if (!hex) return;
+                            const slug = slugFor(key as Key, step);
+                            linesHex.push(`${slug}: ${hex.toUpperCase()}`);
+                            linesHsl.push(`${slug}: ${toHsl(hex)}`);
+                          };
                           if (Array.isArray(entry.variations)) {
                             if (isSemantic) {
-                              const sel = semanticBandSelection[key];
+                              const sel = semanticBandSelection[key as 'error'|'warning'|'success'];
                               const findHex = (step: string) => entry.variations.find((v: any) => v.step === step)?.hex;
                               add(sel.light, findHex(sel.light));
                               add(sel.dark, findHex(sel.dark));
                             } else {
-                              entry.variations.forEach((v: any) => add(v.step || v.name || 'step', v.hex));
+                              const order = ['dark','darker','light','lighter'];
+                              const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
+                              adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
+                              adjusted.forEach((v: any) => add(v.step || v.name || 'step', v.hex));
                             }
                           }
-                          pairs.forEach(({ step, hex }) => {
-                            const slug = slugFor(key, step);
-                            linesHex.push(`${slug}: ${hex.toUpperCase()}`);
-                            linesHsl.push(`${slug}: ${toHsl(hex)}`);
-                          });
                         });
                         return (
                           <>

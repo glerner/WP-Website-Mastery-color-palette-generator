@@ -41,6 +41,41 @@
   --spacing-16: 4rem;
 }
 
+/* Global code styling */
+code,
+pre code {
+  font-family: var(--font-family-monospace);
+  font-size: 0.95em;
+}
+
+code {
+  display: inline-block;
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+}
+
+pre {
+  margin: 0 0 1em;
+  padding: 0.75em 1em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--surface-foreground);
+  overflow: auto;
+}
+
+pre code {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  white-space: pre;
+}
+
 :root {
   /* Light Mode */
   --background: hsl(220 20% 98%);
@@ -128,6 +163,11 @@ body {
   font-family: var(--font-family-base);
   font-size: var(--cf-text-s);
   line-height: 1.4;
+}
+
+/* Global paragraph spacing */
+p {
+  margin-bottom: 1em;
 }
 
 /* Inputs and interactive controls default to body size */

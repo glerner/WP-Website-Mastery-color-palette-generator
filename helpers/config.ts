@@ -35,6 +35,14 @@ export const NEAR_WHITE_HEX = '#F9FAFB';
 export const NEAR_BLACK_RGB = { r: 10, g: 10, b: 10 } as const;
 export const NEAR_WHITE_RGB = { r: 249, g: 250, b: 251 } as const;
 
+/**
+ * Closeness thresholds for validating text colors.
+ * These control how close to white (for Text on Dark) and how close to black (for Text on Light) the chosen colors must be.
+ * Values are luminance targets in [0..1]. Override via env if needed.
+ */
+export const CLOSE_ENOUGH_TO_WHITE_MIN_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_WHITE_MIN_LUM', 0.845, 0, 1);
+export const CLOSE_ENOUGH_TO_BLACK_MAX_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_BLACK_MAX_LUM', 0.08, 0, 1);
+
 /** Number of decimals when computing target Y values. */
 export const Y_TARGET_DECIMALS = int('NEXT_PUBLIC_Y_TARGET_DECIMALS', '2');
 /** Number of decimals when displaying measured Y values. */

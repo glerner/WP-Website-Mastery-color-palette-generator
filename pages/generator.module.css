@@ -12,7 +12,7 @@
 /* Small landscape (e.g., iPhone SE landscape: 667 x 375) */
 @media (orientation: landscape) and (max-height: 420px) {
   .previewContent {
-    padding: var(--spacing-1) var(--spacing-2);
+    padding: var(--cf-space-4xs) var(--cf-space-2xs);
   }
 
   .previewColumn {
@@ -23,8 +23,8 @@
 
   .tabsColumn {
     min-width: 220px;
-    padding-left: var(--spacing-1);
-    padding-right: var(--spacing-1);
+    padding-left: var(--cf-space-4xs);
+    padding-right: var(--cf-space-4xs);
   }
 }
 
@@ -78,7 +78,7 @@
   /* Desktop-specific spacing tweaks */
   .previewContent {
     /* remove wide right margin that widened the center gutter */
-    padding: var(--spacing-3) var(--spacing-4) var(--spacing-6) var(--spacing-3);
+    padding: var(--cf-space-xs) var(--cf-space-m) var(--cf-space-l) var(--cf-space-xs);
     margin: 0;
   }
 
@@ -96,16 +96,16 @@
     max-width: none;
     min-width: 360px;
     /* reduce internal gap from the divider */
-    padding-left: var(--spacing-2);
-    padding-right: var(--spacing-2);
+    padding-left: var(--cf-space-2xs);
+    padding-right: var(--cf-space-2xs);
   }
 }
 
 .controlsContent {
-  padding: var(--spacing-5);
+  padding: var(--cf-space-l);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-6);
+  gap: var(--cf-space-l);
 }
 
 .previewColumn {
@@ -120,7 +120,7 @@
 
 .previewContent {
   /* full-width within the preview column; no auto-centering */
-  padding: var(--spacing-2);
+  padding: var(--cf-space-2xs);
   margin: 0;
 }
 
@@ -153,42 +153,43 @@
 
 .tabContent {
   /* add horizontal padding so selected outlines are fully visible */
-  padding: var(--spacing-2) var(--spacing-4) var(--spacing-4);
+  padding: var(--cf-space-2xs) var(--cf-space-m) var(--cf-space-m);
   overflow-x: visible;
   /* avoid horizontal scrollbar from wide inner rows */
   /* ensure bottom breathing room on AI/Demo and long forms */
   margin-bottom: 1rem;
+  max-width: 65em;
 }
 
 /* Standard section heading for tab contents */
 .sectionTitle {
   font-size: var(--cf-text-xl);
   color: var(--foreground);
-  margin: 0 0 var(--spacing-4);
+  margin: 0 0 var(--cf-space-m);
 }
 
 .submitButton {
-  margin-top: var(--spacing-4);
+  margin-top: var(--cf-space-m);
   width: 100%;
 }
 
 .aiForm {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
+  gap: var(--cf-space-m);
 }
 
 .manualForm {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
+  gap: var(--cf-space-m);
 }
 
 /* Manual tab: responsive two-column wrapper */
 .manualGrid {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-6);
+  gap: var(--cf-space-l);
   align-items: flex-start;
 }
 
@@ -259,7 +260,7 @@
 .wheelLegend {
   display: grid;
   grid-template-columns: repeat(2, minmax(140px, 1fr));
-  gap: var(--spacing-2) var(--spacing-4);
+  gap: var(--cf-space-2xs) var(--cf-space-m);
   min-width: 280px;
 }
 
@@ -336,8 +337,8 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-3);
+  gap: var(--cf-space-2xs);
+  margin-bottom: var(--cf-space-xs);
   /* Allow items to wrap on narrow widths */
   flex-wrap: wrap;
 }
@@ -368,8 +369,8 @@
 }
 
 .exportSection {
-  margin-top: var(--spacing-8);
-  padding-top: var(--spacing-6);
+  margin-top: var(--cf-space-xl);
+  padding-top: var(--cf-space-l);
   border-top: 1px solid var(--border);
 }
 
@@ -377,13 +378,13 @@
   font-size: var(--cf-text-m);
   font-weight: 600;
   color: var(--foreground);
-  margin: 0 0 var(--spacing-2);
+  margin: 0 0 var(--cf-space-2xs);
 }
 
 .exportDescription {
   font-size: var(--cf-text-s);
   color: var(--muted-foreground);
-  margin: 0 0 var(--spacing-4);
+  margin: 0 0 var(--cf-space-m);
   line-height: 1.5;
 }
 
@@ -400,6 +401,28 @@
   margin: 0 auto;
 }
 
+/* Inline unsaved indicator shown near the Save button */
+.unsavedIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--warning-bg);
+  color: var(--warning-fg);
+  border: 1px solid var(--warning-border);
+  font-size: var(--cf-text-s);
+  margin-left: var(--cf-space-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.unsavedDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warning-fg);
+  box-shadow: 0 0 0 1px var(--warning-border);
+}
+
 /* Subtle notice banner used in AI tab */
 .aiNotice {
   /* High-visibility, AAA-friendly banner */
@@ -409,41 +432,41 @@
   background: var(--background);
   border: 2px solid var(--foreground);
   border-radius: var(--radius-sm);
-  padding: var(--spacing-3) var(--spacing-4);
-  margin-bottom: var(--spacing-4);
+  padding: var(--cf-space-xs) var(--cf-space-m);
+  margin-bottom: var(--cf-space-m);
 }
 
 .errorContainer {
   background-color: var(--surface);
   border: 1px solid var(--error);
   border-radius: var(--radius);
-  padding: var(--spacing-4);
-  margin-bottom: var(--spacing-4);
+  padding: var(--cf-space-m);
+  margin-bottom: var(--cf-space-m);
 }
 
 .errorHeader {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--cf-space-2xs);
   color: var(--error);
   font-weight: 600;
-  margin-bottom: var(--spacing-2);
+  margin-bottom: var(--cf-space-2xs);
 }
 
 .errorMessage {
   color: var(--foreground);
   font-size: var(--cf-text-s);
-  margin: 0 0 var(--spacing-3);
+  margin: 0 0 var(--cf-space-xs);
   line-height: 1.4;
 }
 
 .errorSuggestion {
   background-color: var(--muted);
   border-radius: var(--radius-sm);
-  padding: var(--spacing-3);
+  padding: var(--cf-space-xs);
   font-size: var(--cf-text-s);
   color: var(--muted-foreground);
-  margin-bottom: var(--spacing-3);
+  margin-bottom: var(--cf-space-xs);
   line-height: 1.4;
 }
 
@@ -454,7 +477,7 @@
 .retryButton {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--cf-space-2xs);
   width: 100%;
 }
 
@@ -463,12 +486,12 @@
 
   /* Reduce chrome around both columns */
   .previewContent {
-    padding: var(--spacing-1) var(--spacing-1);
+    padding: var(--cf-space-4xs) var(--cf-space-4xs);
     margin: 0;
   }
 
   .tabContent {
-    padding: var(--spacing-2) var(--spacing-1) var(--spacing-3);
+    padding: var(--cf-space-2xs) var(--cf-space-4xs) var(--cf-space-xs);
   }
 
   /* Allow columns to shrink so two columns can fit */
@@ -480,8 +503,8 @@
 
   .tabsColumn {
     min-width: 170px;
-    padding-left: var(--spacing-1);
-    padding-right: var(--spacing-1);
+    padding-left: var(--cf-space-4xs);
+    padding-right: var(--cf-space-4xs);
   }
 }
 

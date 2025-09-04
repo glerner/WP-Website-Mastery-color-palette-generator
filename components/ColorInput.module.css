@@ -52,6 +52,42 @@
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
+/* Remove native spinners in the HSL popover only */
+.popover :global(input[type="number"]) {
+  appearance: textfield; /* Standard */
+  -moz-appearance: textfield; /* Firefox */
+}
+.popover :global(input[type="number"]::-webkit-outer-spin-button),
+.popover :global(input[type="number"]::-webkit-inner-spin-button) {
+  -webkit-appearance: none; /* Chrome, Edge, Safari */
+  margin: 0;
+}
+
+/* Tighten input widths to fit 3 digits or percent values */
+.popover :global(input[type="number"]) {
+  width: 2.6em; /* ~60% of previous 4.2em */
+}
+
+/* Stepper buttons next to H/S/L inputs */
+.popover .stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.popover .stepper button {
+  width: 28px;
+  height: 24px;
+  line-height: 1;
+  border: 1px solid var(--border);
+  background: var(--muted, var(--card));
+  color: var(--foreground);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.popover .stepper button:active {
+  transform: translateY(0.5px);
+}
+
 /* Minimal react-colorful styles (scoped globally) */
 :global(.react-colorful) {
   width: 220px;
