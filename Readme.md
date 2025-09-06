@@ -23,13 +23,6 @@ The GL Color Palette Generator MVP focuses on creating a functional color palett
   * Export of color palettes as theme.json Theme Variations
   * Export of multiple theme variations (change the order of the generated colors, 6 combinations of primary, secondary and tertiary colors, or 24 combinations with accent colors )
 
-# How to use
-
-1. Import FlootSetup.css to set up the css variables and basic styles.
-2. Import the components into your react codebase.
-
----
-
 # Quick Start (Local)
 
 * __Install dependencies__
@@ -44,7 +37,8 @@ npm install
 npm run dev
 ```
 
-Keep the terminal running. Stop with Ctrl+C. After restarting your machine or IDE, run `npm run dev` again.
+Keep the terminal running. Stop with 'q' then Enter, or you can press ctrl+c.
+After restarting your machine or IDE, run `npm run dev` again.
 
 * __Build and preview production bundle__
 
@@ -120,7 +114,7 @@ The app supports exporting palettes as WordPress `theme.json` Theme Variations. 
 
 * __Single archive (ZIP)__ containing multiple theme variations.
 * Each variation includes a `theme.json` and corresponding CSS.
-* Variations may permute primary/secondary/tertiary (and optionally accent) roles.
+* Variations will permute primary/secondary/tertiary (and optionally accent) roles.
 
 See `endpoints/` and related helpers for export implementation details. If hosting within WordPress, you can proxy export via a WP REST endpoint and deliver the ZIP as a download.
 
@@ -131,4 +125,3 @@ See `endpoints/` and related helpers for export implementation details. If hosti
 * __Port busy__: run `npm run dev -- --port 5174` and open http://localhost:5174
 * __Env not applied__: confirm values are in `.env.local` (not committed) and restart `npm run dev`.
 * __Type errors__: check recent edits in `helpers/ensureAAAContrast.tsx`, `helpers/colorUtils.tsx`, and `helpers/config.ts` for consistent imports/exports.
-

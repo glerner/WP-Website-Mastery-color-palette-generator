@@ -11,8 +11,8 @@ function chooseHue(targetHue: number, existingHues: number[], primaryHue: number
   const tooClose = existingHues.some((h) => dist(h, targetHue) < 18);
   if (!tooClose) return norm(targetHue);
   // Try spaced candidates around primary that avoid common analogous/complement overlaps
-  const candidates = [primaryHue + 60, primaryHue + 120, primaryHue + 240, primaryHue + 300];
-  let best = norm(candidates[0]);
+  const candidates: number[] = [primaryHue + 60, primaryHue + 120, primaryHue + 240, primaryHue + 300];
+  let best = norm(candidates[0] ?? primaryHue);
   let bestScore = -1;
   for (const c of candidates) {
     const cNorm = norm(c);
@@ -43,7 +43,7 @@ function buildSemantic(base: Palette): Pick<Palette, 'error' | 'warning' | 'succ
   const error = pickColor(8, 0.86, 0.44);
   error.name = 'Error';
   const warning = pickColor(48, 0.92, 0.58);
-  warning.name = 'Warning';
+  warning.name = 'Notice';
   const success = pickColor(145, 0.62, 0.40);
   success.name = 'Success';
 
@@ -59,7 +59,7 @@ export function generateSemanticColors(base: Palette): Palette {
   return {
     ...base,
     error: { name: 'Error', hex: errorHex },
-    warning: { name: 'Warning', hex: warningHex },
+    warning: { name: 'Notice', hex: warningHex },
     success: { name: 'Success', hex: successHex },
   };
 }

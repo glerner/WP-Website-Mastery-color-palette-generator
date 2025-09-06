@@ -127,9 +127,25 @@
 }
 
 .selected {
-  outline: 2px solid var(--primary, #3b82f6);
+  /* Keep subtle separation without changing layout */
+  outline: 2px solid transparent;
   outline-offset: 0;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) inset;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset,
+    0 0 0 2px rgba(0, 0, 0, 0.35) inset;
+}
+
+/* Paint top and bottom selection bars only (thicker, highly visible) */
+.selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  /* Two gradient bars: top and bottom; does not affect layout */
+  background:
+    linear-gradient(90deg, #ffffff, #d90429, #2a9d8f, #277da1, #000000) top left / 100% 4px no-repeat,
+    linear-gradient(90deg, #000000, #277da1, #2a9d8f, #d90429, #ffffff) bottom left / 100% 4px no-repeat;
 }
 
 .swatchMeta {

@@ -8,14 +8,16 @@ html.cf-theme-dark {
 :root.cf-theme-light .cf-theme-inverted .theme-always-light {
     --cf-min-screen-width: 320px;
     --cf-max-screen-width: 1400px;
-    --cf-primary: #3A5C7D;
-    --cf-secondary: #B68350;
-    --cf-tertiary: #67825F;
-    --cf-accent: #6B3D63;
+    /* Base brand colors set from Export panel (AAA-verified) */
+    --cf-primary: #0000FB; /* primary-dark */
+    --cf-secondary: #155715; /* secondary-dark */
+    --cf-tertiary: #7827A0; /* tertiary-dark */
+    --cf-accent: #5E4F00; /* accent-dark */
     --cf-bg-body: #e6e6e6;
     --cf-bg-surface: #ffffff;
-    --cf-text-body: #000000;
-    --cf-text-title: #000000;
+    /* Text tokens from Export panel */
+    --cf-text-body: #1B2227; /* text-on-light */
+    --cf-text-title: #1B2227; /* text-on-light */
     --cf-border-primary: #80808040;
     --cf-shadow-primary: #00000026;
     --cf-light: #ffffff;
@@ -40,28 +42,41 @@ html.cf-theme-dark {
     --cf-dark-70: #000000b3;
     --cf-dark-80: #000000cc;
     --cf-dark-90: #000000e6;
-    --cf-success: #24f95d;
-    --cf-success-5: #24f95d0d;
-    --cf-success-10: #24f95d1a;
-    --cf-success-20: #24f95d33;
-    --cf-success-30: #24f95d4d;
-    --cf-success-40: #24f95d66;
-    --cf-success-50: #24f95d80;
-    --cf-success-60: #24f95d99;
-    --cf-success-70: #24f95db3;
-    --cf-success-80: #24f95dcc;
-    --cf-success-90: #24f95de6;
-    --cf-error: #f92444;
-    --cf-error-5: #f924440d;
-    --cf-error-10: #f924441a;
-    --cf-error-20: #f9244433;
-    --cf-error-30: #f924444d;
-    --cf-error-40: #f9244466;
-    --cf-error-50: #f9244480;
-    --cf-error-60: #f9244499;
-    --cf-error-70: #f92444b3;
-    --cf-error-80: #f92444cc;
-    --cf-error-90: #f92444e6;
+    /* Status base tokens from Export panel */
+    --cf-success: #7E007E; /* success-dark */
+    --cf-success-5: #7E007E0d;
+    --cf-success-10: #7E007E1a;
+    --cf-success-20: #7E007E33;
+    --cf-success-30: #7E007E4d;
+    --cf-success-40: #7E007E66;
+    --cf-success-50: #7E007E80;
+    --cf-success-60: #7E007E99;
+    --cf-success-70: #7E007Eb3;
+    --cf-success-80: #7E007Ecc;
+    --cf-success-90: #7E007Ee6;
+    --cf-error: #8B0D26; /* error-dark */
+    --cf-error-5: #8B0D260d;
+    --cf-error-10: #8B0D261a;
+    --cf-error-20: #8B0D2633;
+    --cf-error-30: #8B0D264d;
+    --cf-error-40: #8B0D2666;
+    --cf-error-50: #8B0D2680;
+    --cf-error-60: #8B0D2699;
+    --cf-error-70: #8B0D26b3;
+    --cf-error-80: #8B0D26cc;
+    --cf-error-90: #8B0D26e6;
+    /* Notice tokens (from Warning palette): light scheme base is dark shade */
+    --cf-notice: #004E4E;
+    --cf-notice-5: #004E4E0d;
+    --cf-notice-10: #004E4E1a;
+    --cf-notice-20: #004E4E33;
+    --cf-notice-30: #004E4E4d;
+    --cf-notice-40: #004E4E66;
+    --cf-notice-50: #004E4E80;
+    --cf-notice-60: #004E4E99;
+    --cf-notice-70: #004E4Eb3;
+    --cf-notice-80: #004E4Ecc;
+    --cf-notice-90: #004E4Ee6;
     --cf-space-4xs: clamp(0.33rem, calc(-0.03vw + 0.33rem), 0.31rem);
     --cf-space-3xs: clamp(0.41rem, calc(0.04vw + 0.4rem), 0.44rem);
     --cf-space-2xs: clamp(0.51rem, calc(0.16vw + 0.48rem), 0.62rem);
@@ -113,14 +128,16 @@ html.cf-theme-dark {
 :root.cf-theme-light .cf-theme-inverted,
 :root.cf-theme-light .theme-always-dark,
 :root.cf-theme-dark .cf-theme-inverted .theme-always-dark {
-    --cf-primary: #1a2937;
-    --cf-secondary: #71502f;
-    --cf-tertiary: #384734;
-    --cf-accent: #2a1827;
+    /* Keep dark theme base colors aligned with Export panel mapping */
+    --cf-primary: #0000FB; /* primary-dark (chosen base) */
+    --cf-secondary: #155715; /* secondary-dark */
+    --cf-tertiary: #7827A0; /* tertiary-dark */
+    --cf-accent: #5E4F00; /* accent-dark */
     --cf-bg-body: #0d0d0d;
     --cf-bg-surface: #262626;
-    --cf-text-body: #fff;
-    --cf-text-title: #ffffff;
+    /* Text tokens from Export panel */
+    --cf-text-body: #FFFFF0; /* text-on-dark */
+    --cf-text-title: #FFFFF0; /* text-on-dark */
     --cf-border-primary: #bfbfbf1a;
     --cf-shadow-primary: #00000066;
     --cf-light: #000000;
@@ -145,28 +162,40 @@ html.cf-theme-dark {
     --cf-dark-70: #ffffffb3;
     --cf-dark-80: #ffffffcc;
     --cf-dark-90: #ffffffe6;
-    --cf-success: #05b233;
-    --cf-success-5: #05b2330d;
-    --cf-success-10: #05b2331a;
-    --cf-success-20: #05b23333;
-    --cf-success-30: #05b2334d;
-    --cf-success-40: #05b23366;
-    --cf-success-50: #05b23380;
-    --cf-success-60: #05b23399;
-    --cf-success-70: #05b233b3;
-    --cf-success-80: #05b233cc;
-    --cf-success-90: #05b233e6;
-    --cf-error: #b2051f;
-    --cf-error-5: #b2051f0d;
-    --cf-error-10: #b2051f1a;
-    --cf-error-20: #b2051f33;
-    --cf-error-30: #b2051f4d;
-    --cf-error-40: #b2051f66;
-    --cf-error-50: #b2051f80;
-    --cf-error-60: #b2051f99;
-    --cf-error-70: #b2051fb3;
-    --cf-error-80: #b2051fcc;
-    --cf-error-90: #b2051fe6;
+    --cf-success: #FF47FF; /* success-light for dark scheme emphasis */
+    --cf-success-5: #FF47FF0d;
+    --cf-success-10: #FF47FF1a;
+    --cf-success-20: #FF47FF33;
+    --cf-success-30: #FF47FF4d;
+    --cf-success-40: #FF47FF66;
+    --cf-success-50: #FF47FF80;
+    --cf-success-60: #FF47FF99;
+    --cf-success-70: #FF47FFb3;
+    --cf-success-80: #FF47FFcc;
+    --cf-success-90: #FF47FFe6;
+    --cf-error: #F2738D; /* error-light for dark scheme emphasis */
+    --cf-error-5: #F2738D0d;
+    --cf-error-10: #F2738D1a;
+    --cf-error-20: #F2738D33;
+    --cf-error-30: #F2738D4d;
+    --cf-error-40: #F2738D66;
+    --cf-error-50: #F2738D80;
+    --cf-error-60: #F2738D99;
+    --cf-error-70: #F2738Db3;
+    --cf-error-80: #F2738Dcc;
+    --cf-error-90: #F2738De6;
+    /* Notice tokens (from Warning palette): dark scheme base is light shade */
+    --cf-notice: #00ADAD;
+    --cf-notice-5: #00ADAD0d;
+    --cf-notice-10: #00ADAD1a;
+    --cf-notice-20: #00ADAD33;
+    --cf-notice-30: #00ADAD4d;
+    --cf-notice-40: #00ADAD66;
+    --cf-notice-50: #00ADAD80;
+    --cf-notice-60: #00ADAD99;
+    --cf-notice-70: #00ADADb3;
+    --cf-notice-80: #00ADADcc;
+    --cf-notice-90: #00ADADe6;
 }
 
 /* Components */

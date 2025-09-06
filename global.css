@@ -100,16 +100,43 @@ pre code {
   --muted: hsl(220 20% 94%);
   --muted-foreground: hsl(220 10% 45%);
 
-  --success: hsl(145 63% 42%);
-  --success-foreground: hsl(0 0% 100%);
-  --error: hsl(0 72% 51%);
-  --error-foreground: hsl(0 0% 100%);
-  --warning: hsl(38 92% 50%);
-  --warning-foreground: hsl(38 100% 10%);
-  --info: hsl(200 90% 50%);
-  --info-foreground: hsl(0 0% 100%);
-  --info-hover: hsl(200 90% 55%);
-  --info-active: hsl(200 90% 60%);
+  /* Status palette from Export panel (explicit, AAA-verified). No color-mix. */
+  /* Success */
+  --success: #7E007E;           /* success-dark */
+  --success-bg: #FF47FF;        /* success-light */
+  --success-border: #7E007E;    /* success-dark */
+  --success-fg: #1B2227;        /* text-on-light */
+  --success-foreground: #1B2227;
+
+  /* Error */
+  --error: #8B0D26;             /* error-dark */
+  --error-bg: #F2738D;          /* error-light */
+  --error-border: #8B0D26;      /* error-dark */
+  --error-fg: #1B2227;          /* text-on-light */
+  --error-foreground: #1B2227;
+
+  /* Warning */
+  --warning: #004E4E;           /* warning-dark */
+  --warning-bg: #00ADAD;        /* warning-light */
+  --warning-border: #004E4E;    /* warning-dark */
+  --warning-fg: #1B2227;        /* text-on-light */
+  --warning-foreground: #1B2227;
+
+  /* Notice (formerly info) */
+  --notice: #004E4E;           /* notice-dark (was warning-dark) */
+  --notice-bg: #00ADAD;        /* notice-light (was warning-light) */
+  --notice-border: #004E4E;    /* notice-dark */
+  --notice-fg: #1B2227;        /* text-on-light */
+  --notice-foreground: #1B2227;
+
+  /* Alias info* to notice* for now (no color-mix) */
+  --info: var(--notice);
+  --info-bg: var(--notice-bg);
+  --info-border: var(--notice-border);
+  --info-fg: var(--notice-fg);
+  --info-foreground: var(--notice-foreground);
+  --info-hover: var(--notice);
+  --info-active: var(--notice);
 
   /* User-Generated Palette Colors (Placeholders) */
   --user-primary: hsl(210 90% 50%);
@@ -202,16 +229,43 @@ textarea {
   --muted: hsl(220 20% 18%);
   --muted-foreground: hsl(220 10% 55%);
 
-  --success: hsl(145 60% 45%);
-  --success-foreground: hsl(0 0% 100%);
-  --error: hsl(0 70% 60%);
-  --error-foreground: hsl(0 0% 100%);
-  --warning: hsl(38 90% 55%);
-  --warning-foreground: hsl(38 100% 10%);
-  --info: hsl(200 90% 60%);
-  --info-foreground: hsl(0 0% 100%);
-  --info-hover: hsl(200 90% 65%);
-  --info-active: hsl(200 90% 70%);
+  /* Status palette (dark) explicit from Export panel. No color-mix. */
+  /* Success */
+  --success: #FF47FF;           /* success-light (base in dark scheme) */
+  --success-bg: #7E007E;        /* success-dark */
+  --success-border: #FF47FF;    /* success-light */
+  --success-fg: #FFFFF0;        /* text-on-dark */
+  --success-foreground: #FFFFF0;
+
+  /* Error */
+  --error: #F2738D;             /* error-light */
+  --error-bg: #8B0D26;          /* error-dark */
+  --error-border: #F2738D;      /* error-light */
+  --error-fg: #FFFFF0;          /* text-on-dark */
+  --error-foreground: #FFFFF0;
+
+  /* Warning */
+  --warning: #00ADAD;           /* warning-light */
+  --warning-bg: #004E4E;        /* warning-dark */
+  --warning-border: #00ADAD;    /* warning-light */
+  --warning-fg: #FFFFF0;        /* text-on-dark */
+  --warning-foreground: #FFFFF0;
+
+  /* Notice in dark scheme */
+  --notice: #00ADAD;           /* notice-light */
+  --notice-bg: #004E4E;        /* notice-dark */
+  --notice-border: #00ADAD;    /* notice-light */
+  --notice-fg: #FFFFF0;        /* text-on-dark */
+  --notice-foreground: #FFFFF0;
+
+  /* Alias info* to notice* in dark */
+  --info: var(--notice);
+  --info-bg: var(--notice-bg);
+  --info-border: var(--notice-border);
+  --info-fg: var(--notice-fg);
+  --info-foreground: var(--notice-foreground);
+  --info-hover: var(--notice);
+  --info-active: var(--notice);
 
   --border: hsl(220 15% 22%);
 

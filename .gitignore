@@ -61,3 +61,6 @@ change.md
 junk.txt
 changes.txt
 changes.md
+
+# Generated CSS artifacts
+*.generated.css

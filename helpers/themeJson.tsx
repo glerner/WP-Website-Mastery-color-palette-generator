@@ -9,11 +9,11 @@ const getLuminance = (hex: string): number => {
   const g = (rgb >> 8) & 0xff;
   const b = (rgb >> 0) & 0xff;
 
-  const [rs, gs, bs] = [r, g, b].map(c => {
+  const arr = [r, g, b].map(c => {
     const sRGB = c / 255;
     return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
-  });
-
+  }) as [number, number, number];
+  const [rs, gs, bs] = arr;
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 };
 
@@ -154,9 +154,10 @@ export const buildWpVariationJson = (
   });
   steps.forEach(({ step, labelSuffix }) => {
     familyOrder.forEach((k) => {
-      const hex = maps[k][step];
+      const hex = maps[k]?.[step];
       if (hex) {
-        paletteEntries.push({ slug: `${k}-${step}`, color: hex, name: `${labels[k].short} ${labelSuffix}` });
+        const short = (labels as Record<string, { full: string; short: string }>)[k]?.short ?? (k?.[0]?.toUpperCase() ?? '');
+        paletteEntries.push({ slug: `${k}-${step}`, color: hex, name: `${short} ${labelSuffix}` });
       }
     });
   });
@@ -179,7 +180,7 @@ export const buildWpVariationJson = (
   };
   paletteEntries.push(
     { slug: 'error', color: pickSemantic('error'), name: 'Error' },
-    { slug: 'warning', color: pickSemantic('warning'), name: 'Warning' },
+    { slug: 'notice', color: pickSemantic('warning'), name: 'Notice' },
     { slug: 'success', color: pickSemantic('success'), name: 'Success' },
   );
   // Then text on dark (base) and text on light (contrast)
@@ -311,9 +312,9 @@ export const generateThemeJson = (palette: PaletteWithVariations): string => {
       name: 'Error',
     },
     {
-      slug: 'warning',
+      slug: 'notice',
       color: palette.warning.hex,
-      name: 'Warning',
+      name: 'Notice',
     },
     {
       slug: 'success',

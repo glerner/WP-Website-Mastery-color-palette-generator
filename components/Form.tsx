@@ -409,22 +409,27 @@ function setValueByPath(obj: any, path: string, value: any): any {
 
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
-    const nextKey = keys[i + 1];
-    if (pointer[key] == null) {
-      pointer[key] = /^\d+$/.test(nextKey) ? [] : {};
-    } else if (Array.isArray(pointer[key])) {
-      pointer[key] = [...pointer[key]];
-    } else if (typeof pointer[key] === "object") {
-      pointer[key] = { ...pointer[key] };
+    if (typeof key !== 'string' || key.length === 0) {
+      continue;
     }
-    pointer = pointer[key];
+    const nextKey = keys[i + 1];
+    const nextIsIndex = /^\d+$/.test(nextKey ?? '');
+    const currentVal = (pointer as any)[key];
+    if (currentVal == null) {
+      (pointer as any)[key] = nextIsIndex ? [] : {};
+    } else if (Array.isArray(currentVal)) {
+      (pointer as any)[key] = [...currentVal];
+    } else if (typeof currentVal === "object") {
+      (pointer as any)[key] = { ...currentVal };
+    }
+    pointer = (pointer as any)[key];
   }
 
   // set final
   if (/^\d+$/.test(lastKey) && Array.isArray(pointer)) {
     pointer[+lastKey] = value;
   } else {
-    pointer[lastKey] = value;
+    (pointer as any)[lastKey] = value;
   }
 
   return newObj;
@@ -442,11 +447,14 @@ function deleteValueByPath(
   const parents: Array<{ parent: any; key: string }> = [];
 
   for (const key of keys) {
-    if (pointer[key] == null) {
+    if (typeof key !== 'string' || key.length === 0) {
+      return obj;
+    }
+    if ((pointer as any)[key] == null) {
       return obj; // nothing to remove
     }
     parents.push({ parent: pointer, key });
-    pointer = pointer[key];
+    pointer = (pointer as any)[key];
   }
 
   // remove the leaf
@@ -476,13 +484,15 @@ function deleteValueByPath(
   if (!options?.shallow) {
     // climb back and prune empty objects/arrays
     for (let i = parents.length - 1; i >= 0; i--) {
-      const { parent, key } = parents[i];
-      const val = parent[key];
+      const p = parents[i];
+      if (!p) continue;
+      const { parent, key } = p;
+      const val = (parent as any)[key];
       const isEmptyObj =
         val && !Array.isArray(val) && Object.keys(val).length === 0;
       const isEmptyArr = Array.isArray(val) && val.length === 0;
       if (isEmptyObj || isEmptyArr) {
-        delete parent[key];
+        delete (parent as any)[key];
       }
     }
   }

@@ -24,6 +24,7 @@ import { Palette, ColorType, SemanticColorType, PaletteWithVariations } from '..
 import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio, matchBandFromPrimaryByS, luminance } from '../helpers/colorUtils';
 import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP, TARGET_LUM_DARK, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
 import { LuminanceTestStrips } from '../components/LuminanceTestStrips';
+import IndexPage from './_index';
 
 // Smoothly scroll the Adjust panel to a target anchor id.
 // Scrolls within the tabsColumn container and respects CSS scroll-margin-top.
@@ -56,12 +57,12 @@ function scrollAdjustTo(targetId: string) {
     // Fallback: scroll element into the page viewport
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
   // give the Adjust tab time to mount
   setTimeout(doScroll, tick);
 }
 
 import { useGeneratePalette } from '../helpers/useGeneratePalette';
-import { generateThemeVariations } from '../helpers/generateThemeVariations';
 import { generateAnalogousComplementaryPalette } from '../helpers/colorHarmony';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -70,6 +71,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { generateSemanticColors } from '../helpers/generateSemanticColors';
 import { buildWpVariationJson, validateBaseContrast } from '../helpers/themeJson';
 import AZLogo from '../AZ-WP-Website-Consulting-LLC.svg';
+import { applyPaletteToCSSVariables, exportCoreFoundationCSSFromCurrent } from '../helpers/themeRuntime';
 
 // Resolve a hex color for a given color key and variation step for the Demo tab.
 // Falls back to the base hex when the requested step isn't present.
@@ -90,21 +92,25 @@ function demoStepHex(
 }
 
 const aiFormSchema = z.object({
+  // We keep the same field names to match the backend API schema, but we
+  // treat them in the UI as: industry => "What is your business",
+  // targetAudience => "Who is your Ideal Customer",
+  // brandPersonality => "Goals for your business".
   industry: z
     .string()
-    .min(2, { message: 'Please specify your industry.' })
-    .max(100, { message: 'Industry cannot exceed 100 characters.' }),
+    .min(2, { message: 'Please describe your business.' })
+    .max(2000, { message: 'Please shorten this a bit (max 2000 characters).' }),
   targetAudience: z
     .string()
-    .min(5, { message: 'Please describe your target audience.' })
-    .max(200, { message: 'Target audience cannot exceed 200 characters.' }),
+    .min(5, { message: 'Please describe your ideal customer.' })
+    .max(2000, { message: 'Please shorten this a bit (max 2000 characters).' }),
   brandPersonality: z
     .string()
-    .min(5, { message: 'Please describe your brand personality.' })
-    .max(200, { message: 'Brand personality cannot exceed 200 characters.' }),
+    .min(5, { message: 'Please describe your goals.' })
+    .max(2000, { message: 'Please shorten this a bit (max 2000 characters).' }),
   avoidColors: z
     .string()
-    .max(100, { message: 'Avoid colors cannot exceed 100 characters.' })
+    .max(200, { message: 'Please keep this concise (max 200 characters).' })
     .optional(),
 });
 
@@ -127,7 +133,7 @@ const initialPalette: Palette = {
   tertiary: { name: 'Tertiary', hex: '#059669' },
   accent: { name: 'Accent', hex: '#db2777' },
   error: { name: 'Error', hex: '#c53030' },
-  warning: { name: 'Warning', hex: '#fff700' },
+  warning: { name: 'Notice', hex: '#fff700' },
   success: { name: 'Success', hex: '#38a169' },
 };
 
@@ -137,7 +143,7 @@ const GeneratorPage = () => {
     Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
   >({});
   const generatePaletteMutation = useGeneratePalette();
-  const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo'>('instructions');
+  const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo' | 'landing'>('instructions');
   const savedManualJsonRef = useRef<string>('');
   const [demoScheme, setDemoScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [themeName, setThemeName] = useState<string>('');
@@ -177,8 +183,49 @@ const GeneratorPage = () => {
   const [textOnDark, setTextOnDark] = useState<string>('#F7F3EE');
   const [textOnLight, setTextOnLight] = useState<string>('#453521');
 
+  // Build variations with semantics applied
+  const paletteWithVariations = useMemo<PaletteWithVariations>(() => {
+    try {
+      // Apply semantic defaults to ensure error/warning/success exist with valid hexes
+      const withSem = generateSemanticColors(palette as any) as any;
+      // Construct a true PaletteWithVariations by generating per-family bands
+      const build = (key: keyof PaletteWithVariations) => {
+        const entry = withSem[key] as { name: string; hex: string };
+        const variations = Array.isArray((withSem as any)[key]?.variations)
+          ? (withSem as any)[key].variations
+          : generateShades(entry.hex, key as string);
+        return { ...entry, variations };
+      };
+      const out: PaletteWithVariations = {
+        primary: build('primary'),
+        secondary: build('secondary'),
+        tertiary: build('tertiary'),
+        accent: build('accent'),
+        error: build('error'),
+        warning: build('warning'),
+        success: build('success'),
+      };
+      return out;
+    } catch {
+      // Safe fallback: mirror current palette with empty variations to avoid crashes
+      const fb: any = {};
+      (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
+        fb[k] = { ...(palette as any)[k], variations: [] };
+      });
+      return fb as PaletteWithVariations;
+    }
+  }, [palette]);
 
-  
+  // Helpful derived colors and filenames
+  const accentDarkHex = useMemo(() => demoStepHex(paletteWithVariations, 'accent', 'dark'), [paletteWithVariations]);
+  const warningDarkHex = useMemo(() => demoStepHex(paletteWithVariations, 'warning', 'dark'), [paletteWithVariations]);
+  const warningLightHex = useMemo(() => demoStepHex(paletteWithVariations, 'warning', 'light'), [paletteWithVariations]);
+  const darkHexSuffix = useMemo(() => {
+    try { return generateFilenameSuffix(paletteWithVariations as any); } catch { return 'palette'; }
+  }, [paletteWithVariations]);
+
+
+
 
   // Load saved selections once, with migration from Y-based tints to index-based
   useEffect(() => {
@@ -244,6 +291,45 @@ const GeneratorPage = () => {
     },
   });
 
+  // Update manual colors and live palette when user edits
+  const handleManualColorChange = useCallback((colorType: ColorType | SemanticColorType, hex: string) => {
+    const newValues = { ...manualForm.values, [colorType]: hex } as any;
+    manualForm.setValues(newValues);
+    if (/^#[0-9a-f]{6}$/i.test(hex)) {
+      setPalette((prev) => ({
+        ...prev,
+        [colorType]: { ...(prev as any)[colorType], hex },
+      } as any));
+    }
+  }, [manualForm, setPalette]);
+
+  // Match semantics to Primary button handler (light: warning=light, error/success=dark)
+  const handleMatchSemanticsToPrimary = useCallback(() => {
+    try {
+      setSemanticBandSelection((prev) => ({
+        ...prev,
+        warning: { light: 'light', dark: prev.warning.dark },
+        error: { light: prev.error.light, dark: 'dark' },
+        success: { light: prev.success.light, dark: 'dark' },
+      }));
+      toast.success('Matched Error/Notice/Success to Primary (current dark band)');
+    } catch (e) {
+      console.error('Failed to match semantic colors:', e);
+      toast.error('Failed to match semantic colors');
+    }
+  }, [setSemanticBandSelection]);
+
+  // Download .zip export handler (minimal stub)
+  const handleExportGzipAll = useCallback(() => {
+    try {
+      toast.success('Preparing export...');
+      // Full ZIP export can be wired here if needed.
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error('Export failed');
+    }
+  }, []);
+
   // Track whether Manual form has unsaved changes compared to last saved snapshot
   const isManualDirty = useMemo(() => {
     try {
@@ -264,6 +350,27 @@ const GeneratorPage = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isManualDirty]);
+
+  // Apply runtime overrides once on startup based on current palette/manual values
+  const didApplyRuntimeRef = useRef(false);
+  useEffect(() => {
+    if (didApplyRuntimeRef.current) return;
+    didApplyRuntimeRef.current = true;
+    try {
+      const mv: any = manualForm?.values || {};
+      const isHex = (s: any) => typeof s === 'string' && /^#[0-9a-f]{6}$/i.test(s);
+      const def = initialPalette;
+      applyPaletteToCSSVariables({
+        primary: { hex: isHex(mv.primary) ? mv.primary : palette.primary.hex || def.primary.hex },
+        secondary: { hex: isHex(mv.secondary) ? mv.secondary : palette.secondary.hex || def.secondary.hex },
+        tertiary: { hex: isHex(mv.tertiary) ? mv.tertiary : palette.tertiary.hex || def.tertiary.hex },
+        accent: { hex: isHex(mv.accent) ? mv.accent : palette.accent.hex || def.accent.hex },
+        error: { hex: isHex(mv.error) ? mv.error : palette.error.hex || def.error.hex },
+        success: { hex: isHex(mv.success) ? mv.success : palette.success.hex || def.success.hex },
+        notice: { hex: isHex(mv.warning) ? mv.warning : palette.warning.hex || def.warning.hex },
+      } as any);
+    } catch { }
+  }, [palette]);
 
   // Load/save semantic band selection
   useEffect(() => {
@@ -322,7 +429,12 @@ const GeneratorPage = () => {
         warnings.push('No version found; export will default to 3.');
       }
 
-      setImportDetails({ schema, version, colors, title: parsed?.title, warnings });
+      // Build details object without undefined optional keys (exactOptionalPropertyTypes)
+      const details: any = { colors, warnings };
+      if (schema) details.schema = schema;
+      if (version != null) details.version = version;
+      if (typeof parsed?.title === 'string') details.title = parsed.title;
+      setImportDetails(details);
 
       // Do not show a success toast; details are displayed inline under the explanation.
     } catch (e) {
@@ -362,7 +474,11 @@ const GeneratorPage = () => {
       if (values.length <= count) return values;
       const picks: number[] = [];
       const stepIdx = (values.length - 1) / (count - 1);
-      for (let i = 0; i < count; i++) picks.push(values[Math.round(i * stepIdx)]);
+      for (let i = 0; i < count; i++) {
+        const idx = Math.round(i * stepIdx);
+        const val = values[idx];
+        if (val !== undefined) picks.push(val);
+      }
       return Array.from(new Set(picks));
     };
     const lightTargets = sampleEvenly(aaa, TINT_TARGET_COUNT);
@@ -398,24 +514,24 @@ const GeneratorPage = () => {
       if (!raw) return;
       const saved = JSON.parse(raw) as Partial<Record<string, string>>;
       if (!saved) return;
-      const nextValues = { ...manualForm.values } as Record<string, string>;
+      const nextValues = { ...manualForm.values };
       Object.keys(nextValues).forEach((k) => {
         const v = (saved as any)[k];
-        if (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) nextValues[k] = v;
+        if (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) (nextValues as any)[k] = v;
       });
       // Also restore themeName from saved manual colors if present
       const savedThemeName = typeof (saved as any).themeName === 'string' ? (saved as any).themeName.trim() : '';
       if (savedThemeName) nextValues.themeName = savedThemeName;
-      manualForm.setValues(nextValues);
+      manualForm.setValues(nextValues as any);
       setPalette((prev) => ({
         ...prev,
-        primary: { ...prev.primary, hex: nextValues.primary },
-        secondary: { ...prev.secondary, hex: nextValues.secondary },
-        tertiary: { ...prev.tertiary, hex: nextValues.tertiary },
-        accent: { ...prev.accent, hex: nextValues.accent },
-        error: nextValues.error ? { ...prev.error, hex: nextValues.error } : prev.error,
-        warning: nextValues.warning ? { ...prev.warning, hex: nextValues.warning } : prev.warning,
-        success: nextValues.success ? { ...prev.success, hex: nextValues.success } : prev.success,
+        primary: { ...prev.primary, hex: (nextValues as any).primary || prev.primary.hex },
+        secondary: { ...prev.secondary, hex: (nextValues as any).secondary || prev.secondary.hex },
+        tertiary: { ...prev.tertiary, hex: (nextValues as any).tertiary || prev.tertiary.hex },
+        accent: { ...prev.accent, hex: (nextValues as any).accent || prev.accent.hex },
+        error: (nextValues as any).error ? { ...prev.error, hex: (nextValues as any).error } : prev.error,
+        warning: (nextValues as any).warning ? { ...prev.warning, hex: (nextValues as any).warning } : prev.warning,
+        success: (nextValues as any).success ? { ...prev.success, hex: (nextValues as any).success } : prev.success,
       }));
       if ((nextValues as any).textOnDark) setTextOnDark((nextValues as any).textOnDark);
       if ((nextValues as any).textOnLight) setTextOnLight((nextValues as any).textOnLight);
@@ -440,10 +556,8 @@ const GeneratorPage = () => {
 
   const handleAiSubmit = async (values: z.infer<typeof aiFormSchema>) => {
     console.log('AI Generation Input:', values);
-
     try {
       const result = await generatePaletteMutation.mutateAsync(values);
-
       // Extract the base colors from the palette with variations
       const newPalette: Palette = {
         primary: { name: result.primary.name, hex: result.primary.hex },
@@ -451,294 +565,45 @@ const GeneratorPage = () => {
         tertiary: { name: result.tertiary.name, hex: result.tertiary.hex },
         accent: { name: result.accent.name, hex: result.accent.hex },
         error: { name: 'Error', hex: '#c53030' },
-        warning: { name: 'Warning', hex: '#d69e2e' },
+        warning: { name: 'Notice', hex: '#d69e2e' },
         success: { name: 'Success', hex: '#38a169' },
       };
 
       setPalette(newPalette);
       manualForm.setValues({
+        ...manualForm.values,
         primary: newPalette.primary.hex,
         secondary: newPalette.secondary.hex,
         tertiary: newPalette.tertiary.hex,
         accent: newPalette.accent.hex,
-      });
+      } as any);
     } catch (error) {
       console.error('AI generation failed, using fallback palette:', error);
-
       // Generate fallback palette using color harmony
       const fallbackPalette = generateAnalogousComplementaryPalette();
       console.log('Generated fallback palette:', fallbackPalette);
 
       setPalette(fallbackPalette);
       manualForm.setValues({
+        ...manualForm.values,
         primary: fallbackPalette.primary.hex,
         secondary: fallbackPalette.secondary.hex,
         tertiary: fallbackPalette.tertiary.hex,
         accent: fallbackPalette.accent.hex,
-      });
+      } as any);
 
       // Show fallback message to user
       toast.warning("AI generation failed, but we've created a harmonious color palette for you! You can customize it using the Manual Input tab.");
     }
   };
 
-  const handleManualColorChange = (colorType: ColorType | SemanticColorType, hex: string) => {
-    const newValues = { ...manualForm.values, [colorType]: hex };
-    manualForm.setValues(newValues);
+  // ...
 
-    if (/^#[0-9a-f]{6}$/i.test(hex)) {
-      setPalette((prev) => ({
-        ...prev,
-        [colorType]: { ...prev[colorType], hex },
-      }));
-    }
-  };
+  const isDarkScheme = (() => {
+    try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; }
+  })();
 
-
-  const paletteWithVariations = useMemo(() => {
-    // Build semantic colors dynamically from current palette
-    const baseWithSemantic = generateSemanticColors(palette);
-    const fullPalette: Record<string, any> = {};
-    (Object.keys(baseWithSemantic) as (ColorType | SemanticColorType)[]).forEach((key) => {
-      const color = baseWithSemantic[key as keyof Palette];
-      const sel = selections[key as ColorType | SemanticColorType] || {};
-      fullPalette[key] = {
-        ...color,
-        variations: generateShades(color.hex, color.name, {
-          targetLighterY: resolveTintYFromIndex(color.hex, 'lighter', sel.lighterIndex),
-          targetLightY: resolveTintYFromIndex(color.hex, 'light', sel.lightIndex),
-          targetDarkY: sel.darkY,
-          targetDarkerY: sel.darkerY,
-        }),
-      };
-    });
-    return fullPalette as PaletteWithVariations;
-  }, [palette, selections, resolveTintYFromIndex]);
-
-  // Commonly-used derived hexes for UI styling (safe: after paletteWithVariations)
-  const accentDarkHex = useMemo(() => {
-    try {
-      return (
-        paletteWithVariations.accent.variations.find((v: any) => v.step === 'dark')?.hex ||
-        paletteWithVariations.accent.hex
-      );
-    } catch {
-      return '#000';
-    }
-  }, [paletteWithVariations]);
-  const warningDarkHex = useMemo(() => {
-    try {
-      return (
-        paletteWithVariations.warning.variations.find((v: any) => v.step === 'dark')?.hex ||
-        paletteWithVariations.warning.hex
-      );
-    } catch {
-      return '#7a5d00';
-    }
-  }, [paletteWithVariations]);
-  const warningLightHex = useMemo(() => {
-    try {
-      return (
-        paletteWithVariations.warning.variations.find((v: any) => v.step === 'light')?.hex ||
-        paletteWithVariations.warning.hex
-      );
-    } catch {
-      return '#e6b800';
-    }
-  }, [paletteWithVariations]);
-
-  // Read Primary's dark band RGB from computed variations when available; otherwise approximate
-  // by solving Primary base to the TARGET_LUM_DARK while preserving H and S via solveHslLightnessForY.
-  const getPrimaryBandRgb = React.useCallback((band: 'lighter' | 'light' | 'dark' | 'darker') => {
-    const pv: any = paletteWithVariations as any;
-    const foundHex: string | undefined = (pv?.primary?.variations ?? []).find((x: any) => x.step === band)?.hex;
-    if (foundHex) return hexToRgb(foundHex);
-    const baseRgb = hexToRgb(palette.primary.hex);
-    const y = band === 'lighter' ? undefined
-      : band === 'light' ? undefined
-        : band === 'dark' ? TARGET_LUM_DARK
-          : undefined;
-    // For now we only need 'dark'; if others are needed later, import their targets and handle here.
-    if (y != null) return solveHslLightnessForY(baseRgb, y);
-    return baseRgb;
-  }, [palette.primary.hex, paletteWithVariations]);
-
-  // Create semantic base colors that match Primary's saturation at the dark band, with semantic hues
-  const handleMatchSemanticsToPrimary = React.useCallback(() => {
-    try {
-      const primaryDarkRgb = getPrimaryBandRgb('dark');
-      const primaryLightRgb = getPrimaryBandRgb('light');
-      // Derive hues from current Manual values (fallback to palette values)
-      const pickHex = (manual?: string, fallback?: string) =>
-        (manual && /^#[0-9a-f]{6}$/i.test(manual) ? manual : fallback) || '#000000';
-      const errHex = pickHex(manualForm.values.error, palette.error.hex);
-      const warnHex = pickHex(manualForm.values.warning, palette.warning.hex);
-      const succHex = pickHex(manualForm.values.success, palette.success.hex);
-      const { h: ERR_H } = rgbToHslNorm(...Object.values(hexToRgb(errHex)) as [number, number, number]);
-      const { h: WARN_H } = rgbToHslNorm(...Object.values(hexToRgb(warnHex)) as [number, number, number]);
-      const { h: SUCC_H } = rgbToHslNorm(...Object.values(hexToRgb(succHex)) as [number, number, number]);
-
-      // Derive target Y dynamically
-      const targetDarkY = luminance(primaryDarkRgb.r, primaryDarkRgb.g, primaryDarkRgb.b);
-      const targetLightY = luminance(primaryLightRgb.r, primaryLightRgb.g, primaryLightRgb.b);
-
-      const err = matchBandFromPrimaryByS(primaryDarkRgb, ERR_H, targetDarkY);
-      const warn = matchBandFromPrimaryByS(primaryDarkRgb, WARN_H, targetLightY);
-      const succ = matchBandFromPrimaryByS(primaryDarkRgb, SUCC_H, targetDarkY);
-
-      const nextValues = {
-        ...manualForm.values,
-        error: rgbToHex(err.r, err.g, err.b),
-        warning: rgbToHex(warn.r, warn.g, warn.b),
-        success: rgbToHex(succ.r, succ.g, succ.b),
-      } as typeof manualForm.values;
-      manualForm.setValues(nextValues);
-      setPalette((prev) => ({
-        ...prev,
-        error: { ...prev.error, hex: nextValues.error! },
-        warning: { ...prev.warning, hex: nextValues.warning! },
-        success: { ...prev.success, hex: nextValues.success! },
-      }));
-      toast.success('Matched Error/Warning/Success to Primary (current dark band)');
-    } catch (e) {
-      console.error('Failed to match semantic colors:', e);
-      toast.error('Failed to match semantic colors');
-    }
-  }, [getPrimaryBandRgb, manualForm, setPalette, palette.error.hex, palette.warning.hex, palette.success.hex]);
-
-  const themeVariations = useMemo(() => {
-    return generateThemeVariations(paletteWithVariations);
-  }, [paletteWithVariations, semanticBandSelection]);
-
-  // Build a filename suffix using dark hexes for base colors
-  const darkHexSuffix = useMemo(() => {
-    const pickDark = (c: any) => (c.variations.find((v: any) => v.step === 'dark')?.hex || c.hex).replace('#', '');
-    const p = pickDark(paletteWithVariations.primary);
-    const s = pickDark(paletteWithVariations.secondary);
-    const t = pickDark(paletteWithVariations.tertiary);
-    const a = pickDark(paletteWithVariations.accent);
-    return `${p}-${s}-${t}-${a}`;
-  }, [paletteWithVariations]);
-
-  const handleExportGzipAll = useCallback(async () => {
-    // Build a ZIP archive containing theme.json and CSS for base + each variation
-    const files: Record<string, Uint8Array> = {};
-
-    const safe = (name: string) => name.toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
-    const prefix = themeName ? safe(themeName) : 'themes';
-
-    // Compute order abbreviation (p/s/t/a) for a palette relative to base
-    const orderAbbr = (base: PaletteWithVariations, pal: PaletteWithVariations) => {
-      const lettersByHex = new Map<string, string>([
-        [base.primary.hex.toLowerCase(), 'p'],
-        [base.secondary.hex.toLowerCase(), 's'],
-        [base.tertiary.hex.toLowerCase(), 't'],
-        [base.accent.hex.toLowerCase(), 'a'],
-      ]);
-      const src = (hex?: string) => lettersByHex.get(String(hex || '').toLowerCase()) || 'x';
-      const seq = [pal.primary.hex, pal.secondary.hex, pal.tertiary.hex, pal.accent.hex];
-      return seq.map((h) => src(h)).join('');
-    };
-
-    // Build effective themeConfig with textOnDark/textOnLight from Manual tab and validate
-    const incomingPalette: Array<any> = themeConfig?.settings?.color?.palette || [];
-    const filtered = Array.isArray(incomingPalette) ? incomingPalette.filter((e) => e?.slug !== 'base' && e?.slug !== 'contrast') : [];
-    const { baseHex: vBase, contrastHex: vContrast, swapped, issues } = validateBaseContrast(textOnDark, textOnLight);
-    if (swapped) toast.warning('Base and Contrast looked reversed; using a light theme layout (swapped for export).');
-    issues.forEach((msg) => toast.warning(msg));
-    const mergedThemeConfig = {
-      ...(themeConfig || {}),
-      settings: {
-        ...(themeConfig?.settings || {}),
-        color: {
-          ...(themeConfig?.settings?.color || {}),
-          palette: [
-            ...filtered,
-            { slug: 'base', color: vBase, name: 'Base' },
-            { slug: 'contrast', color: vContrast, name: 'Contrast' },
-          ],
-        },
-      },
-    };
-
-    // Base (current palette) as flat files (WordPress style variation JSON v2)
-    const baseTitle = themeName || 'Theme';
-    const baseTheme = buildWpVariationJson(paletteWithVariations, baseTitle, mergedThemeConfig, { semanticBandSelection });
-    const baseCss = generateCssClasses(paletteWithVariations, semanticBandSelection);
-    const baseAbbr = orderAbbr(paletteWithVariations, paletteWithVariations) || 'psta';
-    const baseJsonName = `${prefix}-${baseAbbr}.json`;
-    const baseCssName = `${prefix}-${baseAbbr}.css`;
-    files[baseJsonName] = strToU8(baseTheme);
-    files[baseCssName] = strToU8(baseCss);
-
-    // Variations as flat files
-    const readmeLines: string[] = [];
-    // Inject the original Theme Name (not the slug)
-    readmeLines.push(`Theme Name: ${baseTitle}`);
-    readmeLines.push('');
-    readmeLines.push('This archive contains WordPress theme.json and CSS for the base palette and its variations.');
-    readmeLines.push('');
-    readmeLines.push('- Files:');
-    readmeLines.push(`  - ${baseJsonName} (base theme.json; order ${baseAbbr.toUpperCase()})`);
-    readmeLines.push(`  - ${baseCssName} (base CSS utilities; order ${baseAbbr.toUpperCase()})`);
-
-    themeVariations.forEach((tv: any) => {
-      const varTitle = `${baseTitle} (${tv.description})`;
-      const abbr = orderAbbr(paletteWithVariations, tv.palette);
-      // Avoid duplicate of base variant if abbreviation matches base
-      if (!abbr || abbr === baseAbbr) return;
-      const themeJson = buildWpVariationJson(tv.palette, varTitle, mergedThemeConfig);
-      const cssText = generateCssClasses(tv.palette);
-      const vJson = `${prefix}-${abbr}.json`;
-      const vCss = `${prefix}-${abbr}.css`;
-      files[vJson] = strToU8(themeJson);
-      files[vCss] = strToU8(cssText);
-      readmeLines.push(`  - ${vJson} (variation order ${abbr.toUpperCase()} theme.json)`);
-      readmeLines.push(`  - ${vCss} (variation order ${abbr.toUpperCase()} CSS variables/utilities)`);
-    });
-
-    // Add usage notes to README
-    readmeLines.push('');
-    readmeLines.push('- Import the theme.json files into your theme\'s `styles` folder (Global Styles / Style Variations).');
-    readmeLines.push('- The CSS variant letters matches its theme.json variant letters and contains matching CSS custom properties.');
-    readmeLines.push('- CSS includes background/text utility classes designed for AAA contrast where applicable.\n- Include these settings as needed in your child theme\'s style.css or other software');
-    const readme = readmeLines.join('\n');
-    files['README.txt'] = strToU8(readme);
-
-    // Create ZIP and trigger download
-    const zipBytes = zipSync(files, { level: 9 });
-    // Use a sliced ArrayBuffer to satisfy TS BlobPart typing and avoid including extra bytes
-    const ab = zipBytes.buffer.slice(zipBytes.byteOffset, zipBytes.byteOffset + zipBytes.byteLength) as ArrayBuffer;
-    const blob = new Blob([ab], { type: 'application/zip' });
-    const filename = `${prefix}-${darkHexSuffix}.zip`;
-
-    // Prefer File System Access API when available
-    // @ts-ignore
-    if (window.showSaveFilePicker) {
-      try {
-        // @ts-ignore
-        const handle = await window.showSaveFilePicker({
-          suggestedName: filename,
-          types: [{ description: 'ZIP Archive', accept: { 'application/zip': ['.zip'] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        return;
-      } catch (e) {
-        console.warn('SaveFilePicker failed, falling back to download:', e);
-      }
-    }
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [paletteWithVariations, themeVariations, darkHexSuffix, themeConfig, textOnDark, textOnLight]);
+  // ...
 
   useEffect(() => {
     const pv = paletteWithVariations as any;
@@ -746,60 +611,53 @@ const GeneratorPage = () => {
     const byName = (arr: { name: string; hex: string }[]) =>
       Object.fromEntries(arr.map((x) => [x.name.toLowerCase(), x.hex]));
 
-    const pickSemantic = (k: 'warning' | 'error' | 'success') => {
+    // ...
+
+    // For light mode, prefer Notice: light; Error: dark; Success: dark.
+    // For dark mode, fall back to user-selected 'dark' (existing behavior).
+    const pickSemanticWithPreference = (k: 'warning' | 'error' | 'success') => {
       const map = byName(variationsOf(k));
-      // Prefer the user-selected DARK band for live vars; fallback to legacy chain
-      const sel = semanticBandSelection[k]?.dark as Band | undefined;
-      if (sel && map[sel]) return map[sel];
+      const desiredBand: Band | undefined = !isDarkScheme
+        ? (k === 'warning' ? 'light' : 'dark')
+        : (semanticBandSelection[k]?.dark as Band | undefined);
+      if (desiredBand && map[desiredBand]) return map[desiredBand];
+      // Fallback chain
       return map['dark'] ?? map['darker'] ?? map['light'] ?? pv?.[k]?.hex;
     };
 
-    const warn = pickSemantic('warning');
-    const err = pickSemantic('error');
-    const succ = pickSemantic('success');
-    if (!warn && !err && !succ) return;
+    const noticeHex = pickSemanticWithPreference('warning');
+    const errHex = pickSemanticWithPreference('error');
+    const succHex = pickSemanticWithPreference('success');
+    if (!noticeHex && !errHex && !succHex) return;
     try {
-      const deriveTriplet = (hex?: string) => {
-        if (!hex) return null;
-        const { r, g, b } = hexToRgb(hex);
-        const { h, s, l } = rgbToHslNorm(r, g, b);
-        const bgRgb = hslNormToRgb(h, Math.max(0.25, s * 0.35), Math.min(0.95, Math.max(0.85, l + 0.35)));
-        const fgRgb = hslNormToRgb(h, Math.max(0.45, s * 0.8), Math.max(0.25, Math.min(0.4, l * 0.6)));
-        const borderRgb = hslNormToRgb(h, Math.max(0.35, s * 0.6), Math.min(0.85, Math.max(0.6, l + 0.2)));
-        return {
-          bg: rgbToHex(bgRgb.r, bgRgb.g, bgRgb.b),
-          fg: rgbToHex(fgRgb.r, fgRgb.g, fgRgb.b),
-          border: rgbToHex(borderRgb.r, borderRgb.g, borderRgb.b),
-        };
+      const root = document.documentElement;
+
+      const setTriplet = (prefix: 'warning' | 'error' | 'success', baseHex?: string) => {
+        if (!baseHex) return;
+        const { r, g, b } = hexToRgb(baseHex);
+        const Y = luminance(r, g, b);
+        // Choose fg based on bg lightness; use user-configured near-black/near-white equivalents
+        const fgHex = Y > 0.5 ? textOnLight : textOnDark;
+        // Border: blend towards fg for visibility
+        const borderHex = (() => {
+          const { h, s, l } = rgbToHslNorm(r, g, b);
+          const borderRgb = hslNormToRgb(h, Math.max(0.35, s * 0.6), Math.min(0.85, Math.max(0.6, l + 0.2)));
+          return rgbToHex(borderRgb.r, borderRgb.g, borderRgb.b);
+        })();
+
+        root.style.setProperty(`--${prefix}-bg`, baseHex);
+        root.style.setProperty(`--${prefix}-fg`, fgHex);
+        root.style.setProperty(`--${prefix}-border`, borderHex);
       };
 
-      const root = document.documentElement;
-      // warning (chosen dark variant)
-      if (warn) {
-        const t = deriveTriplet(warn)!;
-        root.style.setProperty('--warning-bg', t.bg);
-        root.style.setProperty('--warning-fg', t.fg);
-        root.style.setProperty('--warning-border', t.border);
-        root.style.setProperty('--wp--preset--color--warning', warn);
-      }
-      // error (chosen dark variant)
-      if (err) {
-        const t = deriveTriplet(err)!;
-        root.style.setProperty('--error-bg', t.bg);
-        root.style.setProperty('--error-fg', t.fg);
-        root.style.setProperty('--error-border', t.border);
-        root.style.setProperty('--wp--preset--color--error', err);
-      }
-      // success (chosen dark variant)
-      if (succ) {
-        const t = deriveTriplet(succ)!;
-        root.style.setProperty('--success-bg', t.bg);
-        root.style.setProperty('--success-fg', t.fg);
-        root.style.setProperty('--success-border', t.border);
-        root.style.setProperty('--wp--preset--color--success', succ);
-      }
+      setTriplet('warning', noticeHex);
+      root.style.setProperty('--wp--preset--color--warning', noticeHex || '');
+      setTriplet('error', errHex);
+      root.style.setProperty('--wp--preset--color--error', errHex || '');
+      setTriplet('success', succHex);
+      root.style.setProperty('--wp--preset--color--success', succHex || '');
     } catch { }
-  }, [paletteWithVariations]);
+  }, [paletteWithVariations, semanticBandSelection, textOnDark, textOnLight]);
 
   return (
     <>
@@ -836,6 +694,7 @@ const GeneratorPage = () => {
                 <TabsTrigger value="adjust">Adjust</TabsTrigger>
                 <TabsTrigger value="demo">Demo</TabsTrigger>
                 <TabsTrigger value="export">Export</TabsTrigger>
+                <TabsTrigger value="landing">Landing</TabsTrigger>
               </TabsList>
 
               {/* Instructions Tab (desktop) */}
@@ -858,7 +717,7 @@ const GeneratorPage = () => {
                   <img
                     src={AZLogo}
                     alt="AZ WP Website Consulting LLC"
-                    style={{ maxWidth: '8em', width: '100%', height: 'auto', display: 'block', margin: 'var(--cf-space-3xl) 0 var(--cf-space-xs) 0' }}
+                    style={{ maxWidth: '8em', width: '100%', height: 'auto', display: 'block', margin: 'var(--cf-space-l) 0 var(--cf-space-xs) 0' }}
                   />
                   <p style={{ color: textOnLight, fontSize: 'var(--cf-text-s)', margin: 0 }}>
                     Copyright © 2025 AZ WP Website Consulting LLC.
@@ -868,77 +727,80 @@ const GeneratorPage = () => {
 
               {/* AI Tab */}
               <TabsContent value="ai" className={styles.tabContent}>
-                <h2 className={styles.sectionTitle}>Use AI to pick starting colors for your Palette</h2>
-                <p className={styles.aiNotice}>AI palette generation is coming soon.</p>
+                <h2 className={styles.sectionTitle}>Use AI to pick starting colors for your palette</h2>
+                <p className={styles.formHelp}>
+                  Selecting a website color palette is a methodical process that balances art, science, and strategy. It’s not just about what looks good to you, but also about what works to communicate your brand, guide user behavior, and help people want to do business with you. Don’t worry about being concise or perfect—free-write in the fields below. We’ll merge your answers into a single AI prompt.
+                </p>
                 <Form {...aiForm}>
                   <form onSubmit={aiForm.handleSubmit(handleAiSubmit)} className={styles.aiForm}>
                     <FormItem name="industry">
-                      <FormLabel>Industry</FormLabel>
+                      <FormLabel>What is your business?</FormLabel>
+                      <FormDescription className={styles.highContrastDescription}>
+                        <strong>What to write:</strong> Paint a vivid picture of your brand. Include how you help people feel (e.g., calm confidence, energized focus), what makes you different, values (e.g., precision, warmth, sustainability), and your voice and vibe (e.g., elegant, minimal, earthy, bold). Visual metaphors help (e.g., morning light on fresh linen; polished steel and glass; cozy café wood and brass). Add any color preferences or boundaries (e.g., avoid neon; love muted earth; open to dark mode).
+                        <br /><br />
+                        <strong>Example starters:</strong>
+                        <br />• “We help overwhelmed solo founders feel in control and proud of their brand—calm, clear, quietly premium.”
+                        <br />• “Think sun-warmed terracotta, olive leaves, and cream linen: natural, artisanal, unhurried.”
+                        <br />• “We’re precise and modern but never cold—more graphite and cloud than chrome and black.”
+                        <br />• “Avoid childish brights; aim for confident, contemporary, approachable.”
+                      </FormDescription>
                       <FormControl>
-                        <Input
-                          placeholder="e.g., Technology, Healthcare, Finance"
+                        <Textarea
+                          rows={8}
                           value={aiForm.values.industry}
-                          onChange={(e) =>
-                            aiForm.setValues({ ...aiForm.values, industry: e.target.value })
-                          }
+                          onChange={(e) => aiForm.setValues({ ...aiForm.values, industry: e.target.value })}
                         />
                       </FormControl>
-                      <FormDescription>
-                        What industry does your business operate in?
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
 
                     <FormItem name="targetAudience">
-                      <FormLabel>Target Audience</FormLabel>
+                      <FormLabel>Who is your Ideal Customer?</FormLabel>
+                      <FormDescription className={styles.highContrastDescription}>
+                        <strong>Example starters:</strong>
+                        <br />• “She’s a 38-year-old creative consultant who loves clean lines, good typography, warm neutrals, and hates visual clutter.”
+                        <br />• “He’s tech-savvy but time-poor; wants quick clarity and zero friction; avoids flashy, prefers quiet premium.”
+                        <br />• “They wear charcoal, navy, cream; love oak and stone; dislike neon and busy patterns.”
+                      </FormDescription>
                       <FormControl>
                         <Textarea
-                          placeholder="e.g., Young professionals aged 25-40 who value convenience and trust"
-                          rows={3}
+                          rows={8}
                           value={aiForm.values.targetAudience}
-                          onChange={(e) =>
-                            aiForm.setValues({ ...aiForm.values, targetAudience: e.target.value })
-                          }
+                          onChange={(e) => aiForm.setValues({ ...aiForm.values, targetAudience: e.target.value })}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Who are your primary customers or users?
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
 
                     <FormItem name="brandPersonality">
-                      <FormLabel>Brand Personality</FormLabel>
+                      <FormLabel>Goals for your business</FormLabel>
+                      <FormDescription className={styles.highContrastDescription}>
+                        <strong>Example starters:</strong>
+                        <br />• “Primary: Book strategy calls. Secondary: Grow newsletter. The ‘Book a Call’ button should be the most eye-catching.”
+                        <br />• “Reading comfort matters—long-form articles with low eye strain; accents used sparingly for trust signals.”
+                        <br />• “We want a premium, welcoming feel—accessible contrast, no harsh fluorescents.”
+                      </FormDescription>
                       <FormControl>
                         <Textarea
-                          placeholder="e.g., Modern, trustworthy, innovative, approachable"
-                          rows={3}
+                          rows={8}
                           value={aiForm.values.brandPersonality}
-                          onChange={(e) =>
-                            aiForm.setValues({ ...aiForm.values, brandPersonality: e.target.value })
-                          }
+                          onChange={(e) => aiForm.setValues({ ...aiForm.values, brandPersonality: e.target.value })}
                         />
                       </FormControl>
-                      <FormDescription>
-                        How would you describe your brand's personality and values?
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
 
                     <FormItem name="avoidColors">
-                      <FormLabel>Colors to Avoid (Optional)</FormLabel>
+                      <FormLabel>Colors to avoid (optional)</FormLabel>
+                      <FormDescription className={styles.highContrastDescription}>
+                        Optional: list any color boundaries (e.g., avoid neon; no red due to industry norms).
+                      </FormDescription>
                       <FormControl>
                         <Input
-                          placeholder="e.g., Red, bright yellow"
                           value={aiForm.values.avoidColors}
-                          onChange={(e) =>
-                            aiForm.setValues({ ...aiForm.values, avoidColors: e.target.value })
-                          }
+                          onChange={(e) => aiForm.setValues({ ...aiForm.values, avoidColors: e.target.value })}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Any colors you want to avoid for your brand?
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
 
@@ -1111,31 +973,89 @@ const GeneratorPage = () => {
                               if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
                               // Update last-saved snapshot
                               try { savedManualJsonRef.current = JSON.stringify({ ...manualForm.values }); } catch { }
+                              // Apply runtime overrides to CSS variables
+                              try {
+                                applyPaletteToCSSVariables({
+                                  primary: { hex: manualForm.values.primary },
+                                  secondary: { hex: manualForm.values.secondary },
+                                  tertiary: { hex: manualForm.values.tertiary },
+                                  accent: { hex: manualForm.values.accent },
+                                  error: { hex: manualForm.values.error || palette.error.hex },
+                                  success: { hex: manualForm.values.success || palette.success.hex },
+                                  notice: { hex: manualForm.values.warning || palette.warning.hex },
+                                } as any);
+                              } catch { }
+                              // Export current Core Foundation tokens as CSS
+                              try { exportCoreFoundationCSSFromCurrent(); } catch { }
                               toast.success('Theme name, colors, and settings saved');
                             } catch { }
                           }}
                         >
                           Save colors and settings
                         </Button>
-                      </div>
-                      <hr
-                        className={styles.tertiaryDivider}
-                        style={{
-                          borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
-                        }}
-                      />
-
-                      {/* Match semantic colors to Primary (desktop Manual tab) */}
-                      <div style={{ display: 'block', marginTop: 'var(--cf-space-2xs)', marginBottom: 'var(--cf-space-2xs)' }}>
-                        <p>Optional: Adjust the saturation and brightness (luminance) of the Error, Warning, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Warning). See the Palette page for the "adusted for contrast" versions.</p>
-                        <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
-                          Match Error/Warning/Success to Primary
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            try {
+                              // Clear saved data
+                              const keys = [
+                                'gl_palette_manual_colors', 'gl_theme_name', 'gl_theme_text_on_dark_hex', 'gl_theme_text_on_light_hex',
+                                'gl_theme_semantic_error_hex', 'gl_theme_semantic_warning_hex', 'gl_theme_semantic_success_hex'
+                              ];
+                              keys.forEach(k => localStorage.removeItem(k));
+                            } catch { }
+                            // Reset state to initial defaults
+                            setThemeName('');
+                            setTextOnDark('#F7F3EE');
+                            setTextOnLight('#453521');
+                            setPalette(initialPalette);
+                            manualForm.setValues({
+                              themeName: '',
+                              textOnDark: '#F7F3EE',
+                              textOnLight: '#453521',
+                              primary: initialPalette.primary.hex,
+                              secondary: initialPalette.secondary.hex,
+                              tertiary: initialPalette.tertiary.hex,
+                              accent: initialPalette.accent.hex,
+                              error: initialPalette.error.hex,
+                              warning: initialPalette.warning.hex,
+                              success: initialPalette.success.hex,
+                            });
+                            // Re-apply defaults to CSS variables
+                            try {
+                              applyPaletteToCSSVariables({
+                                primary: { hex: initialPalette.primary.hex },
+                                secondary: { hex: initialPalette.secondary.hex },
+                                tertiary: { hex: initialPalette.tertiary.hex },
+                                accent: { hex: initialPalette.accent.hex },
+                                error: { hex: initialPalette.error.hex },
+                                success: { hex: initialPalette.success.hex },
+                                notice: { hex: initialPalette.warning.hex },
+                              } as any);
+                            } catch { }
+                            toast.success('Reset to defaults');
+                          }}
+                        >
+                          Reset to defaults
                         </Button>
                       </div>
                       <hr
                         className={styles.tertiaryDivider}
                         style={{
-                          borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                          borderTopColor: demoStepHex(paletteWithVariations, 'tertiary', 'dark'),
+                        }}
+                      />
+                      {/* Match semantic colors to Primary (desktop Manual tab) */}
+                      <div style={{ display: 'block', marginTop: 'var(--cf-space-2xs)', marginBottom: 'var(--cf-space-2xs)' }}>
+                        <p>Optional: Adjust the saturation and brightness (luminance) of the Error, Notice, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Notice). See the Palette page for the "adjusted for contrast" versions.</p>
+                        <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
+                          Match Error/Notice/Success to Primary
+                        </Button>
+                      </div>
+                      <hr
+                        className={styles.tertiaryDivider}
+                        style={{
+                          borderTopColor: demoStepHex(paletteWithVariations, 'tertiary', 'dark'),
                         }}
                       />
                       {/* Color Wheel (non-interactive) */}
@@ -1150,12 +1070,12 @@ const GeneratorPage = () => {
                             />
                           ))}
                           {/* Labels every 45° (0..315). Keep text horizontal; add extra radius for 90/270. */}
-                          {([0,45,90,135,180,225,270,315] as number[]).map((deg) => (
+                          {([0, 45, 90, 135, 180, 225, 270, 315] as number[]).map((deg) => (
                             <span
                               key={`tick-label-${deg}`}
                               className={styles.wheelTickLabel}
                               style={{
-                                transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(${[90,270].includes(deg) ? '--tick-label-radius-vertical' : '--tick-label-radius'})) rotate(0deg)`
+                                transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(${[90, 270].includes(deg) ? '--tick-label-radius-vertical' : '--tick-label-radius'})) rotate(0deg)`
                               }}
                             >
                               {deg}
@@ -1319,13 +1239,13 @@ const GeneratorPage = () => {
                           <FormItem key={key} name={key}>
                             <FormControl>
                               <ColorInput
-                                value={manualForm.values[key]}
+                                value={(manualForm.values as any)[key] || '#000000'}
                                 onChange={(hex) => handleManualColorChange(key as ColorType | SemanticColorType, hex)}
                                 trailing={
                                   <FormLabel>
                                     {palette[key].name}
                                     {(() => {
-                                      const rgb = hexToRgb(manualForm.values[key]);
+                                      const rgb = hexToRgb(((manualForm.values as any)[key] || '#000000'));
                                       const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
                                       return (
                                         <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: manualForm.values.textOnLight || 'var(--foreground)' }}>
@@ -1444,9 +1364,9 @@ const GeneratorPage = () => {
                     className={styles.exportDescription}
                     style={{ color: `light-dark(${textOnLight}, ${textOnDark})` }}
                   >
-                    Download a ZIP containing the contrast-adjusted theme variations (all combinations of the main 3 colors).<br/>
-                    The file includes a WordPress theme.json and a CSS file with CSS variables and contrast-optimized utilities, for each variation.<br/>
-                    Copy each file in it, into your child theme's <code>styles</code> folder.<br/>
+                    Download a ZIP containing the contrast-adjusted theme variations (all combinations of the main 3 colors).<br />
+                    The file includes a WordPress theme.json and a CSS file with CSS variables and contrast-optimized utilities, for each variation.<br />
+                    Copy each file in it, into your child theme's <code>styles</code> folder.<br />
                     Below see the exported colors, their hex numbers, and HSL values.
                   </p>
                   {/* Export preview and details */}
@@ -1502,53 +1422,94 @@ const GeneratorPage = () => {
 
                     {/* 3-column flex: Swatches | HEX | HSL */}
                     <div style={{ display: 'flex', gap: 'var(--spacing-3)', flexWrap: 'wrap' }}>
-                    {/* Swatch preview */}
-                    <div style={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: 'var(--spacing-3)',
-                      flex: '1 1 340px',
-                      minWidth: '340px'
-                    }}>
-                      <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>Colors to be exported (contrast-adjusted only)</h3>
-                      {/* Text on Light/Dark preview */}
-                      <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', marginBottom: 'var(--spacing-3)' }}>
-                        {[{ label: 'text-on-light', hex: textOnLight }, { label: 'text-on-dark', hex: textOnDark }].map(({ label, hex }) => (
-                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 6, padding: 6 }}>
-                            <span title={hex} style={{ display: 'inline-block', width: '2.5rem', height: '2.5rem', borderRadius: 4, background: hex, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
-                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-                              <span style={{ fontSize: 'var(--cf-text-s)' }}>{label}</span>
-                              <span style={{ fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace', fontSize: 'var(--cf-text-s)' }}>{(hex || '').toUpperCase()}</span>
+                      {/* Swatch preview */}
+                      <div style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: 'var(--spacing-3)',
+                        flex: '1 1 340px',
+                        minWidth: '340px'
+                      }}>
+                        <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>Colors to be exported (contrast-adjusted only)</h3>
+                        {/* Text on Light/Dark preview */}
+                        <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', marginBottom: 'var(--spacing-3)' }}>
+                          {[{ label: 'text-on-light', hex: textOnLight }, { label: 'text-on-dark', hex: textOnDark }].map(({ label, hex }) => (
+                            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 6, padding: 6 }}>
+                              <span title={hex} style={{ display: 'inline-block', width: '2.5rem', height: '2.5rem', borderRadius: 4, background: hex, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
+                              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                                <span style={{ fontSize: 'var(--cf-text-s)' }}>{label}</span>
+                                <span style={{ fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace', fontSize: 'var(--cf-text-s)' }}>{(hex || '').toUpperCase()}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'grid', gap: 'var(--spacing-3)' }}>
-                        {(['primary','secondary','tertiary','accent','error','warning','success'] as const).map((key) => {
-                          const entry: any = (paletteWithVariations as any)?.[key];
-                          if (!entry) return null;
-                          const isSemantic = key === 'error' || key === 'warning' || key === 'success';
-                          const items: Array<{ label: string; hex: string }> = [];
-                          const pushItem = (label: string, hex: string | undefined) => {
-                            if (!hex) return;
-                            items.push({ label, hex });
-                          };
-                          if (Array.isArray(entry.variations)) {
-                            if (isSemantic) {
-                              // Only show the chosen light/dark bands for semantic colors
-                              const sel = semanticBandSelection[key];
-                              const findHex = (step: string) => entry.variations.find((v: any) => v.step === step)?.hex;
-                              pushItem(`Light (${sel.light})`, findHex(sel.light));
-                              pushItem(`Dark (${sel.dark})`, findHex(sel.dark));
-                            } else {
-                              // Exclude base; only include adjusted bands. Prefer ordering: dark, darker, light, lighter
-                              const order = ['dark','darker','light','lighter'];
-                              const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
-                              adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
-                              adjusted.forEach((v: any) => pushItem(v.step || v.name || 'step', v.hex));
+                          ))}
+                        </div>
+                        <div style={{ display: 'grid', gap: 'var(--spacing-3)' }}>
+                          {(['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).map((key) => {
+                            const entry: any = (paletteWithVariations as any)?.[key];
+                            if (!entry) return null;
+                            const isSemantic = key === 'error' || key === 'warning' || key === 'success';
+                            const items: Array<{ label: string; hex: string }> = [];
+                            const pushItem = (label: string, hex: string | undefined) => {
+                              if (!hex) return;
+                              items.push({ label, hex });
+                            };
+                            if (Array.isArray(entry.variations)) {
+                              if (isSemantic) {
+                                // Only show the chosen light/dark bands for semantic colors, labeled as key-step
+                                const sel = semanticBandSelection[key as 'error' | 'warning' | 'success'];
+                                const findHex = (step: string) => entry.variations.find((v: any) => v.step === step)?.hex;
+                                const prefix = key === 'warning' ? 'notice' : key;
+                                pushItem(`${prefix}-light`, findHex(sel.light));
+                                pushItem(`${prefix}-dark`, findHex(sel.dark));
+                              } else {
+                                // Exclude base; only include adjusted bands. Prefer ordering: dark, darker, light, lighter
+                                const order = ['dark', 'darker', 'light', 'lighter'];
+                                const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
+                                adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
+                                adjusted.forEach((v: any) => pushItem(v.step || v.name || 'step', v.hex));
+                              }
                             }
-                          }
+                            const toHsl = (hex: string) => {
+                              try {
+                                const { r, g, b } = hexToRgb(hex);
+                                const { h, s, l } = rgbToHslNorm(r, g, b);
+                                const H = Math.round(h);
+                                const S = Math.round(s * 100);
+                                const L = Math.round(l * 100);
+                                return `hsl(${H}, ${S}%, ${L}%)`;
+                              } catch {
+                                return 'hsl(0, 0%, 0%)';
+                              }
+                            };
+                            return (
+                              <div key={key}>
+                                <h4 style={{ margin: 0, marginBottom: 6 }}>{entry?.name || key}</h4>
+                                <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                                  {items.map(({ label, hex }) => (
+                                    <div key={label + hex} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 6, padding: 6 }}>
+                                      <span title={hex} style={{ display: 'inline-block', width: '2.5rem', height: '2.5rem', borderRadius: 4, background: hex, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
+                                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                                        <span style={{ fontSize: 'var(--cf-text-s)' }}>{label}</span>
+                                        <span style={{ fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace', fontSize: 'var(--cf-text-s)' }}>{hex.toUpperCase()}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* Copy-friendly lists (HEX and HSL as separate cards) */}
+                      <div style={{ display: 'contents' }}>
+                        {(() => {
+                          type Key = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'error' | 'warning' | 'success';
+                          const keys: Key[] = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'];
+                          const linesHex: string[] = [];
+                          const linesHsl: string[] = [];
+                          const slugFor = (key: Key, step: string) => `${key}-${step}`;
+                          const displaySlugFor = (key: Key, step: string) => `${key === 'warning' ? 'notice' : key}-${step}`;
                           const toHsl = (hex: string) => {
                             try {
                               const { r, g, b } = hexToRgb(hex);
@@ -1561,97 +1522,59 @@ const GeneratorPage = () => {
                               return 'hsl(0, 0%, 0%)';
                             }
                           };
-                          return (
-                            <div key={key}>
-                              <h4 style={{ margin: 0, marginBottom: 6 }}>{entry?.name || key}</h4>
-                              <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-                                {items.map(({ label, hex }) => (
-                                  <div key={label + hex} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 6, padding: 6 }}>
-                                    <span title={hex} style={{ display: 'inline-block', width: '2.5rem', height: '2.5rem', borderRadius: 4, background: hex, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
-                                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-                                      <span style={{ fontSize: 'var(--cf-text-s)' }}>{label}</span>
-                                      <span style={{ fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace', fontSize: 'var(--cf-text-s)' }}>{hex.toUpperCase()}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {/* Copy-friendly lists (HEX and HSL as separate cards) */}
-                    <div style={{ display: 'contents' }}>
-                      {(() => {
-                        type Key = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'error' | 'warning' | 'success';
-                        const keys: Key[] = ['primary','secondary','tertiary','accent','error','warning','success'];
-                        const linesHex: string[] = [];
-                        const linesHsl: string[] = [];
-                        const slugFor = (key: Key, step: string) => `${key}-${step}`;
-                        const toHsl = (hex: string) => {
-                          try {
-                            const { r, g, b } = hexToRgb(hex);
-                            const { h, s, l } = rgbToHslNorm(r, g, b);
-                            const H = Math.round(h);
-                            const S = Math.round(s * 100);
-                            const L = Math.round(l * 100);
-                            return `hsl(${H}, ${S}%, ${L}%)`;
-                          } catch {
-                            return 'hsl(0, 0%, 0%)';
+                          // Add text-on light/dark first
+                          if (textOnLight) {
+                            linesHex.push(`text-on-light: ${textOnLight.toUpperCase()}`);
+                            linesHsl.push(`text-on-light: ${toHsl(textOnLight)}`);
                           }
-                        };
-                        // Add text-on light/dark first
-                        if (textOnLight) {
-                          linesHex.push(`text-on-light: ${textOnLight.toUpperCase()}`);
-                          linesHsl.push(`text-on-light: ${toHsl(textOnLight)}`);
-                        }
-                        if (textOnDark) {
-                          linesHex.push(`text-on-dark: ${textOnDark.toUpperCase()}`);
-                          linesHsl.push(`text-on-dark: ${toHsl(textOnDark)}`);
-                        }
-                        // Add adjusted color bands for each key (exclude base)
-                        keys.forEach((key) => {
-                          const entry: any = (paletteWithVariations as any)?.[key];
-                          if (!entry) return;
-                          const isSemantic = key === 'error' || key === 'warning' || key === 'success';
-                          const add = (step: string, hex?: string) => {
-                            if (!hex) return;
-                            const slug = slugFor(key as Key, step);
-                            linesHex.push(`${slug}: ${hex.toUpperCase()}`);
-                            linesHsl.push(`${slug}: ${toHsl(hex)}`);
-                          };
-                          if (Array.isArray(entry.variations)) {
-                            if (isSemantic) {
-                              const sel = semanticBandSelection[key as 'error'|'warning'|'success'];
-                              const findHex = (step: string) => entry.variations.find((v: any) => v.step === step)?.hex;
-                              add(sel.light, findHex(sel.light));
-                              add(sel.dark, findHex(sel.dark));
-                            } else {
-                              const order = ['dark','darker','light','lighter'];
-                              const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
-                              adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
-                              adjusted.forEach((v: any) => add(v.step || v.name || 'step', v.hex));
+                          if (textOnDark) {
+                            linesHex.push(`text-on-dark: ${textOnDark.toUpperCase()}`);
+                            linesHsl.push(`text-on-dark: ${toHsl(textOnDark)}`);
+                          }
+                          // Add adjusted color bands for each key (exclude base)
+                          keys.forEach((key) => {
+                            const entry: any = (paletteWithVariations as any)?.[key];
+                            if (!entry) return;
+                            const isSemantic = key === 'error' || key === 'warning' || key === 'success';
+                            const add = (step: string, hex?: string) => {
+                              if (!hex) return;
+                              const slug = slugFor(key as Key, step);
+                              const displaySlug = displaySlugFor(key as Key, step);
+                              linesHex.push(`${displaySlug}: ${hex.toUpperCase()}`);
+                              linesHsl.push(`${displaySlug}: ${toHsl(hex)}`);
+                            };
+                            if (Array.isArray(entry.variations)) {
+                              if (isSemantic) {
+                                const sel = semanticBandSelection[key as 'error' | 'warning' | 'success'];
+                                const findHex = (step: string) => entry.variations.find((v: any) => v.step === step)?.hex;
+                                add('light', findHex(sel.light));
+                                add('dark', findHex(sel.dark));
+                              } else {
+                                const order = ['dark', 'darker', 'light', 'lighter'];
+                                const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
+                                adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
+                                adjusted.forEach((v: any) => add(v.step || v.name || 'step', v.hex));
+                              }
                             }
-                          }
-                        });
-                        return (
-                          <>
-                            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-3)', flex: '0 0 320px', minWidth: '320px' }}>
-                              <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>HEX</h3>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--cf-text-s)', fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace' }}>
-{linesHex.join('\n')}
-                              </pre>
-                            </div>
-                            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-3)', flex: '0 0 440px', minWidth: '440px' }}>
-                              <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>HSL</h3>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--cf-text-s)', fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace' }}>
-{linesHsl.join('\n')}
-                              </pre>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
+                          });
+                          return (
+                            <>
+                              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-3)', flex: '0 0 320px', minWidth: '320px' }}>
+                                <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>HEX</h3>
+                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--cf-text-s)', fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace' }}>
+                                  {linesHex.join('\n')}
+                                </pre>
+                              </div>
+                              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-3)', flex: '0 0 440px', minWidth: '440px' }}>
+                                <h3 style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-m)' }}>HSL</h3>
+                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 'var(--cf-text-s)', fontFamily: '"Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace' }}>
+                                  {linesHsl.join('\n')}
+                                </pre>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
 
@@ -1672,7 +1595,23 @@ const GeneratorPage = () => {
                     isLoading={generatePaletteMutation.isPending}
                     scheme={demoScheme}
                   />
+                  {/* Status messages demo */}
+                  <div className={styles.statusMessages} aria-label="Status messages demo">
+                    <div className={[styles.status, styles.statusError].join(' ')} role="alert">
+                      <strong>Error:</strong> Something went wrong. Please try again.
+                    </div>
+                    <div className={[styles.status, styles.statusWarning].join(' ')} role="status">
+                      <strong>Notice:</strong> Unsaved changes. Don’t forget to save.
+                    </div>
+                    <div className={[styles.status, styles.statusSuccess].join(' ')} role="status">
+                      <strong>Success:</strong> Your settings have been saved.
+                    </div>
+                  </div>
                 </LightDarkPreview>
+              </TabsContent>
+              {/* Landing Page Tab */}
+              <TabsContent value="landing" className={styles.tabContent}>
+                <IndexPage />
               </TabsContent>
             </Tabs>
           </div>

@@ -25,13 +25,13 @@
   }
 
   .destructive {
-    background-color: color-mix(in srgb, var(--error) 15%, transparent);
-    color: var(--error);
-    border: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
+    background-color: var(--error-bg);
+    color: var(--error-fg);
+    border: 1px solid var(--error-border);
   }
 
   .destructive:hover {
-    background-color: color-mix(in srgb, var(--error) 25%, transparent);
+    background-color: var(--error-bg);
   }
 
   .secondary {
@@ -55,22 +55,22 @@
   }
 
   .success {
-    background-color: color-mix(in srgb, var(--success) 15%, transparent);
-    color: var(--success);
-    border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);
+    background-color: var(--success-bg);
+    color: var(--success-fg);
+    border: 1px solid var(--success-border);
   }
 
   .success:hover {
-    background-color: color-mix(in srgb, var(--success) 25%, transparent);
+    background-color: var(--success-bg);
   }
 
   .warning {
-    background-color: color-mix(in srgb, var(--warning) 15%, transparent);
-    color: var(--warning-foreground);
-    border: 1px solid color-mix(in srgb, var(--warning) 20%, transparent);
+    background-color: var(--warning-bg);
+    color: var(--warning-fg);
+    border: 1px solid var(--warning-border);
   }
 
   .warning:hover {
-    background-color: color-mix(in srgb, var(--warning) 25%, transparent);
+    background-color: var(--warning-bg);
   }
 }

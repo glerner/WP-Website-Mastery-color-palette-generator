@@ -1,12 +1,11 @@
 export const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : { r: 0, g: 0, b: 0 };
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return { r: 0, g: 0, b: 0 };
+  const [, rs, gs, bs] = m as RegExpExecArray;
+  const r = parseInt(rs!, 16);
+  const g = parseInt(gs!, 16);
+  const b = parseInt(bs!, 16);
+  return { r, g, b };
 };
 
 export const rgbToHex = (r: number, g: number, b: number): string => {
@@ -23,11 +22,12 @@ export const rgbToHex = (r: number, g: number, b: number): string => {
 
 // WCAG relative luminance calculation
 export const luminance = (r: number, g: number, b: number): number => {
-  const a = [r, g, b].map((v) => {
-    v /= 255;
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  });
-  return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+  const arr = [r, g, b].map((v) => {
+    const vv = v / 255;
+    return vv <= 0.03928 ? vv / 12.92 : Math.pow((vv + 0.055) / 1.055, 2.4);
+  }) as [number, number, number];
+  const [lr, lg, lb] = arr;
+  return lr * 0.2126 + lg * 0.7152 + lb * 0.0722;
 };
 
 export const getContrastRatio = (

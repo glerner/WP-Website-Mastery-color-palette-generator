@@ -146,9 +146,9 @@ export const generateAnalogousComplementaryPalette = (): Palette => {
     secondary: createColorFromHue(30, 'Secondary'), // Analogous +30°
     tertiary: createColorFromHue(-30, 'Tertiary'), // Analogous -30°
     accent: createColorFromHue(180, 'Accent'), // Complementary +180°
-    // Default semantic colors
+    // Default semantic colors (display name Notice, key remains 'warning')
     error: { name: 'Error', hex: '#d32f2f' },
-    warning: { name: 'Warning', hex: '#f57c00' },
+    warning: { name: 'Notice', hex: '#f57c00' },
     success: { name: 'Success', hex: '#388e3c' },
   };
 

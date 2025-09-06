@@ -206,14 +206,12 @@ export const generateCssClasses = (
 };
 
 export const generateFilenameSuffix = (palette: PaletteWithVariations): string => {
+  // Only include the four main families to keep filenames concise
   const hexValues = [
     palette.primary.hex.replace('#', ''),
     palette.secondary.hex.replace('#', ''),
     palette.tertiary.hex.replace('#', ''),
     palette.accent.hex.replace('#', ''),
-    palette.error.hex.replace('#', ''),
-    palette.warning.hex.replace('#', ''),
-    palette.success.hex.replace('#', ''),
   ];
 
   return hexValues.join('-');

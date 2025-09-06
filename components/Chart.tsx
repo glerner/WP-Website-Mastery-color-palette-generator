@@ -145,8 +145,8 @@ const ChartTooltipContent = React.forwardRef<
       }
 
       const [item] = payload
-      const key = `${labelKey || item.dataKey || item.name || "value"}`
-      const itemConfig = getPayloadConfigFromPayload(config, item, key)
+      const key = `${labelKey || item?.dataKey || item?.name || "value"}`
+      const itemConfig = item ? getPayloadConfigFromPayload(config, item, key) : undefined
       const value =
         !labelKey && typeof label === "string"
           ? config[label as keyof typeof config]?.label || label
@@ -189,17 +189,17 @@ const ChartTooltipContent = React.forwardRef<
         {!nestLabel ? tooltipLabel : null}
         <div className={styles.tooltipItems}>
           {payload.map((item, index) => {
-            const key = `${nameKey || item.name || item.dataKey || "value"}`
+            const key = `${nameKey || item?.name || item?.dataKey || "value"}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
-            const indicatorColor = color || item.payload.fill || item.color
+            const indicatorColor = color || (item?.payload as any)?.fill || item?.color
 
             return (
               <div
                 key={item.dataKey}
                 className={`${styles.tooltipItem} ${className ?? ""}`}
               >
-                {formatter && item?.value !== undefined && item.name ? (
-                  formatter(item.value, item.name, item, index, item.payload)
+                {formatter && item?.value !== undefined && item?.name ? (
+                  formatter(item.value, item.name, item, index, item?.payload)
                 ) : (
                   <>
                     {itemConfig?.icon ? (

@@ -55,8 +55,8 @@ type RowProps = {
   name: string;
   baseHex: string;
   colorKey: ColorType | SemanticColorType;
-  selectedLighterIndex?: number;
-  selectedLightIndex?: number;
+  selectedLighterIndex?: number | undefined;
+  selectedLightIndex?: number | undefined;
   onSelect: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', index: number) => void;
   anchorId?: string;
 };
@@ -93,7 +93,8 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
       const stepIdx = (values.length - 1) / (count - 1);
       for (let i = 0; i < count; i++) {
         const idx = Math.round(i * stepIdx);
-        picks.push(values[idx]);
+        const val = values[idx];
+        if (val !== undefined) picks.push(val);
       }
       return Array.from(new Set(picks));
     };
@@ -224,8 +225,8 @@ type RowShadesProps = {
   name: string;
   baseHex: string;
   colorKey: ColorType | SemanticColorType;
-  selectedDarkerY?: number; // we will still honor both selections mapping into same 10-strip
-  selectedDarkY?: number;
+  selectedDarkerY?: number | undefined; // we will still honor both selections mapping into same 10-strip
+  selectedDarkY?: number | undefined;
   onSelect: (colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', y: number) => void;
   anchorId?: string;
 };
@@ -289,7 +290,7 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
     // Ensure darker has a default, but only if it changes
     setIf(selectedDarkerY == null && desiredDarker != null, () => {
       if (selectedDarkerY !== desiredDarker) {
-        onSelect(colorKey, 'darker', desiredDarker);
+        onSelect(colorKey, 'darker', desiredDarker!);
       }
     });
 
@@ -486,7 +487,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-error-shades`}
         />
         <Row
-          name="Warning"
+          name="Notice"
           baseHex={palette.warning.hex}
           colorKey="warning"
           selectedLighterIndex={selections.warning?.lighterIndex}
@@ -495,7 +496,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-warning`}
         />
         <RowShades
-          name="Warning"
+          name="Notice"
           baseHex={palette.warning.hex}
           colorKey="warning"
           selectedDarkerY={selections.warning?.darkerY}

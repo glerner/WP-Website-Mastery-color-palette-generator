@@ -124,7 +124,9 @@ export const AutoComplete = <T = unknown,>({
             <CommandPrimitive.Input
               ref={inputRef}
               value={inputValue}
-              onValueChange={isLoading ? undefined : onInputValueChange}
+              onValueChange={(v) => {
+                if (!isLoading) onInputValueChange(v);
+              }}
               onBlur={handleBlur}
               placeholder={placeholder}
               disabled={disabled}

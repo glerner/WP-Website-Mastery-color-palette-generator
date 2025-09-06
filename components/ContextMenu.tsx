@@ -81,7 +81,7 @@ const ContextMenuCheckboxItem = React.forwardRef<
   <ContextMenuPrimitive.CheckboxItem
     ref={ref}
     className={`${styles.checkboxItem} ${className ?? ""}`}
-    checked={checked}
+    {...(checked !== undefined ? { checked } : {})}
     {...props}
   >
     <span className={styles.checkboxItemIndicator}>

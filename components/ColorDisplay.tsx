@@ -136,7 +136,7 @@ const ColorCard = ({ color, name, onVariationClick }: { color: any; name: string
           <VariationBlock
             key={variation.name}
             variation={variation}
-            onClick={onVariationClick ? () => onVariationClick(variation.step as any) : undefined}
+            {...(onVariationClick ? { onClick: () => onVariationClick(variation.step as any) } : {})}
           />
         ))}
         {gaps.shadeGap != null && gaps.shadeGap < Math.round(RECOMMENDED_SHADE_Y_GAP * 1000) / 1000 && (
@@ -271,8 +271,8 @@ export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBan
                 <>
                   <SemanticBlock color={palette.error} name={`Error (Light)`} step={sel.error.light} />
                   <SemanticBlock color={palette.error} name={`Error (Dark)`} step={sel.error.dark} />
-                  <SemanticBlock color={palette.warning} name={`Warning (Light)`} step={sel.warning.light} />
-                  <SemanticBlock color={palette.warning} name={`Warning (Dark)`} step={sel.warning.dark} />
+                  <SemanticBlock color={palette.warning} name={`Notice (Light)`} step={sel.warning.light} />
+                  <SemanticBlock color={palette.warning} name={`Notice (Dark)`} step={sel.warning.dark} />
                   <SemanticBlock color={palette.success} name={`Success (Light)`} step={sel.success.light} />
                   <SemanticBlock color={palette.success} name={`Success (Dark)`} step={sel.success.dark} />
                 </>

@@ -53,14 +53,14 @@ export const SonnerToaster = ({ className, ...props }: ToasterProps) => {
       toastOptions={{
         unstyled: true,
         classNames: {
-          toast: styles.toast,
-          content: styles.content,
-          title: styles.title,
-          actionButton: styles.actionButton,
-          cancelButton: styles.cancelButton,
-          closeButton: styles.closeButton,
-          description: styles.description,
-          icon: styles.icon,
+          toast: String(styles.toast ?? ''),
+          content: String(styles.content ?? ''),
+          title: String(styles.title ?? ''),
+          actionButton: String(styles.actionButton ?? ''),
+          cancelButton: String(styles.cancelButton ?? ''),
+          closeButton: String(styles.closeButton ?? ''),
+          description: String(styles.description ?? ''),
+          icon: String(styles.icon ?? ''),
         },
       }}
       {...props}
