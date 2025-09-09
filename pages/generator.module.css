@@ -169,6 +169,27 @@
   margin: 0 0 var(--cf-space-s);
 }
 
+/* Tighter spacing variant for inline instructional text in Manual tab */
+.formHelpTight {
+  margin-top: 0;
+  margin-bottom: var(--spacing-2, var(--cf-space-s));
+  font-size: var(--cf-text-s);
+  color: light-dark(var(--foreground, #111111), var(--foreground, #FFFFFF));
+}
+
+/* Meta text used to display HSL/Y next to labels; avoid muted; ensure excellent contrast */
+.formMeta {
+  margin-left: 8px;
+  font-size: var(--cf-text-s);
+  color: light-dark(var(--foreground, #111111), var(--foreground, #FFFFFF));
+}
+
+/* Ensure any inline inputs inside formHelp blocks inherit readable base styles */
+.formHelp :where(input, select, textarea) {
+  font-size: inherit;
+  color: inherit;
+}
+
 /* Force high-contrast for AI field descriptions (override muted) */
 .highContrastDescription {
   color: var(--foreground) !important;
@@ -570,4 +591,28 @@
   background: var(--success-bg, #ecfdf5);
   color: var(--success-fg, #065f46);
   border-color: var(--success-border, #a7f3d0);
+}
+
+/* Inline contrast hint for Manual tab warnings */
+.contrastHint {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: var(--cf-text-s);
+  line-height: 1.2;
+  background: var(--notice-bg, var(--warning-bg, #fff7ed));
+  color: var(--notice-fg, var(--warning-fg, #9a3412));
+  border: 1px solid var(--notice-border, var(--warning-border, #fdba74));
+}
+
+/* High-contrast metadata text (Manual tab readouts: HSL, Y) */
+.metaLabel {
+  color: var(--foreground);
+  font-size: var(--cf-text-s);
+}
+
+/* Add left margin when a metaLabel follows another metaLabel */
+.metaLabel + .metaLabel {
+  margin-left: 8px;
 }

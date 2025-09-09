@@ -20,11 +20,33 @@ import { PreviewSection } from '../components/PreviewSection';
 import LightDarkPreview from '../components/LightDarkPreview';
 import { generateThemeJson } from '../helpers/themeJson';
 import { generateCssClasses, generateFilenameSuffix } from '../helpers/cssGenerator';
-import { Palette, ColorType, SemanticColorType, PaletteWithVariations } from '../helpers/types';
+import { Palette, ColorType, SemanticColorType, PaletteWithVariations, SwatchPick } from '../helpers/types';
 import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio, matchBandFromPrimaryByS, luminance } from '../helpers/colorUtils';
 import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP, TARGET_LUM_DARK, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
 import { LuminanceTestStrips } from '../components/LuminanceTestStrips';
 import IndexPage from './_index';
+
+// Validate SwatchPick before storing/using it (module scope)
+function isValidHex(hex: unknown): hex is string {
+  return typeof hex === 'string' && /^#[0-9a-fA-F]{6}$/.test(hex);
+}
+function isFiniteInRange(n: unknown, min: number, max: number) {
+  return typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
+}
+function isValidSwatchPick(p: any): p is SwatchPick {
+  if (!p || typeof p !== 'object') return false;
+  if (!['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'].includes(p.colorKey)) return false;
+  if (!['lighter', 'light', 'dark', 'darker'].includes(p.step)) return false;
+  if (!Number.isInteger(p.indexDisplayed) || p.indexDisplayed < 0) return false;
+  if (!isValidHex(p.hex)) return false;
+  if (!p.hsl || typeof p.hsl !== 'object') return false;
+  if (!isFiniteInRange(p.hsl.h, 0, 360) || !isFiniteInRange(p.hsl.s, 0, 1) || !isFiniteInRange(p.hsl.l, 0, 1)) return false;
+  if (!isFiniteInRange(p.y, 0, 1)) return false;
+  if (!isFiniteInRange(p.contrastVsTextOnLight, 1, 21)) return false;
+  if (!isFiniteInRange(p.contrastVsTextOnDark, 1, 21)) return false;
+  if (!['light', 'dark'].includes(p.textToneUsed)) return false;
+  return true;
+}
 
 // Smoothly scroll the Adjust panel to a target anchor id.
 // Scrolls within the tabsColumn container and respects CSS scroll-margin-top.
@@ -142,6 +164,30 @@ const GeneratorPage = () => {
   const [selections, setSelections] = useState<
     Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
   >({});
+  // Exact picks captured from Adjust (used to override Palette/Export)
+  const [exactSelections, setExactSelections] = useState<
+    Partial<Record<ColorType | SemanticColorType, { lighter?: SwatchPick; light?: SwatchPick; dark?: SwatchPick; darker?: SwatchPick }>>
+  >(() => {
+    // Initialize from localStorage so Palette overrides apply on first render
+    try {
+      const raw = localStorage.getItem('gl_palette_exact_selections');
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return {};
+      const cleaned: Partial<Record<ColorType | SemanticColorType, { lighter?: SwatchPick; light?: SwatchPick; dark?: SwatchPick; darker?: SwatchPick }>> = {};
+      (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
+        const bands = (parsed as any)[k];
+        if (!bands || typeof bands !== 'object') return;
+        const out: any = {};
+        (['lighter', 'light', 'dark', 'darker'] as const).forEach((step) => {
+          const pick = (bands as any)[step];
+          if (isValidSwatchPick(pick)) out[step] = pick;
+        });
+        if (Object.keys(out).length) (cleaned as any)[k] = out;
+      });
+      return cleaned;
+    } catch { return {}; }
+  });
   const generatePaletteMutation = useGeneratePalette();
   const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo' | 'landing'>('instructions');
   const savedManualJsonRef = useRef<string>('');
@@ -205,6 +251,23 @@ const GeneratorPage = () => {
         warning: build('warning'),
         success: build('success'),
       };
+      // Override any generated band hexes with exact user picks
+      const applyExact = (key: keyof PaletteWithVariations) => {
+        const picks = (exactSelections as any)?.[key];
+        if (!picks) return;
+        const arr: any[] = Array.isArray((out as any)[key]?.variations) ? (out as any)[key].variations : [];
+        const setHex = (step: 'lighter' | 'light' | 'dark' | 'darker', hex?: string) => {
+          if (!hex) return;
+          const v = arr.find((x) => x && (x.step === step || x.name === step));
+          if (v) v.hex = hex;
+        };
+        setHex('lighter', picks.lighter?.hex);
+        setHex('light', picks.light?.hex);
+        setHex('dark', picks.dark?.hex);
+        setHex('darker', picks.darker?.hex);
+      };
+      (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (keyof PaletteWithVariations)[])
+        .forEach(applyExact);
       return out;
     } catch {
       // Safe fallback: mirror current palette with empty variations to avoid crashes
@@ -214,7 +277,94 @@ const GeneratorPage = () => {
       });
       return fb as PaletteWithVariations;
     }
-  }, [palette]);
+  }, [palette, exactSelections]);
+
+  // Migration: if we have legacy selections (indices/Y) but no exactSelections for a color,
+  // derive exact SwatchPicks from the built variations so Palette/Export reflect user choices on first load.
+  useEffect(() => {
+    try {
+      const needKeys = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const)
+        .filter((k) => !(exactSelections as any)?.[k] && (selections as any)?.[k]);
+      if (!needKeys.length) return;
+      const next: typeof exactSelections = { ...(exactSelections as any) } as any;
+      needKeys.forEach((k) => {
+        const sel = (selections as any)[k] || {};
+        const entry = (paletteWithVariations as any)[k];
+        const arr: Array<{ step: string; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+        const addPick = (step: 'lighter' | 'light' | 'dark' | 'darker', indexMaybe?: number, yMaybe?: number) => {
+          let hex: string | undefined;
+          let indexDisplayed: number | undefined;
+          if (typeof indexMaybe === 'number') {
+            // Find index-th in the filtered list; fall back to matching by step
+            const byStep = arr.filter((v) => v.step === step);
+            if (byStep[indexMaybe]?.hex) { hex = byStep[indexMaybe].hex; indexDisplayed = indexMaybe; }
+          }
+          if (!hex && typeof yMaybe === 'number') {
+            // Find closest Y among this step
+            const candidates = arr.filter((v) => v.step === step);
+            if (candidates.length > 0) {
+              const ys = candidates.map((v) => { const { r, g, b } = hexToRgb(v.hex); return luminance(r, g, b); });
+              let best = 0, dBest = Infinity;
+              ys.forEach((yy, i) => { const d = Math.abs(yy - yMaybe); if (d < dBest) { dBest = d; best = i; } });
+              if (best >= 0 && best < candidates.length && candidates[best]?.hex) { hex = candidates[best].hex; indexDisplayed = best; }
+            }
+          }
+          if (!hex) return;
+          const { r, g, b } = hexToRgb(hex);
+          const { h, s, l } = rgbToHslNorm(r, g, b);
+          const y = luminance(r, g, b);
+          const cLight = getContrastRatio({ r, g, b }, hexToRgb(textOnLight));
+          const cDark = getContrastRatio({ r, g, b }, hexToRgb(textOnDark));
+          const pick: any = { colorKey: k, step, indexDisplayed: indexDisplayed ?? 0, hex, hsl: { h, s, l }, y, contrastVsTextOnLight: cLight, contrastVsTextOnDark: cDark, textToneUsed: y >= 0.5 ? 'dark' : 'light' };
+          next[k] = { ...(next as any)[k], [step]: pick } as any;
+        };
+        addPick('lighter', sel.lighterIndex);
+        addPick('light', sel.lightIndex);
+        addPick('dark', undefined, sel.darkY);
+        addPick('darker', undefined, sel.darkerY);
+      });
+      setExactSelections(next);
+    } catch { }
+  }, [paletteWithVariations, selections, textOnLight, textOnDark]);
+
+  // Synchronize Adjust highlights (selections) from exactSelections so the initially highlighted
+  // swatches match what Palette/Export are using.
+  useEffect(() => {
+    try {
+      if (!exactSelections || Object.keys(exactSelections).length === 0) return;
+      const next: typeof selections = { ...(selections as any) } as any;
+      (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
+        const entry = (paletteWithVariations as any)[k];
+        const arr: Array<{ step: string; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+        const byStep = (step: 'lighter' | 'light' | 'dark' | 'darker') => arr.filter(v => v.step === step);
+        const picks = (exactSelections as any)[k];
+        if (!picks) return;
+        const cur = (next as any)[k] || {};
+        // Tints: set lighter/light by exact hex index if not already set
+        (['lighter', 'light'] as const).forEach((step) => {
+          const pick = picks?.[step]?.hex as string | undefined;
+          if (!pick) return;
+          const list = byStep(step);
+          const idx = list.findIndex(v => (v.hex || '').toLowerCase() === pick.toLowerCase());
+          if (idx >= 0) {
+            if (step === 'lighter' && cur.lighterIndex == null) cur.lighterIndex = idx;
+            if (step === 'light' && cur.lightIndex == null) cur.lightIndex = idx;
+          }
+        });
+        // Shades: set Y by luminance of exact hex if not already set
+        (['dark', 'darker'] as const).forEach((step) => {
+          const pick = picks?.[step]?.hex as string | undefined;
+          if (!pick) return;
+          const { r, g, b } = hexToRgb(pick);
+          const y = luminance(r, g, b);
+          if (step === 'dark' && cur.darkY == null) cur.darkY = y;
+          if (step === 'darker' && cur.darkerY == null) cur.darkerY = y;
+        });
+        (next as any)[k] = cur;
+      });
+      setSelections(next);
+    } catch { }
+  }, [exactSelections, paletteWithVariations]);
 
   // Helpful derived colors and filenames
   const accentDarkHex = useMemo(() => demoStepHex(paletteWithVariations, 'accent', 'dark'), [paletteWithVariations]);
@@ -248,6 +398,98 @@ const GeneratorPage = () => {
       }
     } catch { }
   }, []);
+
+  // Load saved exact selections (redundant safety to pick up changes from other tabs/windows)
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'gl_palette_exact_selections') return;
+      try {
+        const raw = e.newValue;
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return;
+        const cleaned: typeof exactSelections = {} as any;
+        (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
+          const bands = parsed[k];
+          if (!bands || typeof bands !== 'object') return;
+          const out: any = {};
+          (['lighter', 'light', 'dark', 'darker'] as const).forEach((step) => {
+            const pick = (bands as any)[step];
+            if (isValidSwatchPick(pick)) out[step] = pick;
+          });
+          if (Object.keys(out).length) (cleaned as any)[k] = out;
+        });
+        setExactSelections(cleaned);
+      } catch { }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // Persist exact selections
+  useEffect(() => {
+    try { localStorage.setItem('gl_palette_exact_selections', JSON.stringify(exactSelections)); } catch { }
+  }, [exactSelections]);
+
+  // When text tokens change, ensure palette picks shown in Palette tab remain AAA by adjusting
+  // exactSelections to the nearest AAA-compliant variation of the same band.
+  useEffect(() => {
+    try {
+      if (!paletteWithVariations) return;
+      const next: typeof exactSelections = { ...(exactSelections as any) } as any;
+      const families: (keyof PaletteWithVariations)[] = ['primary','secondary','tertiary','accent','error','warning','success'];
+      let changed = false;
+      families.forEach((k) => {
+        const entry: any = (paletteWithVariations as any)[k];
+        const vars: Array<{ step: 'lighter'|'light'|'dark'|'darker'; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+        const ensureBand = (step: 'lighter'|'light'|'dark'|'darker') => {
+          const list = vars.filter(v => v.step === step);
+          if (!list.length) return;
+          const pick = (next as any)[k]?.[step];
+          const targetHex: string | undefined = pick?.hex;
+          const preferWhite = (step === 'dark' || step === 'darker');
+          const tokenHex = preferWhite ? textOnDark : textOnLight;
+          const token = tokenHex ? hexToRgb(tokenHex) : undefined;
+          const hasAAA = (hex: string) => {
+            try { return token ? getContrastRatio(hexToRgb(hex), token) >= AAA_MIN : true; } catch { return true; }
+          };
+          const currentIsAAA = targetHex ? hasAAA(targetHex) : false;
+          // choose the closest-by-Y variation within this band that meets AAA
+          const curY = targetHex ? (() => { const {r,g,b} = hexToRgb(targetHex); return luminance(r,g,b); })() : undefined;
+          let bestHex: string | undefined;
+          let bestD = Number.POSITIVE_INFINITY;
+          list.forEach(v => {
+            if (!hasAAA(v.hex)) return;
+            if (curY == null) { // no current pick: choose mid-ish AAA by minimizing distance to band median Y
+              const y0 = (() => { const {r,g,b} = hexToRgb(list[0].hex); return luminance(r,g,b); })();
+              const y1 = (() => { const {r,g,b} = hexToRgb(list[list.length - 1].hex); return luminance(r,g,b); })();
+              const medianY = (y0 + y1) / 2;
+              const y = (() => { const {r,g,b} = hexToRgb(v.hex); return luminance(r,g,b); })();
+              const d = Math.abs(y - medianY);
+              if (d < bestD) { bestD = d; bestHex = v.hex; }
+              return;
+            }
+            const y = (() => { const {r,g,b} = hexToRgb(v.hex); return luminance(r,g,b); })();
+            const d = Math.abs(y - curY);
+            if (d < bestD) { bestD = d; bestHex = v.hex; }
+          });
+          if (!currentIsAAA && bestHex && bestHex !== targetHex) {
+            const { r, g, b } = hexToRgb(bestHex);
+            const { h, s, l } = rgbToHslNorm(r, g, b);
+            const y = luminance(r, g, b);
+            const cLight = getContrastRatio({ r, g, b }, hexToRgb(textOnLight));
+            const cDark = getContrastRatio({ r, g, b }, hexToRgb(textOnDark));
+            const idx = list.findIndex(v => v.hex.toLowerCase() === bestHex.toLowerCase());
+            const pickObj: any = { colorKey: k, step, indexDisplayed: Math.max(0, idx), hex: bestHex, hsl: { h, s, l }, y, contrastVsTextOnLight: cLight, contrastVsTextOnDark: cDark, textToneUsed: preferWhite ? 'light' : 'dark' };
+            next[k] = { ...(next as any)[k], [step]: pickObj } as any;
+            changed = true;
+          }
+        };
+        (['lighter','light','dark','darker'] as const).forEach(ensureBand);
+      });
+      if (changed) setExactSelections(next);
+    } catch {}
+  }, [textOnLight, textOnDark, paletteWithVariations]);
 
   // Load/save textOnDark/textOnLight overrides
   useEffect(() => {
@@ -855,14 +1097,14 @@ const GeneratorPage = () => {
                 <div className={styles.previewContent}>
                   <ColorDisplay
                     palette={paletteWithVariations}
-                    isLoading={generatePaletteMutation.isPending}
+                    isLoading={false}
                     semanticBandSelection={semanticBandSelection}
+                    textOnLight={textOnLight}
+                    textOnDark={textOnDark}
                     onVariationClick={(key, step) => {
                       setActiveTab('adjust');
-                      const baseId = (step === 'dark' || step === 'darker')
-                        ? `luminance-${key}-shades`
-                        : `luminance-${key}`;
-                      scrollAdjustTo(`d-${baseId}`);
+                      const suffix = (step === 'dark' || step === 'darker') ? '-shades' : '';
+                      scrollAdjustTo(`d-luminance-${key}${suffix}`);
                     }}
                   />
                 </div>
@@ -1127,7 +1369,7 @@ const GeneratorPage = () => {
                     {/* Right column: color entry controls */}
                     <div className={styles.manualCol}>
                       <form className={styles.manualForm}>
-                        <p className={styles.formHelp} style={{ marginTop: 0, marginBottom: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
+                        <p className={`${styles.formHelp} ${styles.formHelpTight}`}>
                           Enter hexadecimal color numbers, or click the color swatch to enter HSL (type or up/down arrow keys in fields, or drag in the color picker).
                         </p>
                         {/* Order: Text on Light above Text on Dark */}
@@ -1140,44 +1382,53 @@ const GeneratorPage = () => {
                                 setTextOnLight(hex);
                               }}
                               trailing={(() => {
-                                const rgb = hexToRgb(manualForm.values.textOnLight);
-                                const y = luminance(rgb.r, rgb.g, rgb.b);
-                                const ok = y <= CLOSE_ENOUGH_TO_BLACK_MAX_LUM;
-                                const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
-                                return (
-                                  <div>
-                                    <FormLabel>
-                                      Text on Light (near black)
-                                      <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: manualForm.values.textOnLight || 'var(--foreground)' }}>
-                                        HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                try {
+                                  const { r, g, b } = hexToRgb(manualForm.values.textOnLight);
+                                  const { h, s, l } = rgbToHslNorm(r, g, b);
+                                  const Y = luminance(r, g, b);
+                                  const ok = Y <= CLOSE_ENOUGH_TO_BLACK_MAX_LUM;
+                                  return (
+                                    <div>
+                                      <FormLabel>
+                                        Text on Light (near black)
+                                        <span className={styles.formMeta}>
+                                          HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                        </span>
+                                      </FormLabel>
+                                      <span className={styles.metaLabel}>
+                                        Y={Y.toFixed(3)}
                                       </span>
-                                    </FormLabel>
-                                    {!ok && (
-                                      <div style={{ marginTop: 2, fontSize: 'var(--cf-text-s)', color: `light-dark(${warningDarkHex}, ${warningLightHex})` }}>
-                                        Consider a darker color for readability (Y ≤ {CLOSE_ENOUGH_TO_BLACK_MAX_LUM}).
-                                      </div>
-                                    )}
-                                    {/* Suggestions */}
-                                    <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                                      {[{ label: 'Almost black', hex: '#333333' }, { label: 'Neutral', hex: '#453521' }].map(s => (
-                                        <button
-                                          key={s.hex}
-                                          type="button"
-                                          onClick={() => { manualForm.setValues({ ...manualForm.values, textOnLight: s.hex }); setTextOnLight(s.hex); }}
-                                          style={{
-                                            padding: '2px 6px',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 4,
-                                            background: 'transparent',
-                                            color: 'inherit',
-                                            cursor: 'pointer',
-                                            fontSize: 'var(--cf-text-s)'
+                                      {!ok && (
+                                        <div className={styles.contrastHint}>
+                                          Consider a darker color for readability (Y ≤ {CLOSE_ENOUGH_TO_BLACK_MAX_LUM}).
+                                        </div>
+                                      )}
+                                      {/* Suggestions */}
+                                      <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#0A0A0A';
+                                            manualForm.setValues({ ...manualForm.values, textOnLight: hex });
+                                            setTextOnLight(hex);
                                           }}
-                                        >{s.label}</button>
-                                      ))}
+                                        >Almost black</Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#222222';
+                                            manualForm.setValues({ ...manualForm.values, textOnLight: hex });
+                                            setTextOnLight(hex);
+                                          }}
+                                        >Neutral</Button>
+                                      </div>
                                     </div>
-                                  </div>
-                                );
+                                  );
+                                } catch {
+                                  return null;
+                                }
                               })()}
                             />
                           </FormControl>
@@ -1192,44 +1443,53 @@ const GeneratorPage = () => {
                                 setTextOnDark(hex);
                               }}
                               trailing={(() => {
-                                const rgb = hexToRgb(manualForm.values.textOnDark);
-                                const y = luminance(rgb.r, rgb.g, rgb.b);
-                                const ok = y >= CLOSE_ENOUGH_TO_WHITE_MIN_LUM;
-                                const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
-                                return (
-                                  <div>
-                                    <FormLabel>
-                                      Text on Dark (near white)
-                                      <span style={{ marginLeft: 8, fontSize: 'var(--cf-text-s)', color: manualForm.values.textOnLight || 'var(--foreground)' }}>
-                                        HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
-                                      </span>
-                                    </FormLabel>
-                                    {!ok && (
-                                      <div style={{ marginTop: 2, fontSize: 'var(--cf-text-s)', color: `light-dark(${warningDarkHex}, ${warningLightHex})` }}>
-                                        Consider a lighter color for readability (Y ≥ {CLOSE_ENOUGH_TO_WHITE_MIN_LUM}).
-                                      </div>
-                                    )}
-                                    {/* Suggestions */}
-                                    <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                                      {[{ label: 'Almost white', hex: '#F7F3EE' }, { label: 'Neutral', hex: '#EFEEEC' }, { label: 'Off-white', hex: '#F1EEE9' }].map(s => (
-                                        <button
-                                          key={s.hex}
-                                          type="button"
-                                          onClick={() => { manualForm.setValues({ ...manualForm.values, textOnDark: s.hex }); setTextOnDark(s.hex); }}
-                                          style={{
-                                            padding: '2px 6px',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 4,
-                                            background: 'transparent',
-                                            color: 'inherit',
-                                            cursor: 'pointer',
-                                            fontSize: 'var(--cf-text-s)'
+                                try {
+                                  const { r, g, b } = hexToRgb(manualForm.values.textOnDark);
+                                  const { h, s, l } = rgbToHslNorm(r, g, b);
+                                  const Y = luminance(r, g, b);
+                                  const ok = Y >= CLOSE_ENOUGH_TO_WHITE_MIN_LUM;
+                                  return (
+                                    <div>
+                                      <FormLabel>
+                                        Text on Dark (near white)
+                                        <span className={styles.formMeta}>
+                                          HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                        </span>
+                                        <span className={styles.formMeta}>
+                                          Y={Y.toFixed(Y_TARGET_DECIMALS)}
+                                        </span>
+                                      </FormLabel>
+                                      {!ok && (
+                                        <div className={styles.contrastHint}>
+                                          Consider a lighter color for readability (Y ≥ {CLOSE_ENOUGH_TO_WHITE_MIN_LUM}).
+                                        </div>
+                                      )}
+                                      {/* Suggestions */}
+                                      <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#F9FAFB';
+                                            manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                                            setTextOnDark(hex);
                                           }}
-                                        >{s.label}</button>
-                                      ))}
+                                        >Almost white</Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#f2f2f2';
+                                            manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                                            setTextOnDark(hex);
+                                          }}
+                                        >Off-white</Button>
+                                      </div>
                                     </div>
-                                  </div>
-                                );
+                                  );
+                                } catch {
+                                  return null;
+                                }
                               })()}
                             />
                           </FormControl>
@@ -1335,6 +1595,21 @@ const GeneratorPage = () => {
                   palette={paletteWithVariations}
                   selections={selections}
                   anchorPrefix="d-"
+                  onTokensAutoAdjusted={(update) => {
+                    // Persist adjusted tokens into form, state, and localStorage
+                    const nextVals = { ...manualForm.values } as any;
+                    if (update.textOnLight) {
+                      setTextOnLight(update.textOnLight);
+                      nextVals.textOnLight = update.textOnLight;
+                      try { localStorage.setItem('gl_theme_text_on_light_hex', update.textOnLight); } catch {}
+                    }
+                    if (update.textOnDark) {
+                      setTextOnDark(update.textOnDark);
+                      nextVals.textOnDark = update.textOnDark;
+                      try { localStorage.setItem('gl_theme_text_on_dark_hex', update.textOnDark); } catch {}
+                    }
+                    manualForm.setValues(nextVals);
+                  }}
                   onSelectTintIndex={(colorKey, kind, index) =>
                     setSelections((prev) => ({
                       ...prev,
@@ -1355,6 +1630,24 @@ const GeneratorPage = () => {
                       },
                     }))
                   }
+                  // New exact-pick handlers (used to override Palette/Export)
+                  onSelectTint={(colorKey, kind, pick) => {
+                    if (!isValidSwatchPick(pick)) { console.error('Rejected invalid SwatchPick (tint)', { colorKey, kind, pick }); return; }
+                    setExactSelections((prev) => ({
+                      ...prev,
+                      [colorKey]: { ...(prev[colorKey] || {}), [kind]: pick },
+                    }));
+                  }}
+                  onSelectShade={(colorKey, kind, pick) => {
+                    if (!isValidSwatchPick(pick)) { console.error('Rejected invalid SwatchPick (shade)', { colorKey, kind, pick }); return; }
+                    setExactSelections((prev) => ({
+                      ...prev,
+                      [colorKey]: { ...(prev[colorKey] || {}), [kind]: pick },
+                    }));
+                  }}
+                  textOnLight={textOnLight}
+                  textOnDark={textOnDark}
+                  onGoPalette={() => setActiveTab('palette')}
                 />
               </TabsContent>
               <TabsContent value="export" className={styles.tabContent}>

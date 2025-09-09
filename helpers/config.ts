@@ -1,6 +1,13 @@
 // Centralized configuration for luminance ranges, target counts, precision, and thresholds
 // Values can be overridden via environment variables (NEXT_PUBLIC_* for client/browser use)
 // This file is the single source of truth for all constants.
+//
+// DEPRECATION NOTICE
+// ------------------
+// Near-black/near-white constants are deprecated for contrast computations.
+// Do NOT use NEAR_BLACK_* or NEAR_WHITE_* in new logic. Use the user-configurable
+// text tokens instead (text-on-light / text-on-dark). These tokens are the
+// source of truth for rendering and validation throughout the app and exports.
 
 const ENV: Record<string, string | undefined> =
   (typeof globalThis !== 'undefined' && (globalThis as any).process && (globalThis as any).process.env)
@@ -27,12 +34,17 @@ const int = (key: string, fallback: string) => {
 };
 
 /**
- * Near-black/near-white colors used for text contrast testing against background swatches.
+ * Near-black/near-white colors used for contrast testing in legacy code paths.
  * Units: HEX strings and RGB triplets.
+ * @deprecated Use text-on-light / text-on-dark tokens for contrast. These constants will be removed.
  */
+/** @deprecated Use text-on-light token for contrast instead. */
 export const NEAR_BLACK_HEX = '#0A0A0A';
+/** @deprecated Use text-on-dark token for contrast instead. */
 export const NEAR_WHITE_HEX = '#F9FAFB';
+/** @deprecated Use text-on-light token for contrast instead. */
 export const NEAR_BLACK_RGB = { r: 10, g: 10, b: 10 } as const;
+/** @deprecated Use text-on-dark token for contrast instead. */
 export const NEAR_WHITE_RGB = { r: 249, g: 250, b: 251 } as const;
 
 /**
@@ -40,8 +52,10 @@ export const NEAR_WHITE_RGB = { r: 249, g: 250, b: 251 } as const;
  * These control how close to white (for Text on Dark) and how close to black (for Text on Light) the chosen colors must be.
  * Values are luminance targets in [0..1]. Override via env if needed.
  */
-export const CLOSE_ENOUGH_TO_WHITE_MIN_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_WHITE_MIN_LUM', 0.845, 0, 1);
-export const CLOSE_ENOUGH_TO_BLACK_MAX_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_BLACK_MAX_LUM', 0.08, 0, 1);
+// Text-on-dark should be very light: minimum Y ~ 0.90 (.90 good, .88 okay)
+export const CLOSE_ENOUGH_TO_WHITE_MIN_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_WHITE_MIN_LUM', 0.90, 0, 1);
+// Text-on-light should be quite dark: maximum Y ~ 0.15 (.10 is quite light)
+export const CLOSE_ENOUGH_TO_BLACK_MAX_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_BLACK_MAX_LUM', 0.05, 0, 1);
 
 /** Number of decimals when computing target Y values. */
 export const Y_TARGET_DECIMALS = int('NEXT_PUBLIC_Y_TARGET_DECIMALS', '2');
@@ -50,9 +64,9 @@ export const Y_DISPLAY_DECIMALS = int('NEXT_PUBLIC_Y_DISPLAY_DECIMALS', '3');
 
 // Target counts
 /** Desired number of tint (lighter) steps. Env: NEXT_PUBLIC_TINT_TARGET_COUNT */
-export const TINT_TARGET_COUNT = int('NEXT_PUBLIC_TINT_TARGET_COUNT', '10');
+export const TINT_TARGET_COUNT = int('NEXT_PUBLIC_TINT_TARGET_COUNT', '15');
 /** Desired number of shade (darker) steps. Env: NEXT_PUBLIC_SHADE_TARGET_COUNT */
-export const SHADE_TARGET_COUNT = int('NEXT_PUBLIC_SHADE_TARGET_COUNT', '10');
+export const SHADE_TARGET_COUNT = int('NEXT_PUBLIC_SHADE_TARGET_COUNT', '15');
 
 // Luminance ranges (defaults chosen from prior implementation)
 /** Lower bound for the "lighter" band (Y). Env: NEXT_PUBLIC_LIGHTER_MIN_Y */

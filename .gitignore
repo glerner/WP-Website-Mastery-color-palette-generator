@@ -57,6 +57,7 @@ storybook-static/
 .cascade/
 
 # notes about upcoming changes, plan
+git-diff.txt
 change.md
 junk.txt
 changes.txt

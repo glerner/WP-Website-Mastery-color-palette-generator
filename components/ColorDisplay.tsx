@@ -15,10 +15,12 @@ interface ColorDisplayProps {
   palette: PaletteWithVariations;
   isLoading: boolean;
   onVariationClick?: (
-    key: 'primary' | 'secondary' | 'tertiary' | 'accent',
+    key: 'primary' | 'secondary' | 'tertiary' | 'accent' | 'error' | 'warning' | 'success',
     step: 'lighter' | 'light' | 'dark' | 'darker'
   ) => void;
   semanticBandSelection?: SemanticBandSelection;
+  textOnLight?: string | undefined;
+  textOnDark?: string | undefined;
 }
 
 const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
@@ -46,17 +48,17 @@ const ContrastInfo = ({ colorHex }: { colorHex: string }) => {
   );
 };
 
-const VariationBlock = ({ variation, onClick }: { variation: any; onClick?: () => void }) => {
+const VariationBlock = ({ variation, onClick, textOnLight, textOnDark }: { variation: any; onClick?: () => void; textOnLight?: string | undefined; textOnDark?: string | undefined }) => {
   const contrastSolution = ensureAAAContrast(variation.hex);
   const bg = hexToRgb(variation.hex);
-  const textIsWhite = contrastSolution.textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase();
-  const textRgb = textIsWhite ? NEAR_WHITE_RGB : NEAR_BLACK_RGB;
+  // Compute numeric contrast against active tokens for consistency with Adjust/Export
+  const preferWhite = variation.step === 'dark' || variation.step === 'darker';
+  const tokenHex = preferWhite ? textOnDark : textOnLight;
+  const textRgb = tokenHex ? hexToRgb(tokenHex) : (preferWhite ? NEAR_WHITE_RGB : NEAR_BLACK_RGB);
   const ratio = getContrastRatio(bg, textRgb);
   const level: 'AAA' | 'AA' | 'FAIL' = ratio >= AAA_MIN ? 'AAA' : ratio >= AA_SMALL_MIN ? 'AA' : 'FAIL';
-  const hslInt = hexToHslString(variation.hex, false).replace(/^hsl/i, 'HSL');
+  const hslInt = hexToHslString(variation.hex, true).replace(/^hsl/i, 'HSL');
   const y = luminance(...Object.values(hexToRgb(variation.hex)) as [number, number, number]);
-
-  const badgeBg = textIsWhite ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
 
   return (
     <div
@@ -95,7 +97,7 @@ const VariationBlock = ({ variation, onClick }: { variation: any; onClick?: () =
   );
 };
 
-const ColorCard = ({ color, name, onVariationClick }: { color: any; name: string; onVariationClick?: (step: 'lighter' | 'light' | 'dark' | 'darker') => void }) => {
+const ColorCard = ({ color, name, onVariationClick, textOnLight, textOnDark }: { color: any; name: string; onVariationClick?: (step: 'lighter' | 'light' | 'dark' | 'darker') => void; textOnLight?: string | undefined; textOnDark?: string | undefined }) => {
   const ordered = React.useMemo(() => {
     const order: Record<string, number> = { lighter: 0, light: 1, dark: 2, darker: 3 };
     return [...(color.variations || [])].sort((a, b) => (order[a.step] ?? 99) - (order[b.step] ?? 99));
@@ -136,6 +138,8 @@ const ColorCard = ({ color, name, onVariationClick }: { color: any; name: string
           <VariationBlock
             key={variation.name}
             variation={variation}
+            textOnLight={textOnLight}
+            textOnDark={textOnDark}
             {...(onVariationClick ? { onClick: () => onVariationClick(variation.step as any) } : {})}
           />
         ))}
@@ -164,15 +168,17 @@ const SemanticBlock = ({
   color,
   name,
   step,
+  onClick,
 }: {
   color: any;
   name: string;
   step: 'lighter' | 'light' | 'dark' | 'darker';
+  onClick?: () => void;
 }) => {
   const v = pickVariation(color, step);
   // Force the display name to the semantic token rather than base-color-step
   const variation = { ...v, name: `${name}` };
-  return <VariationBlock variation={variation} />;
+  return <VariationBlock variation={variation} {...(onClick ? { onClick } : {})} />;
 };
 
 // Helpers
@@ -211,7 +217,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBandSelection }: ColorDisplayProps) => {
+export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBandSelection, textOnLight, textOnDark }: ColorDisplayProps) => {
   return (
     <section className={styles.section}>
       <h2 className={`${styles.sectionTitle} cf-font-600`}>Color Palette</h2>
@@ -229,21 +235,29 @@ export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBan
               color={palette.primary}
               name="Primary"
               onVariationClick={(step) => onVariationClick?.('primary', step)}
+              textOnLight={textOnLight}
+              textOnDark={textOnDark}
             />
             <ColorCard
               color={palette.secondary}
               name="Secondary"
               onVariationClick={(step) => onVariationClick?.('secondary', step)}
+              textOnLight={textOnLight}
+              textOnDark={textOnDark}
             />
             <ColorCard
               color={palette.tertiary}
               name="Tertiary"
               onVariationClick={(step) => onVariationClick?.('tertiary', step)}
+              textOnLight={textOnLight}
+              textOnDark={textOnDark}
             />
             <ColorCard
               color={palette.accent}
               name="Accent"
               onVariationClick={(step) => onVariationClick?.('accent', step)}
+              textOnLight={textOnLight}
+              textOnDark={textOnDark}
             />
           </>
         )}
@@ -269,12 +283,12 @@ export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBan
               } as SemanticBandSelection;
               return (
                 <>
-                  <SemanticBlock color={palette.error} name={`Error (Light)`} step={sel.error.light} />
-                  <SemanticBlock color={palette.error} name={`Error (Dark)`} step={sel.error.dark} />
-                  <SemanticBlock color={palette.warning} name={`Notice (Light)`} step={sel.warning.light} />
-                  <SemanticBlock color={palette.warning} name={`Notice (Dark)`} step={sel.warning.dark} />
-                  <SemanticBlock color={palette.success} name={`Success (Light)`} step={sel.success.light} />
-                  <SemanticBlock color={palette.success} name={`Success (Dark)`} step={sel.success.dark} />
+                  <SemanticBlock color={palette.error} name={`Error (Light)`} step={sel.error.light} onClick={onVariationClick ? () => onVariationClick('error', sel.error.light) : undefined} />
+                  <SemanticBlock color={palette.error} name={`Error (Dark)`} step={sel.error.dark} onClick={onVariationClick ? () => onVariationClick('error', sel.error.dark) : undefined} />
+                  <SemanticBlock color={palette.warning} name={`Notice (Light)`} step={sel.warning.light} onClick={onVariationClick ? () => onVariationClick('warning', sel.warning.light) : undefined} />
+                  <SemanticBlock color={palette.warning} name={`Notice (Dark)`} step={sel.warning.dark} onClick={onVariationClick ? () => onVariationClick('warning', sel.warning.dark) : undefined} />
+                  <SemanticBlock color={palette.success} name={`Success (Light)`} step={sel.success.light} onClick={onVariationClick ? () => onVariationClick('success', sel.success.light) : undefined} />
+                  <SemanticBlock color={palette.success} name={`Success (Dark)`} step={sel.success.dark} onClick={onVariationClick ? () => onVariationClick('success', sel.success.dark) : undefined} />
                 </>
               );
             })()}

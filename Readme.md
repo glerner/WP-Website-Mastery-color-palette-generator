@@ -1,23 +1,30 @@
-# Color Palette Generator Project
+# WPWM Color Palette Generator Project
+by WP-Website-Mastery.com
 
-The GL Color Palette Generator MVP focuses on creating a functional color palette system with AI assistance and WordPress theme integration. The core functionality includes
+Color palette theme.json generator, automatically contrast adjusting. Select tints-shades from those that match WCAG AAA contrast. Generates WordPress Theme Variation palettes.
+
+[See it run](https://gl-color-palette-generator.vercel.app)
+[Github](https://github.com/glerner/WP-Website-Mastery-color-palette-generator.git)
+
+#color-palette #wcag-contrast #wcag-aaa #theme-colors #wp-theme-variations
+
+The WPWM Color Palette Generator focuses on creating a functional color palette system with AI assistance and WordPress theme integration. The core functionality includes
 * AI-Assisted Color Generation
   * Questionnaire for gathering business/brand context
   * AI generation of color palettes that will look good for this business with these clients
   * Return of Primary, Secondary, Tertiary, and Accent colors with hex values and names
 * Manual Color Management
   * Manual entry of the four core colors, and automatic fill-in any missing colors (using a selection from a list of common color harmonies)
-  * Automatic generation of color variations (should call them tints/shades, since also using "WordPress Theme Variations")
+  * Automatic generation of color tints/shades (not calling them "variations" since also using "WordPress Theme Variations").
     * Correct luminance ordering (white  → lighter → light → clear-gap-between-light-and-dark → dark → darker → black)
-  * Color variations have contrast checking against white or black text, required to exceed WCAG AAA color contrast
-    * color contrast should be between minimal AAA and WCAG maximum recommended contrast,
-    * adjustable luminance target levels for lighter, light, dark, darker
+  * All tints and shades have contrast checking against white or black text, required to exceed WCAG AAA color contrast, while not exceeding WCAG maximum recommended contrast ("pure white" against "pure black" is hard to read, too high contrast).
+    * adjustable luminance target levels for lighter, light, dark, darker -- you select your favorite from several shown
 * Extended Color Set
-  * Addition of utility colors (error, warning, success)
+  * Addition of utility colors (error, notice, success)
   * Neutral color variations
 * Display and Preview
   * Visual display of the complete color palette
-  * Sample content preview with lorem ipsum text
+  * Sample content preview with demo text
   * Preview of different color combinations
 * WordPress Integration
   * Export of color palettes as theme.json Theme Variations
