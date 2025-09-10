@@ -283,12 +283,12 @@ export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBan
               } as SemanticBandSelection;
               return (
                 <>
-                  <SemanticBlock color={palette.error} name={`Error (Light)`} step={sel.error.light} onClick={onVariationClick ? () => onVariationClick('error', sel.error.light) : undefined} />
-                  <SemanticBlock color={palette.error} name={`Error (Dark)`} step={sel.error.dark} onClick={onVariationClick ? () => onVariationClick('error', sel.error.dark) : undefined} />
-                  <SemanticBlock color={palette.warning} name={`Notice (Light)`} step={sel.warning.light} onClick={onVariationClick ? () => onVariationClick('warning', sel.warning.light) : undefined} />
-                  <SemanticBlock color={palette.warning} name={`Notice (Dark)`} step={sel.warning.dark} onClick={onVariationClick ? () => onVariationClick('warning', sel.warning.dark) : undefined} />
-                  <SemanticBlock color={palette.success} name={`Success (Light)`} step={sel.success.light} onClick={onVariationClick ? () => onVariationClick('success', sel.success.light) : undefined} />
-                  <SemanticBlock color={palette.success} name={`Success (Dark)`} step={sel.success.dark} onClick={onVariationClick ? () => onVariationClick('success', sel.success.dark) : undefined} />
+                  <SemanticBlock color={palette.error} name={`Error (Light)`} step={sel.error.light} {...(onVariationClick ? { onClick: () => onVariationClick('error', sel.error.light) } : {})} />
+                  <SemanticBlock color={palette.error} name={`Error (Dark)`} step={sel.error.dark} {...(onVariationClick ? { onClick: () => onVariationClick('error', sel.error.dark) } : {})} />
+                  <SemanticBlock color={palette.warning} name={`Notice (Light)`} step={sel.warning.light} {...(onVariationClick ? { onClick: () => onVariationClick('warning', sel.warning.light) } : {})} />
+                  <SemanticBlock color={palette.warning} name={`Notice (Dark)`} step={sel.warning.dark} {...(onVariationClick ? { onClick: () => onVariationClick('warning', sel.warning.dark) } : {})} />
+                  <SemanticBlock color={palette.success} name={`Success (Light)`} step={sel.success.light} {...(onVariationClick ? { onClick: () => onVariationClick('success', sel.success.light) } : {})} />
+                  <SemanticBlock color={palette.success} name={`Success (Dark)`} step={sel.success.dark} {...(onVariationClick ? { onClick: () => onVariationClick('success', sel.success.dark) } : {})} />
                 </>
               );
             })()}

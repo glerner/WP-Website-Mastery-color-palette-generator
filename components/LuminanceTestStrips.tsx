@@ -217,16 +217,20 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
                     textToneUsed: 'dark',
                   };
                   onSelectTint && onSelectTint(colorKey, 'lighter', pick);
-                } catch {}
+                } catch { }
               }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onSelect(colorKey, 'lighter', i); onSelectTint && onSelectTint(colorKey, 'lighter', {
-                colorKey, step: 'lighter', indexDisplayed: i, hex, hsl: (()=>{ const {h,s,l}=rgbToHslNorm(rgb.r, rgb.g, rgb.b); return {h,s,l}; })(), y,
-                contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
-                contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
-                textToneUsed: 'dark',
-              }); } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onSelect(colorKey, 'lighter', i); onSelectTint && onSelectTint(colorKey, 'lighter', {
+                    colorKey, step: 'lighter', indexDisplayed: i, hex, hsl: (() => { const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b); return { h, s, l }; })(), y,
+                    contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
+                    contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
+                    textToneUsed: 'dark',
+                  });
+                }
+              }}
             >
               {renderPickerSwatchContent({ hex, hsl, y, level, contrast, textColor: '#000' })}
             </div>
@@ -267,7 +271,7 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
             const yL = lighterYSelected != null ? parseFloat(lighterYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
             const yLt = lightYSelected != null ? parseFloat(lightYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
             const diff = (yL != null && yLt != null) ? (yL - yLt) : undefined;
-            return `Selected lighter (Y ${yL?.toFixed(3) ?? '-'}) and light (Y ${yLt?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_TINT_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-' }). Palette will preserve your selections, which may reduce perceptual separation.`;
+            return `Selected lighter (Y ${yL?.toFixed(3) ?? '-'}) and light (Y ${yLt?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_TINT_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-'}). Palette will preserve your selections, which may reduce perceptual separation.`;
           })()}
         </div>
       )}
@@ -302,16 +306,20 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
                     textToneUsed: 'dark',
                   };
                   onSelectTint && onSelectTint(colorKey, 'light', pick);
-                } catch {}
+                } catch { }
               }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onSelect(colorKey, 'light', i); onSelectTint && onSelectTint(colorKey, 'light', {
-                colorKey, step: 'light', indexDisplayed: i, hex, hsl: (()=>{ const {h,s,l}=rgbToHslNorm(rgb.r, rgb.g, rgb.b); return {h,s,l}; })(), y,
-                contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
-                contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
-                textToneUsed: 'dark',
-              }); } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onSelect(colorKey, 'light', i); onSelectTint && onSelectTint(colorKey, 'light', {
+                    colorKey, step: 'light', indexDisplayed: i, hex, hsl: (() => { const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b); return { h, s, l }; })(), y,
+                    contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
+                    contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
+                    textToneUsed: 'dark',
+                  });
+                }
+              }}
             >
               {renderPickerSwatchContent({ hex, hsl, y, level, contrast, textColor: '#000' })}
             </div>
@@ -359,25 +367,27 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
     if (aaa.length === 0) unified = [];
     else {
       // Compute dynamic step: ensure at least HARD_MIN_SHADE_Y_GAP, or fill span over max count
-      const span = (aaa[aaa.length - 1] - aaa[0]);
+      const firstY = aaa[0]!;
+      const lastY = aaa[aaa.length - 1]!;
+      const span = lastY - firstY;
       const desired = SHADE_TARGET_COUNT > 1 ? (span / (SHADE_TARGET_COUNT - 1)) : span;
       const minStep = Math.max(HARD_MIN_SHADE_Y_GAP, desired);
-      let last: number | undefined;
+      let lastPicked: number | undefined;
       for (const y of aaa) {
-        if (last == null || Math.abs(y - last) >= minStep - 1e-9) {
+        if (lastPicked == null || Math.abs(y - lastPicked) >= minStep - 1e-9) {
           unified.push(parseFloat(y.toFixed(Y_TARGET_DECIMALS)));
-          last = y;
+          lastPicked = y;
           if (unified.length >= SHADE_TARGET_COUNT) break;
         }
       }
       // In case we under-selected due to discrete sampling, try a second pass offset by half step
       if (unified.length < Math.min(SHADE_TARGET_COUNT, aaa.length)) {
-        const offset = minStep / 2;
         let last2 = unified.length ? unified[unified.length - 1] : undefined;
         for (const y of aaa) {
           if (last2 == null || Math.abs(y - last2) >= minStep - 1e-9) {
-            if (!unified.includes(parseFloat(y.toFixed(Y_TARGET_DECIMALS)))) {
-              unified.push(parseFloat(y.toFixed(Y_TARGET_DECIMALS)));
+            const r = parseFloat(y.toFixed(Y_TARGET_DECIMALS));
+            if (!unified.includes(r)) {
+              unified.push(r);
               last2 = y;
               if (unified.length >= SHADE_TARGET_COUNT) break;
             }
@@ -478,16 +488,20 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
                     textToneUsed: 'light',
                   };
                   onSelectShade && onSelectShade(colorKey, 'darker', pick);
-                } catch {}
+                } catch { }
               }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onSelect(colorKey, 'darker', targetY); onSelectShade && onSelectShade(colorKey, 'darker', {
-                colorKey, step: 'darker', indexDisplayed: i, hex, hsl: (()=>{ const {h,s,l}=rgbToHslNorm(rgb.r, rgb.g, rgb.b); return {h,s,l}; })(), y,
-                contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
-                contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
-                textToneUsed: 'light',
-              }); } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onSelect(colorKey, 'darker', targetY); onSelectShade && onSelectShade(colorKey, 'darker', {
+                    colorKey, step: 'darker', indexDisplayed: i, hex, hsl: (() => { const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b); return { h, s, l }; })(), y,
+                    contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
+                    contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
+                    textToneUsed: 'light',
+                  });
+                }
+              }}
             >
               {renderPickerSwatchContent({ hex, hsl: hslStringFromRgb(rgb, true), y, level, contrast, textColor: '#fff' })}
             </div>
@@ -516,7 +530,7 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
             const yDkr = selectedDarkerY != null ? parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
             const yDrk = selectedDarkY != null ? parseFloat(selectedDarkY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
             const diff = (yDkr != null && yDrk != null) ? (yDrk - yDkr) : undefined;
-            return `Selected darker (Y ${yDkr?.toFixed(3) ?? '-'}) and dark (Y ${yDrk?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_SHADE_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-' }). Palette will preserve your selections.`;
+            return `Selected darker (Y ${yDkr?.toFixed(3) ?? '-'}) and dark (Y ${yDrk?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_SHADE_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-'}). Palette will preserve your selections.`;
           })()}
         </div>
       )}
@@ -550,16 +564,20 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
                     textToneUsed: 'light',
                   };
                   onSelectShade && onSelectShade(colorKey, 'dark', pick);
-                } catch {}
+                } catch { }
               }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onSelect(colorKey, 'dark', targetY); onSelectShade && onSelectShade(colorKey, 'dark', {
-                colorKey, step: 'dark', indexDisplayed: i, hex, hsl: (()=>{ const {h,s,l}=rgbToHslNorm(rgb.r, rgb.g, rgb.b); return {h,s,l}; })(), y,
-                contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
-                contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
-                textToneUsed: 'light',
-              }); } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onSelect(colorKey, 'dark', targetY); onSelectShade && onSelectShade(colorKey, 'dark', {
+                    colorKey, step: 'dark', indexDisplayed: i, hex, hsl: (() => { const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b); return { h, s, l }; })(), y,
+                    contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
+                    contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
+                    textToneUsed: 'light',
+                  });
+                }
+              }}
             >
               {renderPickerSwatchContent({ hex, hsl: hslStringFromRgb(rgb, true), y, level, contrast, textColor: '#fff' })}
             </div>
@@ -657,10 +675,10 @@ export function LuminanceTestStrips({
     const base = Math.max(0, Math.floor(N / 2) - 1);
     const overlap = Math.max(0, N - 2 * base);
     return {
-        // lighter = highest Ys
-        lighter: unified.slice(Math.max(0, N - (base + overlap))),
-        // light = lowest Ys
-        light: unified.slice(0, base + overlap),
+      // lighter = highest Ys
+      lighter: unified.slice(Math.max(0, N - (base + overlap))),
+      // light = lowest Ys
+      light: unified.slice(0, base + overlap),
     };
   }, []);
 
@@ -708,7 +726,7 @@ export function LuminanceTestStrips({
   // Decide whether to clamp based on available options (need at least 3 in each band)
   const { textOnLightRgb, textOnDarkRgb, adjustedNotice, adjustedLight, adjustedDark } = React.useMemo(() => {
     // Check all color families; clamp if ANY has < 3 options in any band
-    const keys: Array<keyof PaletteWithVariations> = ['primary','secondary','tertiary','accent','error','warning','success'];
+    const keys: Array<keyof PaletteWithVariations> = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'];
     let insufficient = false;
     for (const k of keys) {
       const baseHex = (palette as any)[k]?.hex as string | undefined;

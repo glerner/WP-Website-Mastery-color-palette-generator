@@ -306,7 +306,7 @@ const GeneratorPage = () => {
               const ys = candidates.map((v) => { const { r, g, b } = hexToRgb(v.hex); return luminance(r, g, b); });
               let best = 0, dBest = Infinity;
               ys.forEach((yy, i) => { const d = Math.abs(yy - yMaybe); if (d < dBest) { dBest = d; best = i; } });
-              if (best >= 0 && best < candidates.length && candidates[best]?.hex) { hex = candidates[best].hex; indexDisplayed = best; }
+              if (best >= 0 && best < candidates.length && candidates[best]?.hex) { hex = candidates[best]!.hex; indexDisplayed = best; }
             }
           }
           if (!hex) return;
@@ -437,12 +437,12 @@ const GeneratorPage = () => {
     try {
       if (!paletteWithVariations) return;
       const next: typeof exactSelections = { ...(exactSelections as any) } as any;
-      const families: (keyof PaletteWithVariations)[] = ['primary','secondary','tertiary','accent','error','warning','success'];
+      const families: (keyof PaletteWithVariations)[] = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'];
       let changed = false;
       families.forEach((k) => {
         const entry: any = (paletteWithVariations as any)[k];
-        const vars: Array<{ step: 'lighter'|'light'|'dark'|'darker'; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
-        const ensureBand = (step: 'lighter'|'light'|'dark'|'darker') => {
+        const vars: Array<{ step: 'lighter' | 'light' | 'dark' | 'darker'; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+        const ensureBand = (step: 'lighter' | 'light' | 'dark' | 'darker') => {
           const list = vars.filter(v => v.step === step);
           if (!list.length) return;
           const pick = (next as any)[k]?.[step];
@@ -455,40 +455,43 @@ const GeneratorPage = () => {
           };
           const currentIsAAA = targetHex ? hasAAA(targetHex) : false;
           // choose the closest-by-Y variation within this band that meets AAA
-          const curY = targetHex ? (() => { const {r,g,b} = hexToRgb(targetHex); return luminance(r,g,b); })() : undefined;
+          const curY = targetHex ? (() => { const { r, g, b } = hexToRgb(targetHex); return luminance(r, g, b); })() : undefined;
           let bestHex: string | undefined;
           let bestD = Number.POSITIVE_INFINITY;
           list.forEach(v => {
             if (!hasAAA(v.hex)) return;
             if (curY == null) { // no current pick: choose mid-ish AAA by minimizing distance to band median Y
-              const y0 = (() => { const {r,g,b} = hexToRgb(list[0].hex); return luminance(r,g,b); })();
-              const y1 = (() => { const {r,g,b} = hexToRgb(list[list.length - 1].hex); return luminance(r,g,b); })();
+              const y0 = (() => { const { r, g, b } = hexToRgb(list[0]!.hex); return luminance(r, g, b); })();
+              const y1 = (() => { const { r, g, b } = hexToRgb(list[list.length - 1]!.hex); return luminance(r, g, b); })();
               const medianY = (y0 + y1) / 2;
-              const y = (() => { const {r,g,b} = hexToRgb(v.hex); return luminance(r,g,b); })();
+              const y = (() => { const { r, g, b } = hexToRgb(v.hex); return luminance(r, g, b); })();
               const d = Math.abs(y - medianY);
               if (d < bestD) { bestD = d; bestHex = v.hex; }
               return;
             }
-            const y = (() => { const {r,g,b} = hexToRgb(v.hex); return luminance(r,g,b); })();
+            const y = (() => { const { r, g, b } = hexToRgb(v.hex); return luminance(r, g, b); })();
             const d = Math.abs(y - curY);
             if (d < bestD) { bestD = d; bestHex = v.hex; }
           });
-          if (!currentIsAAA && bestHex && bestHex !== targetHex) {
-            const { r, g, b } = hexToRgb(bestHex);
+          if (currentIsAAA) return;
+          if (!bestHex || bestHex === targetHex) return;
+          {
+            const safeHex = bestHex!;
+            const { r, g, b } = hexToRgb(safeHex);
             const { h, s, l } = rgbToHslNorm(r, g, b);
             const y = luminance(r, g, b);
-            const cLight = getContrastRatio({ r, g, b }, hexToRgb(textOnLight));
-            const cDark = getContrastRatio({ r, g, b }, hexToRgb(textOnDark));
-            const idx = list.findIndex(v => v.hex.toLowerCase() === bestHex.toLowerCase());
-            const pickObj: any = { colorKey: k, step, indexDisplayed: Math.max(0, idx), hex: bestHex, hsl: { h, s, l }, y, contrastVsTextOnLight: cLight, contrastVsTextOnDark: cDark, textToneUsed: preferWhite ? 'light' : 'dark' };
+            const cLight = textOnLight ? getContrastRatio({ r, g, b }, hexToRgb(textOnLight)) : 0;
+            const cDark = textOnDark ? getContrastRatio({ r, g, b }, hexToRgb(textOnDark)) : 0;
+            const idx = list.findIndex(v => v.hex.toLowerCase() === safeHex.toLowerCase());
+            const pickObj: any = { colorKey: k, step, indexDisplayed: Math.max(0, idx), hex: safeHex, hsl: { h, s, l }, y, contrastVsTextOnLight: cLight, contrastVsTextOnDark: cDark, textToneUsed: preferWhite ? 'light' : 'dark' };
             next[k] = { ...(next as any)[k], [step]: pickObj } as any;
             changed = true;
           }
         };
-        (['lighter','light','dark','darker'] as const).forEach(ensureBand);
+        (['lighter', 'light', 'dark', 'darker'] as const).forEach(ensureBand);
       });
       if (changed) setExactSelections(next);
-    } catch {}
+    } catch { }
   }, [textOnLight, textOnDark, paletteWithVariations]);
 
   // Load/save textOnDark/textOnLight overrides
@@ -1601,12 +1604,12 @@ const GeneratorPage = () => {
                     if (update.textOnLight) {
                       setTextOnLight(update.textOnLight);
                       nextVals.textOnLight = update.textOnLight;
-                      try { localStorage.setItem('gl_theme_text_on_light_hex', update.textOnLight); } catch {}
+                      try { localStorage.setItem('gl_theme_text_on_light_hex', update.textOnLight); } catch { }
                     }
                     if (update.textOnDark) {
                       setTextOnDark(update.textOnDark);
                       nextVals.textOnDark = update.textOnDark;
-                      try { localStorage.setItem('gl_theme_text_on_dark_hex', update.textOnDark); } catch {}
+                      try { localStorage.setItem('gl_theme_text_on_dark_hex', update.textOnDark); } catch { }
                     }
                     manualForm.setValues(nextVals);
                   }}
