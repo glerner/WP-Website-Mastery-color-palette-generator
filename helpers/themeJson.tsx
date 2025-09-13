@@ -61,7 +61,7 @@ export const buildWpVariationJson = (
   palette: PaletteWithVariations,
   title: string,
   themeConfig?: any,
-  opts?: { semanticBandSelection?: SemanticBandSelection }
+  opts?: { semanticBandSelection?: SemanticBandSelection; textOnDark?: string; textOnLight?: string }
 ): string => {
   const schema = typeof themeConfig?.$schema === 'string' ? themeConfig.$schema : 'https://schemas.wp.org/trunk/theme.json';
   let version: number = 3;
@@ -157,7 +157,9 @@ export const buildWpVariationJson = (
       const hex = maps[k]?.[step];
       if (hex) {
         const short = (labels as Record<string, { full: string; short: string }>)[k]?.short ?? (k?.[0]?.toUpperCase() ?? '');
-        paletteEntries.push({ slug: `${k}-${step}`, color: hex, name: `${short} ${labelSuffix}` });
+        const slug = `${k}-${step}`;
+        // Use CSS variable reference for theme.json palette
+        paletteEntries.push({ slug, color: `var(--${slug})`, name: `${short} ${labelSuffix}` });
       }
     });
   });
@@ -178,27 +180,71 @@ export const buildWpVariationJson = (
     }
     return map['dark'] ?? map['darker'] ?? map['light'] ?? map['lighter'] ?? (palette as any)[ct]?.hex;
   };
+  // Semantics: reference CSS variables; 'warning' semantic is exported as 'notice'
   paletteEntries.push(
-    { slug: 'error', color: pickSemantic('error'), name: 'Error' },
-    { slug: 'notice', color: pickSemantic('warning'), name: 'Notice' },
-    { slug: 'success', color: pickSemantic('success'), name: 'Success' },
+    { slug: 'error', color: 'var(--error)', name: 'Error' },
+    { slug: 'notice', color: 'var(--notice)', name: 'Notice' },
+    { slug: 'success', color: 'var(--success)', name: 'Success' },
   );
   // Then text on dark (base) and text on light (contrast)
   paletteEntries.push(
-    { slug: 'base', color: baseColor, name: 'Text on Dark' },
-    { slug: 'contrast', color: contrastColor, name: 'Text on Light' },
+    { slug: 'base', color: 'var(--base)', name: 'Text on Dark' },
+    { slug: 'contrast', color: 'var(--contrast)', name: 'Text on Light' },
   );
   // Finally transparent convenience color
   paletteEntries.push({ slug: 'transparent', color: 'transparent', name: 'Transparent' });
+
+  // Build a one-line :root CSS string for this variation with concrete hex values
+  const buildOneLineCss = () => {
+    const families: Array<'primary'|'secondary'|'tertiary'|'accent'> = ['primary','secondary','tertiary','accent'];
+    const stepsList: Array<'lighter'|'light'|'dark'|'darker'> = ['lighter','light','dark','darker'];
+    const tokDark = (opts?.textOnDark && /^#[0-9a-f]{6}$/i.test(opts.textOnDark)) ? opts!.textOnDark! : '#FFFFF0';
+    const tokLight = (opts?.textOnLight && /^#[0-9a-f]{6}$/i.test(opts.textOnLight)) ? opts!.textOnLight! : '#1B2227';
+    const pieces: string[] = [];
+    pieces.push(`--text-on-dark: ${tokDark}`);
+    pieces.push(`--text-on-light: ${tokLight}`);
+    // family steps
+    families.forEach((k) => {
+      const vars = ((palette as any)[k]?.variations || []) as { name: string; hex: string; step?: string }[];
+      const map = byName(vars);
+      stepsList.forEach((st) => {
+        const hex = map[st];
+        if (hex) pieces.push(`--${k}-${st}: ${hex}`);
+      });
+    });
+    // semantics light/dark
+    const mkLD = (ct: 'error'|'warning'|'success') => {
+      const vars = ((palette as any)[ct]?.variations || []) as { name: string; hex: string; step?: string }[];
+      const map = byName(vars);
+      const sel = opts?.semanticBandSelection?.[ct];
+      const light = sel?.light ? (map[sel.light] ?? undefined) : (map['light'] ?? map['lighter'] ?? undefined);
+      const dark = sel?.dark ? (map[sel.dark] ?? undefined) : (map['dark'] ?? map['darker'] ?? undefined);
+      return { light, dark } as { light?: string; dark?: string };
+    };
+    const err = mkLD('error');
+    const noti = mkLD('warning');
+    const succ = mkLD('success');
+    if (err.light) pieces.push(`--error-light: ${err.light}`);
+    if (err.dark) pieces.push(`--error-dark: ${err.dark}`);
+    if (noti.light) pieces.push(`--notice-light: ${noti.light}`);
+    if (noti.dark) pieces.push(`--notice-dark: ${noti.dark}`);
+    if (succ.light) pieces.push(`--success-light: ${succ.light}`);
+    if (succ.dark) pieces.push(`--success-dark: ${succ.dark}`);
+    return `:root{ ${pieces.join('; ')}; }`;
+  };
 
   const out: any = {
     $schema: schema,
     version,
     title,
     settings: {
+      css: buildOneLineCss(),
       color: {
         palette: paletteEntries,
       },
+    },
+    styles: {
+      css: buildOneLineCss(),
     },
   };
   // No typography, gradients, or duotone are exported here by design.
@@ -207,7 +253,7 @@ export const buildWpVariationJson = (
   const sanitize = (input: any) => {
     const warn = (msg: string) => console.warn(`[themeJson] ${msg}`);
     const allowedTop = new Set(['$schema', 'version', 'title', 'settings']);
-    const allowedSettings = new Set(['color']);
+    const allowedSettings = new Set(['color', 'css']);
     const allowedColor = new Set(['palette']);
 
     // Top-level
@@ -240,6 +286,10 @@ export const buildWpVariationJson = (
     // gradients/duotone are intentionally not included in variations
 
     const outSettings: any = {};
+    // Preserve css string if provided
+    if (typeof inSettings.css === 'string') {
+      outSettings.css = inSettings.css;
+    }
     outSettings.color = color;
     // typography is intentionally not included in variations
     top.settings = outSettings;

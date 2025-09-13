@@ -1,6 +1,4 @@
 import { PaletteWithVariations } from './types';
-import { ensureAAAContrast } from './ensureAAAContrast';
-import { NEAR_WHITE_HEX, NEAR_BLACK_HEX } from './config';
 
 type Band = 'lighter' | 'light' | 'dark' | 'darker';
 type SemanticPerScheme = { light: Band; dark: Band };
@@ -8,7 +6,8 @@ type SemanticBandSelection = { error: SemanticPerScheme; warning: SemanticPerSch
 
 export const generateCssClasses = (
   palette: PaletteWithVariations,
-  semanticBandSelection?: SemanticBandSelection
+  semanticBandSelection?: SemanticBandSelection,
+  opts?: { textOnDark?: string; textOnLight?: string }
 ): string => {
   let css = '/* ';
   css += 'NOTE: For developer use only. WordPress does not load these generated CSS files by default.\n';
@@ -38,13 +37,23 @@ export const generateCssClasses = (
   css += '/* WordPress automatically generates wp--preset--color variables from theme.json. */\n';
   css += '/* Do not overwrite the variables that WordPress generates. */\n';
   css += ':root{\n';
+  // Ensure text tokens are defined per file as requested
+  const TOK_DARK = (opts?.textOnDark && /^#[0-9a-f]{6}$/i.test(opts.textOnDark) ? opts.textOnDark : '#FFFFF0');
+  const TOK_LIGHT = (opts?.textOnLight && /^#[0-9a-f]{6}$/i.test(opts.textOnLight) ? opts.textOnLight : '#1B2227');
+  css += `  --text-on-dark: ${TOK_DARK};\n`;
+  css += `  --text-on-light: ${TOK_LIGHT};\n`;
   // Base colors: ONLY export variations (contrast-adjusted). Do not export base color vars.
   ['primary', 'secondary', 'tertiary', 'accent'].forEach((ct) => {
-    (palette as any)[ct].variations.forEach((v: { name: string; hex: string }) => {
-      // Normalize variation step name to avoid doubled family in slug, e.g.,
-      // "primary-primary-lighter" -> "primary-lighter"
-      const varSlug = toSlug(v.name);
-      const step = varSlug.startsWith(`${ct}-`) ? varSlug.slice(ct.length + 1) : varSlug;
+    (palette as any)[ct].variations.forEach((v: { name: string; hex: string; step?: string }) => {
+      // Prefer explicit step when available to avoid cross-family names
+      const stepRaw = (v as any).step as string | undefined;
+      const step = stepRaw && ['lighter','light','dark','darker'].includes(stepRaw)
+        ? stepRaw
+        : (() => {
+            const varSlug = toSlug(v.name);
+            const m = /(lighter|light|dark|darker)$/i.exec(varSlug);
+            return (m && m[1]) ? m[1].toLowerCase() : varSlug;
+          })();
       const slug = `${ct}-${step}`;
       css += appendVar(slug, v.hex);
       // No on-* variables exported; use utilities to set readable text color per use site
@@ -94,7 +103,8 @@ export const generateCssClasses = (
   (['error', 'warning', 'success'] as const).forEach((ct) => {
     const chosen = pickSemanticHex(ct);
     if (chosen) {
-      css += appendVar(ct, chosen);
+      const ctOut = ct === 'warning' ? 'notice' : ct;
+      css += appendVar(ctOut, chosen);
       // No on-* variables for semantics either
     }
   });
@@ -102,12 +112,63 @@ export const generateCssClasses = (
   css += '/* Close WordPress preset :root block (do not paste into style.css) */';
   css += '\n\n\n\n';
 
+  // Aliases consumed by exported theme.json: map custom vars -> WP preset vars
+  // Safe to ship alongside the styles/*.json so var(--<slug>) resolves in WP.
+  css += '/* Aliases for theme.json: map custom vars to WP preset variables */\n';
+  css += ':root{\n';
+  // Main families: lighter, light, dark, darker
+  (['primary', 'secondary', 'tertiary', 'accent'] as const).forEach((ct) => {
+    const steps = new Set(
+      (palette as any)[ct].variations.map((v: { name: string }) => {
+        const vs = toSlug(v.name);
+        return vs.startsWith(`${ct}-`) ? vs.slice(ct.length + 1) : vs;
+      })
+    );
+    ['lighter', 'light', 'dark', 'darker'].forEach((step) => {
+      if (steps.has(step)) {
+        const slug = `${ct}-${step}`;
+        css += `  --${slug}: var(--wp--preset--color--${slug});\n`;
+      }
+    });
+  });
+  // Semantics: error, notice (was warning), success
+  // Define light/dark variants for semantics from chosen bands
+  {
+    const pick = (ct: 'error' | 'warning' | 'success') => pickSemanticHexLD(ct as any);
+    const err = pick('error');
+    const noti = pick('warning');
+    const succ = pick('success');
+    if (err) {
+      if (err.lightChoice) css += `  --error-light: ${err.lightChoice};\n`;
+      if (err.darkChoice) css += `  --error-dark: ${err.darkChoice};\n`;
+    }
+    if (noti) {
+      if (noti.lightChoice) css += `  --notice-light: ${noti.lightChoice};\n`;
+      if (noti.darkChoice) css += `  --notice-dark: ${noti.darkChoice};\n`;
+    }
+    if (succ) {
+      if (succ.lightChoice) css += `  --success-light: ${succ.lightChoice};\n`;
+      if (succ.darkChoice) css += `  --success-dark: ${succ.darkChoice};\n`;
+    }
+  }
+  // Provide shorthand aliases to *-dark for potential consumers
+  css += `  --error: var(--error-dark);\n`;
+  css += `  --notice: var(--notice-dark);\n`;
+  css += `  --success: var(--success-dark);\n`;
+  // Base/contrast used for text tokens
+  css += `  --base: var(--text-on-dark);\n`;
+  css += `  --contrast: var(--text-on-light);\n`;
+  // Compatibility: define base family presets (no step) from their -dark counterpart
+  css += `  --wp--preset--color--primary: var(--wp--preset--color--primary-dark);\n`;
+  css += `  --wp--preset--color--secondary: var(--wp--preset--color--secondary-dark);\n`;
+  css += `  --wp--preset--color--tertiary: var(--wp--preset--color--tertiary-dark);\n`;
+  css += `  --wp--preset--color--accent: var(--wp--preset--color--accent-dark);\n`;
+  css += '}\n\n';
+
   // these are not WordPress presets; safe to copy to your style.css if needed
   css += '/* these are *not* WordPress presets, safe to copy to your style.css as needed */\n\n';
   css += ':root {\n';
   css += `  color-scheme: light dark;\n`;
-  css += `  --text-on-dark: ${NEAR_WHITE_HEX};        /* near-white for dark backgrounds */\n`;
-  css += `  --text-on-light: ${NEAR_BLACK_HEX};       /* near-black for light backgrounds */\n`;
   css += '}\n\n';
 
   // Generate classes for main color variations (excluding base colors)
@@ -132,30 +193,29 @@ export const generateCssClasses = (
       const hasCounterpart = counterpart ? stepsMap.has(counterpart) : false;
 
       // Merge .bg-* and .has-*-background-color into a single rule
-      css += `.bg-${colorType}-${step}, .has-${slug}-background-color {\n`;
+      // Include .has-<family>-background-color on the 'dark' step for compatibility
+      const extra = step === 'dark' ? `, .has-${colorType}-background-color` : '';
+      css += `.bg-${colorType}-${step}, .has-${slug}-background-color${extra} {\n`;
       if (hasCounterpart) {
         css += `  background-color: light-dark(var(--wp--preset--color--${slug}), var(--wp--preset--color--${colorType}-${counterpart}));\n`;
         css += `  color: light-dark(${lightTextAlias}, ${darkTextAlias});\n`;
       } else {
-        // Fallback to single value when no clear counterpart exists
+        // Fallback when no clear counterpart exists
         css += `  background-color: var(--wp--preset--color--${slug});\n`;
-        // Use contrast-based utility for single mode as a fallback
-        const { textColor } = ensureAAAContrast(variation.hex);
-        const alias = textColor.toUpperCase() === NEAR_WHITE_HEX.toUpperCase() ? darkTextAlias : lightTextAlias;
-        css += `  color: ${alias};\n`;
+        // Use light-dark text tokens universally per guidance
+        css += `  color: light-dark(${lightTextAlias}, ${darkTextAlias});\n`;
       }
       css += `}\n\n`;
     });
   });
 
-  // Generate classes for semantic colors (include base + variations)
+  // Generate classes for semantic colors using light/dark vars
   ['error', 'warning', 'success'].forEach((colorType) => {
-    const { lightChoice, darkChoice } = pickSemanticHexLD(colorType as 'error' | 'warning' | 'success');
-    const chosenFallback = pickSemanticHex(colorType as 'error' | 'warning' | 'success') as string | null;
-    const lightHex = lightChoice ?? chosenFallback ?? NEAR_WHITE_HEX;
-    const darkHex = darkChoice ?? chosenFallback ?? NEAR_BLACK_HEX;
-    css += `.bg-${colorType}, .has-${colorType}-background-color {\n`;
-    css += `  background-color: light-dark(${lightHex}, ${darkHex});\n`;
+    const ctOut = colorType === 'warning' ? 'notice' : colorType;
+    const lightVar = `var(--${ctOut}-light)`;
+    const darkVar = `var(--${ctOut}-dark)`;
+    css += `.bg-${ctOut}, .has-${ctOut}-background-color {\n`;
+    css += `  background-color: light-dark(${lightVar}, ${darkVar});\n`;
     css += `  color: light-dark(${lightTextAlias}, ${darkTextAlias});\n`;
     css += `}\n\n`;
   });
@@ -191,14 +251,13 @@ export const generateCssClasses = (
     });
   });
 
-  // Text classes for semantic colors (base only; no variants to avoid duplicates)
+  // Text classes for semantic colors using light/dark vars
   ['error', 'warning', 'success'].forEach((colorType) => {
-    const { lightChoice, darkChoice } = pickSemanticHexLD(colorType as 'error' | 'warning' | 'success');
-    const chosenFallback = pickSemanticHex(colorType as 'error' | 'warning' | 'success') as string | null;
-    const lightHex = lightChoice ?? chosenFallback ?? NEAR_WHITE_HEX;
-    const darkHex = darkChoice ?? chosenFallback ?? NEAR_BLACK_HEX;
-    css += `.text-${colorType} {\n`;
-    css += `  color: light-dark(${lightHex}, ${darkHex});\n`;
+    const ctOut = colorType === 'warning' ? 'notice' : colorType;
+    const lightVar = `var(--${ctOut}-light)`;
+    const darkVar = `var(--${ctOut}-dark)`;
+    css += `.text-${ctOut} {\n`;
+    css += `  color: light-dark(${lightVar}, ${darkVar});\n`;
     css += `}\n\n`;
   });
 

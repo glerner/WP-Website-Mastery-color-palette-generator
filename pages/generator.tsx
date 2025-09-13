@@ -279,28 +279,29 @@ const GeneratorPage = () => {
     }
   }, [palette, exactSelections]);
 
-  // Migration: if we have legacy selections (indices/Y) but no exactSelections for a color,
-  // derive exact SwatchPicks from the built variations so Palette/Export reflect user choices on first load.
+  // Keep exactSelections (Palette/Export source) in sync with current Adjust selections
+  // whenever the underlying palette/variations or selections change. This ensures that
+  // editing on the Manual tab (which updates the base palette) propagates through Adjust
+  // into the Palette tab without requiring additional user interaction.
   useEffect(() => {
     try {
-      const needKeys = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const)
-        .filter((k) => !(exactSelections as any)?.[k] && (selections as any)?.[k]);
-      if (!needKeys.length) return;
+      const families = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const);
       const next: typeof exactSelections = { ...(exactSelections as any) } as any;
-      needKeys.forEach((k) => {
-        const sel = (selections as any)[k] || {};
+      families.forEach((k) => {
+        const sel = (selections as any)[k];
+        if (!sel) return; // nothing to sync for this family
+        const hasAnySelection = sel.lighterIndex != null || sel.lightIndex != null || sel.darkY != null || sel.darkerY != null;
+        if (!hasAnySelection) return;
         const entry = (paletteWithVariations as any)[k];
         const arr: Array<{ step: string; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
         const addPick = (step: 'lighter' | 'light' | 'dark' | 'darker', indexMaybe?: number, yMaybe?: number) => {
           let hex: string | undefined;
           let indexDisplayed: number | undefined;
           if (typeof indexMaybe === 'number') {
-            // Find index-th in the filtered list; fall back to matching by step
             const byStep = arr.filter((v) => v.step === step);
             if (byStep[indexMaybe]?.hex) { hex = byStep[indexMaybe].hex; indexDisplayed = indexMaybe; }
           }
           if (!hex && typeof yMaybe === 'number') {
-            // Find closest Y among this step
             const candidates = arr.filter((v) => v.step === step);
             if (candidates.length > 0) {
               const ys = candidates.map((v) => { const { r, g, b } = hexToRgb(v.hex); return luminance(r, g, b); });
@@ -564,16 +565,98 @@ const GeneratorPage = () => {
     }
   }, [setSemanticBandSelection]);
 
-  // Download .zip export handler (minimal stub)
-  const handleExportGzipAll = useCallback(() => {
+  // Download .zip export handler (full implementation with error trapping and notices)
+  const handleExportGzipAll = useCallback(async () => {
+    const title = (themeName && themeName.trim()) || 'Generated Color Palette';
+    const suffix = (() => { try { return generateFilenameSuffix(paletteWithVariations as any); } catch { return 'palette'; } })();
+    const zipName = `themes-${suffix}.zip`;
+
     try {
-      toast.success('Preparing export...');
-      // Full ZIP export can be wired here if needed.
-    } catch (e) {
+      // 1) Build assets for ALL P/S/T permutations (accent fixed as 'a')
+      const titleSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const pv: any = paletteWithVariations as any;
+      const variants: Array<{ code: string; palette: any }> = [
+        { code: 'psta', palette: { ...pv, primary: pv.primary, secondary: pv.secondary, tertiary: pv.tertiary, accent: pv.accent } },
+        { code: 'ptsa', palette: { ...pv, primary: pv.primary, secondary: pv.tertiary, tertiary: pv.secondary, accent: pv.accent } },
+        { code: 'spta', palette: { ...pv, primary: pv.secondary, secondary: pv.primary, tertiary: pv.tertiary, accent: pv.accent } },
+        { code: 'stpa', palette: { ...pv, primary: pv.secondary, secondary: pv.tertiary, tertiary: pv.primary, accent: pv.accent } },
+        { code: 'tpsa', palette: { ...pv, primary: pv.tertiary, secondary: pv.primary, tertiary: pv.secondary, accent: pv.accent } },
+        { code: 'tspa', palette: { ...pv, primary: pv.tertiary, secondary: pv.secondary, tertiary: pv.primary, accent: pv.accent } },
+      ];
+
+      const files: Record<string, Uint8Array> = {};
+      const contentsList: string[] = [];
+      for (const v of variants) {
+        const jsonStr = buildWpVariationJson(
+          v.palette,
+          `${title} ${v.code}`,
+          themeConfig,
+          { semanticBandSelection, textOnDark, textOnLight }
+        );
+        const cssStr = generateCssClasses(v.palette, semanticBandSelection as any, { textOnDark, textOnLight });
+        const jsonPath = `styles/${titleSlug}-${v.code}.json`;
+        const cssPath = `styles/${titleSlug}-${v.code}.css`;
+        files[jsonPath] = strToU8(jsonStr);
+        files[cssPath] = strToU8(cssStr);
+        contentsList.push(` - ${jsonPath}`);
+        contentsList.push(` - ${cssPath}`);
+      }
+
+      const readme = [
+        '# Generated by Color Palette Generator, by AZ WP Website Consulting LLC',
+        '',
+        `Title: ${title}`,
+        `Filename suffix: ${suffix}`,
+        '',
+        'This archive contains ALL permutations of Primary/Secondary/Tertiary (Accent fixed).',
+        'For each permutation, there is a theme style variation JSON and a matching CSS utilities file.',
+        '',
+        'Contents:',
+        ...contentsList,
+        '',
+        'How to use:',
+        '1) For WordPress: copy all your *.json and *.css files into wp-content/themes/your-theme/styles/',
+        '   Then switch Style variation in the Site Editor > Styles.',
+        '2) Copy variables and classes from your chosen styles/*.css into your child theme style.css as needed.',
+      ].join('\n');
+      files['README.txt'] = strToU8(readme);
+
+      const zipped = zipSync(files, { level: 9 });
+      const blob = new Blob([zipped], { type: 'application/zip' });
+
+      // 3) Try File System Access API first (allows user to choose location)
+      // Not all browsers support this; fallback to anchor download.
+      const supportsFS = typeof (window as any).showSaveFilePicker === 'function';
+      if (supportsFS) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: zipName,
+            types: [{ description: 'ZIP archive', accept: { 'application/zip': ['.zip'] } }],
+          });
+          const w = await handle.createWritable();
+          await w.write(blob);
+          await w.close();
+          toast.success(`Exported: ${zipName}`);
+          return;
+        } catch (fsErr) {
+          // If user cancels or FS write fails, fall back to anchor method
+          console.warn('File System Access save failed, falling back to browser download', fsErr);
+        }
+      }
+
+      // 4) Fallback: trigger browser download
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = zipName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast.success(`Download started: ${zipName}`);
+    } catch (e: any) {
       console.error('Export failed:', e);
-      toast.error('Export failed');
+      const msg = (e && (e.message || e.toString())) || 'Unknown error';
+      toast.error(`Export failed: ${msg}`);
     }
-  }, []);
+  }, [paletteWithVariations, themeConfig, themeName, semanticBandSelection]);
 
   // Track whether Manual form has unsaved changes compared to last saved snapshot
   const isManualDirty = useMemo(() => {
@@ -877,7 +960,7 @@ const GeneratorPage = () => {
     try {
       const root = document.documentElement;
 
-      const setTriplet = (prefix: 'warning' | 'error' | 'success', baseHex?: string) => {
+      const setTriplet = (prefix: 'notice' | 'error' | 'success', baseHex?: string) => {
         if (!baseHex) return;
         const { r, g, b } = hexToRgb(baseHex);
         const Y = luminance(r, g, b);
@@ -895,8 +978,9 @@ const GeneratorPage = () => {
         root.style.setProperty(`--${prefix}-border`, borderHex);
       };
 
-      setTriplet('warning', noticeHex);
-      root.style.setProperty('--wp--preset--color--warning', noticeHex || '');
+      // Map palette.warning -> app 'notice' variables and WP preset 'notice'
+      setTriplet('notice', noticeHex);
+      root.style.setProperty('--wp--preset--color--notice', noticeHex || '');
       setTriplet('error', errHex);
       root.style.setProperty('--wp--preset--color--error', errHex || '');
       setTriplet('success', succHex);
