@@ -622,7 +622,10 @@ const GeneratorPage = () => {
       files['README.txt'] = strToU8(readme);
 
       const zipped = zipSync(files, { level: 9 });
-      const blob = new Blob([zipped], { type: 'application/zip' });
+      // Convert Uint8Array view to a plain ArrayBuffer for BlobPart compatibility
+      const ab = new ArrayBuffer(zipped.byteLength);
+      new Uint8Array(ab).set(zipped);
+      const blob = new Blob([ab], { type: 'application/zip' });
 
       // 3) Try File System Access API first (allows user to choose location)
       // Not all browsers support this; fallback to anchor download.

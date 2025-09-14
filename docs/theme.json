@@ -151,12 +151,12 @@
 				},
 				{
 				"slug": "base",
-				"color": "var(--text-on-dark)",
+				"color": "var(--base)",
 				"name": "Text on Dark"
 				},
 				{
 				"slug": "contrast",
-				"color": "var(--text-on-light)",
+				"color": "var(--contrast)",
 				"name": "Text on Light"
 				},
 				{
@@ -164,7 +164,7 @@
 				"color": "transparent",
 				"name": "Transparent"
 				}
-		    ],
+			],
 			"duotone": [
 				{
 					"colors": [
@@ -254,7 +254,7 @@
 				{
 					"name": "Primary-Base vertical light",
 					"slug": "v-primary-to-background",
-					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--primary-light), var(--wp--preset--color--primary-darker)) 0%, var(--wp--preset--color--base) 100%)"
+					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--primary-light), var(--wp--preset--color--primary-darker)) 0%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Secondary-Tertiary vertical light",
@@ -264,37 +264,37 @@
 				{
 					"name": "Secondary-Base vertical light",
 					"slug": "v-secondary-to-background",
-					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--secondary-light), var(--wp--preset--color--secondary-darker)) 0%, var(--wp--preset--color--base) 100%)"
+					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--secondary-light), var(--wp--preset--color--secondary-darker)) 0%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Tertiary-Base vertical light",
 					"slug": "v-tertiary-to-background",
-					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 0%, var(--wp--preset--color--base) 100%)"
+					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 0%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Secondary-Base light",
 					"slug": "d-secondary-to-background",
-					"gradient": "linear-gradient(to bottom right, light-dark(var(--wp--preset--color--secondary-lighter), var(--wp--preset--color--secondary-darker)) 50%, var(--wp--preset--color--base) 100%)"
+					"gradient": "linear-gradient(to bottom right, light-dark(var(--wp--preset--color--secondary-lighter), var(--wp--preset--color--secondary-darker)) 50%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Base-Secondary light",
 					"slug": "d-background-to-secondary",
-					"gradient": "linear-gradient(to bottom right, var(--wp--preset--color--base) 50%, light-dark(var(--wp--preset--color--secondary-light), var(--wp--preset--color--secondary-darker)) 100%)"
+					"gradient": "linear-gradient(to bottom right, light-dark(var(--text-on-dark),var(--text-on-light)) 50%, light-dark(var(--wp--preset--color--secondary-light), var(--wp--preset--color--secondary-darker)) 100%)"
 				},
 				{
 					"name": "Tertiary-Base light",
 					"slug": "d-tertiary-to-background",
-					"gradient": "linear-gradient(to bottom right, light-dark(var(--wp--preset--color--tertiary-lighter), var(--wp--preset--color--tertiary-darker)) 50%, var(--wp--preset--color--base) 100%)"
+					"gradient": "linear-gradient(to bottom right, light-dark(var(--wp--preset--color--tertiary-lighter), var(--wp--preset--color--tertiary-darker)) 50%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Base-Tertiary light",
 					"slug": "d-background-to-tertiary",
-					"gradient": "linear-gradient(to bottom right, var(--wp--preset--color--base) 50%, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 100%)"
+					"gradient": "linear-gradient(to bottom right, light-dark(var(--text-on-dark),var(--text-on-light)) 50%, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 100%)"
 				},
 				{
-					"name": "Transparent-Primary light"
+					"name": "Transparent-Primary light",
 					"slug": "d-transparent-primary",
-					"gradient": "linear-gradient(to bottom right, transparent 49.9%, light-dark(var(--wp--preset--color--primary-light), var(--wp--preset--color--primary-darker)) 100%)",
+					"gradient": "linear-gradient(to bottom right, transparent 49.9%, light-dark(var(--wp--preset--color--primary-light), var(--wp--preset--color--primary-darker)) 100%)"
 				},
 				{
 					"name": "primary-transparent light",
@@ -453,7 +453,7 @@
 		"useRootPaddingAwareAlignments": true
 	},
 	"styles": {
-		"css": ":root{ --text-on-dark: #F7F3EE; --text-on-light: #453521; --wp--preset--color--base: var(--text-on-dark); --wp--preset--color--contrast: var(--text-on-light); --wp--preset--color--primary-lighter: var(--primary-lighter); --wp--preset--color--primary-light: var(--primary-light); --wp--preset--color--primary-dark: var(--primary-dark); --wp--preset--color--primary-darker: var(--primary-darker); --wp--preset--color--secondary-lighter: var(--secondary-lighter); --wp--preset--color--secondary-light: var(--secondary-light); --wp--preset--color--secondary-dark: var(--secondary-dark); --wp--preset--color--secondary-darker: var(--secondary-darker); --wp--preset--color--tertiary-lighter: var(--tertiary-lighter); --wp--preset--color--tertiary-light: var(--tertiary-light); --wp--preset--color--tertiary-dark: var(--tertiary-dark); --wp--preset--color--tertiary-darker: var(--tertiary-darker); --wp--preset--color--accent-lighter: var(--accent-lighter); --wp--preset--color--accent-light: var(--accent-light); --wp--preset--color--accent-dark: var(--accent-dark); --wp--preset--color--accent-darker: var(--accent-darker); --wp--preset--color--error-light: var(--error-light); --wp--preset--color--error-dark: var(--error-dark); --wp--preset--color--notice-light: var(--notice-light); --wp--preset--color--notice-dark: var(--notice-dark); --wp--preset--color--success-light: var(--success-light); --wp--preset--color--success-dark: var(--success-dark); --wp--preset--color--primary: var(--wp--preset--color--primary-dark); --wp--preset--color--secondary: var(--wp--preset--color--secondary-dark); --wp--preset--color--tertiary: var(--wp--preset--color--tertiary-dark); --wp--preset--color--accent: var(--wp--preset--color--accent-dark); }",
+	    "css": ":root{ --text-on-dark: #F7F3EE; --text-on-light: #453521; --primary-lighter: #dde6fc; --primary-light: #bed0f9; --primary-dark: #0e3894; --primary-darker: #0a2b71; --secondary-lighter: #faddfa; --secondary-light: #f6bef6; --secondary-dark: #701070; --secondary-darker: #570c57; --tertiary-lighter: #b4fce6; --tertiary-light: #08f1a9; --tertiary-dark: #03563c; --tertiary-darker: #02412d; --accent-lighter: #f9dbeb; --accent-light: #f3bcd9; --accent-dark: #83164f; --accent-darker: #5f1039; --error-light: #f1c6c6; --error-dark: #781d1d; --notice-light: #e8e100; --notice-dark: #504d00; --success-light: #a8e1c2; --success-dark: #1f5a3b; --base: #D6D2CE; --contrast: #1A1514; }",
 		"blocks": {
 			"core/comments-title": {
 				"typography": {

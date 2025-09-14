@@ -158,7 +158,7 @@ export const buildWpVariationJson = (
       if (hex) {
         const short = (labels as Record<string, { full: string; short: string }>)[k]?.short ?? (k?.[0]?.toUpperCase() ?? '');
         const slug = `${k}-${step}`;
-        // Use CSS variable reference for theme.json palette
+        // Reference our custom CSS variables (defined in theme.json styles.css entries
         paletteEntries.push({ slug, color: `var(--${slug})`, name: `${short} ${labelSuffix}` });
       }
     });
@@ -180,11 +180,20 @@ export const buildWpVariationJson = (
     }
     return map['dark'] ?? map['darker'] ?? map['light'] ?? map['lighter'] ?? (palette as any)[ct]?.hex;
   };
-  // Semantics: reference CSS variables; 'warning' semantic is exported as 'notice'
+  // Semantics: reference banded dark variables; 'warning' semantic is exported as 'notice'
   paletteEntries.push(
-    { slug: 'error', color: 'var(--error)', name: 'Error' },
-    { slug: 'notice', color: 'var(--notice)', name: 'Notice' },
-    { slug: 'success', color: 'var(--success)', name: 'Success' },
+    { slug: 'error', color: 'var(--error-dark)', name: 'Error' },
+    { slug: 'notice', color: 'var(--notice-dark)', name: 'Notice' },
+    { slug: 'success', color: 'var(--success-dark)', name: 'Success' },
+  );
+  // Also expose light/dark variants as separate slugs for semantic colors
+  paletteEntries.push(
+    { slug: 'error-light', color: 'var(--error-light)', name: 'Error Light' },
+    { slug: 'error-dark', color: 'var(--error-dark)', name: 'Error Dark' },
+    { slug: 'notice-light', color: 'var(--notice-light)', name: 'Notice Light' },
+    { slug: 'notice-dark', color: 'var(--notice-dark)', name: 'Notice Dark' },
+    { slug: 'success-light', color: 'var(--success-light)', name: 'Success Light' },
+    { slug: 'success-dark', color: 'var(--success-dark)', name: 'Success Dark' },
   );
   // Then text on dark (base) and text on light (contrast)
   paletteEntries.push(
@@ -230,6 +239,10 @@ export const buildWpVariationJson = (
     if (noti.dark) pieces.push(`--notice-dark: ${noti.dark}`);
     if (succ.light) pieces.push(`--success-light: ${succ.light}`);
     if (succ.dark) pieces.push(`--success-dark: ${succ.dark}`);
+    // Note: No fallback semantic single variables (e.g., --error) are emitted here by design.
+    // base/contrast variables
+    pieces.push(`--base: ${baseColor}`);
+    pieces.push(`--contrast: ${contrastColor}`);
     return `:root{ ${pieces.join('; ')}; }`;
   };
 
@@ -238,7 +251,6 @@ export const buildWpVariationJson = (
     version,
     title,
     settings: {
-      css: buildOneLineCss(),
       color: {
         palette: paletteEntries,
       },
@@ -252,8 +264,9 @@ export const buildWpVariationJson = (
   // Validate and sanitize the structure to match expected WordPress theme.json shape
   const sanitize = (input: any) => {
     const warn = (msg: string) => console.warn(`[themeJson] ${msg}`);
-    const allowedTop = new Set(['$schema', 'version', 'title', 'settings']);
-    const allowedSettings = new Set(['color', 'css']);
+    const allowedTop = new Set(['$schema', 'version', 'title', 'settings', 'styles']);
+    const allowedSettings = new Set(['color']);
+    const allowedStyles = new Set(['css']);
     const allowedColor = new Set(['palette']);
 
     // Top-level
@@ -286,13 +299,22 @@ export const buildWpVariationJson = (
     // gradients/duotone are intentionally not included in variations
 
     const outSettings: any = {};
-    // Preserve css string if provided
-    if (typeof inSettings.css === 'string') {
-      outSettings.css = inSettings.css;
-    }
     outSettings.color = color;
     // typography is intentionally not included in variations
     top.settings = outSettings;
+
+    // styles
+    const inStyles = (input && input.styles) || {};
+    const outStyles: any = {};
+    for (const k of Object.keys(inStyles)) {
+      if (!allowedStyles.has(k)) warn(`Unexpected styles key '${k}' was dropped.`);
+    }
+    if (typeof inStyles.css === 'string') {
+      outStyles.css = inStyles.css;
+    }
+    if (Object.keys(outStyles).length) {
+      top.styles = outStyles;
+    }
 
     return top;
   };

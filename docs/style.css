@@ -1,0 +1,1717 @@
+/*
+Theme Name: Website Tech for Small Businesses 2025
+Theme URI: https://website-tech.glerner.com
+Author: AZ WP Website Consulting LLC
+Author URI: https://website-tech.glerner.com
+Description: Website Tech is a Twenty Twenty-Four child
+Requires at least: 6.7
+Tested up to: 6.8.2
+Requires PHP: 8.0
+Version: 1.03
+License: GNU General Public License v2 or later
+License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+Text Domain: website-tech
+Template: twentytwentyfour
+Tags: one-column, custom-colors, custom-menu, custom-logo, editor-style, featured-images, full-site-editing, block-patterns, rtl-language-support, sticky-post, threaded-comments, translation-ready, wide-blocks, block-styles, accessibility-ready, blog, portfolio, news
+*/
+
+/* heading font Andika https://gwfh.mranftl.com/fonts/andika?subsets=latin Google Font with subset and converted to woff2 */
+
+/* Fix sloppy Divi theme styling. Remove after have finished moving off Divi */
+.block-editor__container #et-switch-to-divi,
+.block-editor__container #et-switch-to-gutenberg,
+.block-editor__container .editor-post-switch-to-divi,
+.block-editor__container .editor-post-switch-to-divi.components-button.is-default,
+.block-editor__container .editor-post-switch-to-gutenberg,
+.block-editor__container .editor-post-switch-to-gutenberg.components-button.is-default,
+.editor-styles-wrapper .wp-site-blocks #et-switch-to-divi,
+.editor-styles-wrapper .wp-site-blocks #et-switch-to-gutenberg,
+.editor-styles-wrapper .wp-site-blocks .editor-post-switch-to-divi,
+.editor-styles-wrapper .wp-site-blocks .editor-post-switch-to-divi.components-button.is-default,
+.editor-styles-wrapper .wp-site-blocks .editor-post-switch-to-gutenberg,
+.editor-styles-wrapper .wp-site-blocks .editor-post-switch-to-gutenberg.components-button.is-default,
+.gutenberg__editor #et-switch-to-divi,
+.gutenberg__editor #et-switch-to-gutenberg,
+.gutenberg__editor .editor-post-switch-to-divi,
+.gutenberg__editor .editor-post-switch-to-divi.components-button.is-default,
+.gutenberg__editor .editor-post-switch-to-gutenberg,
+.gutenberg__editor .editor-post-switch-to-gutenberg.components-button.is-default {
+
+    color: black;
+    overflow: hidden;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(blue, blue);
+    }
+}
+
+
+
+/* Font Variables set in theme.json */
+:root {
+
+    --wp--preset--font-family--body: var(--wp--preset--font-family--wide-sans-serif);
+    --wp--preset--font-family--heading: var(--wp--preset--font-family--my-heading);
+    --wp--preset--font-family--heading-font: var(--wp--preset--font-family--my-heading);
+}
+
+:root {
+  /* Hint to browsers that both color schemes are supported */
+  color-scheme: light dark;
+}
+
+.bg-primary-lighter, .has-primary-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-lighter, .has-primary-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-lighter), var(--primary-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-primary-light, .has-primary-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-light, .has-primary-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-light), var(--primary-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-primary-dark, .has-primary-dark-background-color, .has-primary-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-dark, .has-primary-dark-background-color, .has-primary-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-light), var(--primary-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-primary-darker, .has-primary-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-darker, .has-primary-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-lighter), var(--primary-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-secondary-lighter, .has-secondary-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-lighter, .has-secondary-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-lighter), var(--secondary-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-secondary-light, .has-secondary-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-light, .has-secondary-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-light), var(--secondary-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-secondary-dark, .has-secondary-dark-background-color, .has-secondary-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-dark, .has-secondary-dark-background-color, .has-secondary-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-light), var(--secondary-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-secondary-darker, .has-secondary-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-darker, .has-secondary-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-lighter), var(--secondary-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-tertiary-lighter, .has-tertiary-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-lighter, .has-tertiary-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-lighter), var(--tertiary-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-tertiary-light, .has-tertiary-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-light, .has-tertiary-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-light), var(--tertiary-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-tertiary-dark, .has-tertiary-dark-background-color, .has-tertiary-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-dark, .has-tertiary-dark-background-color, .has-tertiary-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-light), var(--tertiary-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-tertiary-darker, .has-tertiary-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-darker, .has-tertiary-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-lighter), var(--tertiary-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-accent-lighter, .has-accent-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-lighter, .has-accent-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-lighter), var(--accent-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-accent-light, .has-accent-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-light, .has-accent-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-light), var(--accent-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-accent-dark, .has-accent-dark-background-color, .has-accent-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-dark, .has-accent-dark-background-color, .has-accent-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-light), var(--accent-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-accent-darker, .has-accent-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-darker);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-darker, .has-accent-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-lighter), var(--accent-darker));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-error, .has-error-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--error-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-error, .has-error-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--error-light), var(--error-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-notice, .has-notice-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--notice-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-notice, .has-notice-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--notice-light), var(--notice-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+.bg-success, .has-success-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--success-dark);
+  color: var(--text-on-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .bg-success, .has-success-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--success-light), var(--success-dark));
+    color: light-dark(var(--text-on-light), var(--text-on-dark));
+  }
+}
+
+/* Utility classes for text colors only */
+.text-primary-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-lighter), var(--primary-darker));
+  }
+}
+
+.text-primary-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-light), var(--primary-dark));
+  }
+}
+
+.text-primary-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-light), var(--primary-dark));
+  }
+}
+
+.text-primary-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-lighter), var(--primary-darker));
+  }
+}
+
+.text-secondary-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-lighter), var(--secondary-darker));
+  }
+}
+
+.text-secondary-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-light), var(--secondary-dark));
+  }
+}
+
+.text-secondary-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-light), var(--secondary-dark));
+  }
+}
+
+.text-secondary-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-lighter), var(--secondary-darker));
+  }
+}
+
+.text-tertiary-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-lighter), var(--tertiary-darker));
+  }
+}
+
+.text-tertiary-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-light), var(--tertiary-dark));
+  }
+}
+
+.text-tertiary-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-light), var(--tertiary-dark));
+  }
+}
+
+.text-tertiary-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-lighter), var(--tertiary-darker));
+  }
+}
+
+.text-accent-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-lighter), var(--accent-darker));
+  }
+}
+
+.text-accent-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-light), var(--accent-dark));
+  }
+}
+
+.text-accent-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-light), var(--accent-dark));
+  }
+}
+
+.text-accent-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-lighter), var(--accent-darker));
+  }
+}
+
+.text-error {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--error-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-error {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--error-light), var(--error-dark));
+  }
+}
+
+.text-notice {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--notice-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-notice {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--notice-light), var(--notice-dark));
+  }
+}
+
+.text-success {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--success-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-success {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--success-light), var(--success-dark));
+  }
+}
+
+
+/* Close WordPress preset :root block (paste into style.css) */
+
+/* Font Variables *not* set in theme.json */
+:root {
+
+    --wp--preset--color--white: var(text-on-dark, white);
+    --wp--preset--color--black: var(text-on-light, black);
+}
+
+.bg-contrast, .has-contrast-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--text-on-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-contrast, .has-contrast-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+body {
+    background-color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+ }
+
+/* these are *not* WordPress presets, safe to copy to your style.css as needed */
+
+
+
+
+
+
+
+
+
+
+/* Other Variables */
+
+:root {
+
+    color-scheme: light dark;
+    --wp--custom--radius--medium: var(--wp--preset--font-size--normal, 1em);
+    --wp--custom--radius--large: calc(var(--wp--custom--radius--medium)*1.5);
+    --wp--style--global--content-size:
+}
+
+.is-layout-constrained> :where(:not(.alignleft):not(.alignright):not(.alignfull)) {
+
+    max-width: var(--cf-max-screen-width);
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+
+/*
+ * - theme.json to Core Frameworks
+ * When you import the theme.json blueprint for Bricks Builder, the following Core Framework variables are applied:
+ *	- General:
+ *	The website’s background color is set to var(--bg-body) (this is critical especially for dark mode).
+ *	- Links:
+ *	Link typography color uses the variable var(--primary).
+ *	- Typography:
+ *	Body text color is set to var(--text-body) and the font size to var(--text-m).
+ *	For all headings, the color is set to var(--text-title).
+ *	- Elements – Section:
+ *	Padding is applied using the following variables for top, right, bottom, and left: var(--space-2xl), var(--space-m), var(--space-2xl), and var(--space-m) respectively.
+ *	- Element – Container:
+ *	The container width is defined by the variable var(--max-screen-width).
+ *
+ */
+
+
+/* Screen Reader only
+from https://equalizedigital.com/accessibility-checker/empty-link/ */
+.sr-only {
+
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+
+    background-color: var(--wp--preset--color--primary-lighter, lightgreen);
+    color: var(--text-on-light, black);
+    font-family: var(--wp--preset--font-family--heading-font);
+    font-weight: 600;
+    line-height: 1.2;
+    margin-top: 1.5em;
+    margin-bottom: 1em;
+    padding-top: 0.25em;
+    padding-right: 0.25em;
+    padding-bottom: 0.25em;
+    padding-left: 0.25em;
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--primary-lighter), var(--wp--preset--color--primary-darker));
+        color: light-dark(var(--text-on-light), var(--text-on-dark));
+    }
+}
+
+.wp-block-site-title :where(a) {
+
+    background-color: var(--wp--preset--color--primary-lighter, lightgreen);
+    color: var(--text-on-light, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--primary-lighter), var(--wp--preset--color--primary-darker));
+        color: light-dark(var(--text-on-light), var(--text-on-dark));
+    }
+}
+
+/* size and background for site logo
+ * theme.json styles > core/site-logo > elements > link > color > background
+ */
+.wp-block-site-logo img {
+
+    height: auto;
+    max-width: 125px;
+    width: auto;
+}
+
+img.custom-logo {
+
+    background-color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+/* Site Icon (logo displayed in Site Editor and in browser tab) */
+img.edit-site-site-icon__image {
+
+    background-color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+.wp-block-site-logo a:hover {
+
+    background-color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+/* Lists */
+ul li,
+ol li {
+
+    margin-left: 1em;
+}
+
+/* Links */
+.wp-block-post-content a:where(:not(.wp-element-button, .wp-block-uagb-buttons)),
+.wp-block-post-content .wp-block-button__link {
+
+    color: var(--wp--preset--color--accent-dark, black);
+    background-color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--accent-dark, black), var(--wp--preset--color--accent-dark, black));
+        background-color: light-dark(var(--text-on-dark, lightgreen), var(--text-on-dark, lightgreen));
+    }
+}
+
+/* button settings set these:
+.wp-block-uagb-buttons .uagb-block-3c418cd2 .uagb-button__wrapper .uagb-buttons-repeater
+.wp-block-uagb-buttons .uagb-block-3c418cd2.wp-block-uagb-buttons-child .uagb-buttons-repeater
+.wp-block-uagb-buttons .uagb-block-3c418cd2 .wp-block-button__link
+.wp-block-uagb-buttons .uagb-block-3c418cd2 .uagb-buttons-repeater .uagb-button__link */
+.uagb-button__link,
+.wp-block-post-content .wp-block-uagb-buttons .uagb-buttons-repeater .uagb-button__link {
+
+    background-color: var(--wp--preset--color--accent-dark, lightgreen);
+    color: var(--text-on-dark, black);
+    text-decoration: none;
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--accent-dark, lightgreen), var(--wp--preset--color--accent-dark, lightgreen));
+        color: light-dark(var(--text-on-dark, lightgreen), var(--text-on-dark, lightgreen));
+    }
+}
+
+.wp-block-navigation .wp-block-navigation-item__content.wp-block-navigation-item__content {
+
+    color: var(--wp--preset--color--accent-dark, black);
+    background-color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--accent-dark, black), var(--wp--preset--color--accent-light, black));
+        background-color: light-dark(var(--text-on-dark, lightgreen), var(--text-on-light, lightgreen));
+    }
+}
+
+/* .wp-block-post-content a:where(:not(.wp-element-button, .wp-block-uagb-buttons)),
+.uagb-button__link,
+.wp-block-post-content .wp-block-button__link {
+
+    color: var(--wp--preset--color--accent-dark, black);
+    background-color: var(--text-on-dark, lightgreen);
+@supports (color: light-dark(black, white)) {
+  color: light-dark(var(--wp--preset--color--accent-dark, black), var(--wp--preset--color--accent-dark, black));
+  background-color: light-dark(var(--text-on-dark, lightgreen), var(--text-on-dark, lightgreen));
+}
+}
+*/
+
+.box {
+
+    width: 200px;
+    height: 200px;
+    background-color: var(--wp--preset--color--tertiary-dark, lightgreen);
+    color: var(--text-on-dark, black);
+    border-radius: 10px;
+    margin: 10px;
+    padding: 10px;
+    box-shadow: 5px 5px 10px var(--wp--preset--color--tertiary-dark, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--tertiary-dark, black), var(--wp--preset--color--tertiary-dark, black));
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+.text {
+
+    background-color: var(--text-on-dark, lightgreen);
+    color: var(--text-on-light, black);
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--text-on-dark, white), var(--text-on-dark, white));
+        color: light-dark(var(--text-on-light, black), var(--text-on-dark, black));
+    }
+}
+
+
+/* Menus */
+
+/* doesn't work, have to select Navigation, then set color and background from palette
+    undo /wp-includes/blocks/navigation/style.min.css .wp-block-navigation .wp-block-navigation-item__content.wp-block-navigation-item__content color: inherit;
+    Must override color:inherit in wp-includes/css/dist/block-library/style.min.css .wp-block-navigation .wp-block-navigation-item__content.wp-block-navigation-item__content color:inherit
+nav ul li.wp-block-navigation-item {
+
+    background-color: var(--wp--preset--color--accent-dark, lightgreen);
+    color: var(--wp--preset--color--base, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--accent-dark) !important, var(--wp--preset--color--accent-dark) !important);
+  color: light-dark(var(--text-on-dark), var(--text-on-light));
+}
+}
+*/
+
+.wp-block-navigation .wp-block-navigation-item__content.wp-block-navigation-item__content:hover {
+
+    background-color: var(--wp--preset--color--accent-dark, black);
+    color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+.wp-block-navigation a {
+
+    background-color: var(--wp--preset--color--accent-dark, lightgreen);
+    color: var(--text-on-dark, black);
+    text-decoration: none;
+    padding: 5px;
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+.wp-block-navigation a:hover {
+
+    color: var(--wp--preset--color--accent-dark, black);
+    background-color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+        background-color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+header .wp-block-uagb-container:not(.uagb-layout-grid) .block-editor-inner-blocks .wp-block-navigation__container .wp-block.header-menu-item.wp-block-navigation-item header .wp-block-uagb-container:not(.uagb-layout-grid) .block-editor-inner-blocks .wp-block-navigation__container .wp-block.header-menu-item.wp-block-navigation-item {
+
+    width: auto !important;
+}
+
+
+footer .has-tertiary-background-color * {
+
+    background-color: var(--wp--preset--color--tertiary-dark, lightgreen);
+    color: var(--text-on-dark, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--tertiary-dark), var(--wp--preset--color--tertiary-dark));
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+footer .uagb-layout-grid .uagb-tax-link {
+
+    background: inherit;
+    color: black;
+    pointer-events: none;
+    padding: 0.2em;
+    line-height: 1.2;
+    display: block;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(inherit, inherit);
+    }
+}
+
+footer .uagb-layout-grid .uagb-taxomony-box a {
+
+    padding: 0;
+    margin: 0;
+    background-color: lightgreen;
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(inherit, inherit);
+    }
+}
+
+/* Group colors based on manually set background
+.wp-block-group.bg--primary-dark,
+.wp-block-uagb-container.bg--primary-dark {
+
+    background-color: var(--wp--preset--color--primary-dark, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--primary-dark), var(--wp--preset--color--primary-dark));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+/*
+ *.wp-block-group.bg--primary-darker,
+.wp-block-uagb-container.bg--primary-darker {
+
+    background-color: var(--wp--preset--color--primary-darker, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--primary-darker), var(--wp--preset--color--primary-darker));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+
+/*
+.wp-block-group.bg--secondary-dark,
+.wp-block-uagb-container.bg--secondary-dark  {
+
+    /* background-color: var(--wp--preset--color--secondary-dark, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--secondary-dark), var(--wp--preset--color--secondary-dark));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+
+/*
+.wp-block-group.bg--secondary-darker,
+.wp-block-uagb-container.bg--secondary-darker {
+
+    background-color: var(--wp--preset--color--secondary-darker, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--secondary-darker), var(--wp--preset--color--secondary-darker));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+/* .wp-block-group.bg--tertiary-dark,
+.wp-block-uagb-container.bg--tertiary-dark {
+
+    background-color: var(--wp--preset--color--tertiary-dark, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--tertiary-dark), var(--wp--preset--color--tertiary-dark));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+/*
+.wp-block-group.bg--tertiary-darker,
+.wp-block-uagb-container.bg--tertiary-darker {
+
+    /*background-color: var(--wp--preset--color--tertiary-darker, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--tertiary-darker), var(--wp--preset--color--tertiary-darker));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+/* .wp-block-group.bg--accent-dark,
+.wp-block-uagb-container.bg--accent-dark {
+
+    background-color: var(--wp--preset--color--accent-dark, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+/* .wp-block-group.bg--accent-darker,
+.wp-block-uagb-container.bg--accent-darker {
+
+    background-color: var(--wp--preset--color--accent-darker, lightgreen);
+    color: var(--text-on-dark, black);
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(var(--wp--preset--color--accent-darker), var(--wp--preset--color--accent-darker));
+  color: light-dark(var(--text-on-dark), var(--text-on-dark));
+}
+}
+*/
+
+
+
+/* <details> accordion - Quick Reminder that Details/Summary is the Easiest Way Ever to Make an Accordion | CSS-Tricks https://css-tricks.com/quick-reminder-that-details-summary-is-the-easiest-way-ever-to-make-an-accordion/
+and improved https://codepen.io/thomashigginbotham/pen/aYqvqQ?editors=1100
+
+<details>
+  <summary>What's a Po' Boy?</summary>
+  A po' boy (also po-boy, po boy) is a traditional sandwich from Louisiana. It almost always consists of meat, which is usually roast beef or fried seafood, often shrimp, crawfish, fish, oysters or crab.
+</details>
+*/
+
+details {
+
+    margin: 1rem;
+}
+
+summary {
+
+    font-weight: bold;
+    list-style-image: url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/3/right-arrow.svg);
+}
+
+details[open] summary {
+
+    list-style-image: url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/9632/down-arrow.svg);
+}
+
+summary::-webkit-details-marker {
+
+    background: url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/3/right-arrow.svg);
+    color: black;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(transparent, transparent);
+    }
+}
+
+details[open] summary::-webkit-details-marker {
+
+    background: url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/9632/down-arrow.svg);
+}
+
+/* Media and Text block */
+/*
+.wp-block-media-text p {
+
+    /*background-color: lightgreen;
+    color: black;
+@supports (color: light-dark(black, white)) {
+  background-color: light-dark(inherit, inherit);
+  color: light-dark(inherit, inherit);
+}
+}
+*/
+
+/* Image with Caption */
+:root :where(.editor-styles-wrapper) :where(.wp-element-caption, .wp-block-audio figcaption, .wp-block-embed figcaption, .wp-block-gallery figcaption, .wp-block-image figcaption, .wp-block-table figcaption, .wp-block-video figcaption) {
+
+    /*color: var(--wp--preset--color--contrast-2);*/
+    font-family: var(--wp--preset--font-family--gl-system-font);
+    font-size: 1em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    border-bottom: double;
+}
+
+
+/* Heading with Number, Greenshift */
+.wp-block-post-content h3.gspb_heading.gspb-selector-element a {
+
+    padding: 0.25em;
+    display: inline-block;
+    /* else top padding and margin get cut off */
+    /* font size want core framework text-l */
+}
+
+
+/* Syntax Highlighter */
+.syntaxhighlighter table td.gutter {
+
+    width: min-content;
+    /* might not be needed */
+    max-width: fit-content;
+    /* prevent wide line number table cells */
+}
+
+.wp-block-syntaxhighlighter-code tr {
+
+    display: inline-table;
+    /* prevent line numbers on their own lines, followed by code lines */
+    /* or display: block, or inline-flex also work */
+}
+
+
+/* Login Form styling from https://developer.wordpress.org/news/2023/08/adding-and-using-custom-settings-in-theme-json/ */
+
+input {
+
+    font-family: var(--wp--preset--font-family--better-monospace);
+    font-size: var(--wp--preset--font-size--medium);
+}
+
+input:where( :not([type=checkbox]):not([type=radio])),
+select,
+textarea {
+
+    color: var(--wp--custom--form-input--color, black);
+    background: var(--wp--custom--form-input--background, transparent);
+    border: 2px solid;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--custom--form-input--color, inherit), var(--wp--custom--form-input--color, inherit));
+    }
+}
+
+.wp-block-loginout form {
+
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: var(--wp--style--block-gap);
+}
+
+.wp-block-loginout form>* {
+
+    margin: 0;
+}
+
+.wp-block-loginout form input:not([type=submit]):not([type=checkbox]):not([type=hidden]) {
+
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+}
+
+/* end Login form */
+
+button {
+
+    background-color: var(--wp--preset--color--accent-darker, lightgreen);
+    border-color: var(--wp--preset--color--accent-lighter, black);
+    color: var(--text-on-dark, black);
+    padding: var(--wp--preset--spacing--20);
+    font-weight: bold;
+    font-size: var(--wp--preset--font-size--medium);
+    font-family: var(--wp--preset--font-family--better-monospace);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--accent-darker), var(--wp--preset--color--accent-darker));
+        color: light-dark(var(--wp--preset--color--accent-lighter), var(--wp--preset--color--accent-darker));
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+/* HFE Search Box */
+.elementor-element form.hfe-search-button-wrapper div.hfe-search-form__container .hfe-search-form__input {
+
+    padding: 4px 8px;
+    height: 2em !important;
+    align-content: baseline;
+}
+
+.elementor-element form.hfe-search-button-wrapper div.hfe-search-form__container button.hfe-search-submit {
+
+    height: auto;
+    color: var(--e-global-color-white, black);
+    background-color: var(--e-global-color-accent, lightgreen);
+    width: 30px;
+    font-size: 18px;
+    padding: .5em 0;
+    margin: 0px 0;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--e-global-color-white), var(--e-global-color-white));
+        background-color: light-dark(var(--e-global-color-accent), var(--e-global-color-accent));
+    }
+}
+
+/* styling for WS Form */
+form.wsf-form {
+
+    font-family: var(--wp--preset--font-family--better-monospace);
+}
+
+div.wsf-field,
+input[type="checkbox"].wsf-field+label.wsf-label,
+input[type="checkbox"].wsf-field+label.wsf-label::before {
+
+    color: var(--wp--preset--color--foreground, black);
+    background-color: var(--text-on-dark, lightgreen);
+    font-size: var(--wp--preset--font-size--medium);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--foreground, var(--wp--preset--color--contrast, black)), var(--wp--preset--color--foreground, var(--wp--preset--color--contrast, black)));
+        background-color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+div.ws-form .wsf-alert {
+
+    background-color: var(--wp--preset--color--secondary, lightgreen);
+    border-color: var(--wp--preset--color--secondary, black);
+    color: var(--wp--preset--color--foreground, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--secondary, white), var(--wp--preset--color--secondary, white));
+        color: light-dark(var(--wp--preset--color--secondary, lightgreen), var(--wp--preset--color--secondary, lightgreen));
+        color: light-dark(var(--wp--preset--color--foreground, black), var(--wp--preset--color--foreground, black));
+    }
+}
+
+div.ws-form .wsf-text-danger {
+
+    color: var(--wp--preset--color--highlight-2, black);
+    padding-right: 0.2em;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--highlight-2), var(--wp--preset--color--highlight-2));
+    }
+}
+
+div.ws-form .wsf-help {
+
+    color: var(--wp--preset--color--foreground, black);
+    display: block;
+    font-size: var(--wp--preset--font-size--normal, 1em);
+    line-height: 1.4;
+    margin-top: 5px;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--foreground, black), var(--wp--preset--color--foreground, black));
+    }
+}
+
+button.wsf-button:hover {
+
+    background-color: var(--wp--preset--color--accent-lighter, lightgreen);
+    border-color: var(--wp--preset--color--accent-dark, black);
+    color: var(--wp--preset--color--accent-dark, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--accent-lighter), var(--wp--preset--color--accent-darker));
+        color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+        color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+    }
+}
+
+button.wsf-button.wsf-button-primary {
+
+    background-color: var(--wp--preset--color--primary-darker, lightgreen);
+    border-color: var(--wp--preset--color--accent-lighter, black);
+    color: var(--text-on-dark, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--primary-darker), var(--wp--preset--color--primary-darker));
+        color: light-dark(var(--wp--preset--color--accent-lighter), var(--wp--preset--color--accent-darker));
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+div.wsf-alert.wsf-alert-success {
+
+    background-color: var(--wp--preset--color--primary-light, lightgreen);
+    border-color: var(--wp--preset--color--accent-lighter, black);
+    color: var(--wp--preset--color--black, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--primary-light), var(--wp--preset--color--primary-dark));
+        color: light-dark(var(--wp--preset--color--accent-lighter), var(--wp--preset--color--accent-darker));
+        color: light-dark(var(--wp--preset--color--black), var(--wp--preset--color--black));
+    }
+}
+
+/* end WS Form */
+
+
+/* big CSS hover underline, thin un-hovered */
+a,
+.elementor a:where(:not(.wp-element-button, .uagb-button__wrapper, .uagb-tax-link)),
+.wp-block-navigation a:where(:not(.wp-element-button, .uagb-button__wrapper, .uagb-tax-link)) {
+
+    vertical-align: baseline;
+    background-color: var(--wp--preset--color--tertiary-lighter, lightgreen);
+    color: var(--wp--preset--color--accent-dark, black);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    text-decoration: underline;
+    text-decoration-thickness: .15rem;
+    text-underline-offset: .3rem;
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--tertiary-lighter, lightgreen), var(--wp--preset--color--tertiary-darker, lightgreen));
+        color: light-dark(var(--wp--preset--color--accent-dark, navy), var(--wp--preset--color--accent-dark, navy));
+    }
+}
+
+.elementor-nav-menu--layout-horizontal .elementor-nav-menu a {
+
+    white-space: nowrap;
+    flex-grow: 1;
+    text-decoration: none;
+}
+
+a:hover {
+
+    text-underline-offset: .2em;
+    text-decoration-skip-ink: auto;
+    background-color: var(--wp--preset--color--accent-dark, lightgreen);
+    color: var(--wp--preset--color--tertiary-lighter, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--accent-dark, navy), var(--wp--preset--color--accent-dark, navy));
+        color: light-dark(var(--wp--preset--color--tertiary-lighter, lightgreen), var(--wp--preset--color--tertiary-darker, lightgreen));
+    }
+}
+
+
+
+
+/* Spectra (formerly Ultimate Add-ons for Gutenberg) */
+
+/* Spectra highlight color, in the "Highlight" icon of the block's toolbar */
+.uagb-highlight {
+
+    background-color: var(--wp--preset--color--highlight1, lightgreen);
+    color: var(--wp--preset--color--black, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--highlight1), var(--wp--preset--color--highlight1));
+        color: light-dark(var(--wp--preset--color--black), var(--wp--preset--color--black));
+    }
+}
+
+/* Spectra block quote */
+.wp-block-uagb-blockquote.uagb-blockquote__skin-border blockquote.uagb-blockquote {
+
+    /* .uagb-block-b0271a66.uagb-blockquote__skin-border blockquote.uagb-blockquote */
+    border-color: var(--wp--preset--color--tertiary-darker, black);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--tertiary-darker), var(--wp--preset--color--tertiary-darker));
+    }
+}
+
+.wp-block-uagb-blockquote cite.uagb-blockquote__author {
+
+    color: var(--wp--preset--color--tertiary-darker, black);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--tertiary-darker), var(--wp--preset--color--tertiary-darker));
+    }
+}
+
+/* Spectra Cover block */
+/* .wp-block-uagb-advanced-heading p.uagb-desc-text.rich-text, .wp-block-uagb-advanced-heading h2.uagb-heading-text {
+ */
+.block-color-primarylight {
+    background-color: var(--wp--preset--color--primary-lighter, lightgreen);
+    color: var(--wp--preset--color--black, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--primary-lighter), var(--wp--preset--color--primary-darker));
+        color: light-dark(var(--wp--preset--color--black), var(--wp--preset--color--black));
+    }
+}
+
+/* Spectra Post Grid */
+.uagb-post__cta {
+
+    /* Read More link */
+    float: right;
+    margin-bottom: 15px;
+}
+
+/* Spectra Layout Grid */
+.uagb-taxonomy__outer-wrap.uagb-layout-grid {
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-column-gap: var(--mdc-layout-grid-gutter-phone, 12px);
+    grid-row-gap: var(--mdc-layout-grid-gutter-phone, 12px);
+}
+
+.uagb-taxomony-box {
+
+    border-top-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-color: var(--wp--preset--color--tertiary-lighter, black);
+    border-style: solid;
+    display: grid;
+
+    /* important override of div display block */
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--tertiary-lighter), var(--wp--preset--color--tertiary-darker));
+    }
+}
+
+div.uagb-layout-grid {
+
+    margin-bottom: 1em;
+}
+
+.uagb-layout-grid .uagb-tax-link {
+
+    pointer-events: visible;
+    /* link should show different mouse pointer */
+    padding: 0;
+    /* prevent vertical line showing */
+}
+
+.uagb-layout-grid .uagb-taxomony-box a.uagb-tax-link,
+.uagb-layout-grid a.uagb-tax-link div {
+
+    /* taxonomy grid has text in a div within the link
+     * element default has styling like .uagb-block-3d8b49e2.uagb-layout-grid .uagb-tax-link color 777
+     */
+    color: var(--wp--preset--color--accent-dark, black);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+    }
+}
+
+.uagb-block-3d8b49e2.uagb-layout-grid .uagb-tax-link {
+
+    color: var(--text-on-dark, black);
+    pointer-events: none;
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+.uagb-layout-grid a.uagb-tax-link:hover,
+.uagb-layout-grid a.uagb-tax-link:hover div {
+
+    background-color: var(--wp--preset--color--accent-dark, lightgreen);
+    color: var(--text-on-dark, black);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+        color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+
+/* Spectra social share block */
+.wp-block-uagb-social-share {
+
+    background-color: var(--text-on-dark, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--text-on-dark), var(--text-on-dark));
+    }
+}
+
+/* Spectra table of contents block
+ * change List color to transparent, then reset
+*/
+.wp-block-uagb-table-of-contents ul.uagb-toc__list,
+.wp-block-uagb-table-of-contents ol.uagb-toc__list {
+
+    margin-left: 0;
+}
+
+.block-editor-block-list__block .uagb-block-5bfdfd6d .uagb-toc__list-wrap li a {
+
+    font-style: normal;
+    text-decoration: underline;
+    color: var(--wp--preset--color--accent-dark, black);
+    background-color: var(--wp--preset--color--tertiary-lighter, lightgreen);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--wp--preset--color--accent-dark), var(--wp--preset--color--accent-dark));
+        background-color: light-dark(var(--wp--preset--color--tertiary-lighter), var(--wp--preset--color--tertiary-darker));
+    }
+}
+
+/* from Responsive flexbox tables, by David Miller https://codepen.io/Orangetronic/pen/pJgpXw
+ * See also https://css-tricks.com/accessible-simple-responsive-tables/
+*/
+table.table {
+
+    width: 100%;
+}
+
+tr,
+.wp-block-table tr {
+
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 0.5em 0 1em;
+    border: 2px solid var(--wp--preset--color--tertiary-lighter);
+}
+
+td,
+th,
+.wp-block-table td,
+.wp-block-table th {
+
+    flex: 1 1 250px;
+    border: 1px solid var(--wp--preset--color--secondary-lighter);
+    padding: .5em;
+}
+
+/* Zebra striping, from https://codepen.io/davidelrizzo/pen/BjXBrz  then View Compiled CSS
+ * See main page https://css-tricks.com/accessible-simple-responsive-tables/
+ *   ========================================================================== */
+:root {
+
+    --table--stripe--odd: linear-gradient(135deg, #517FA4, #F3CC9A);
+    --table--stripe--even: #A0B7CD;
+    /* can't define CSS variables using variables
+     * --table--stripe--odd: var(--wp--preset--gradient--primary-gradient);
+    --table--stripe--even: var(--wp--preset--color--primary-lighter);
+    */
+}
+
+.is-striped {
+
+    /* background-image: linear-gradient(0, rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.07)); */
+    background-image: var(--wp--preset--gradient--primary-gradient);
+}
+
+figure.wp-block-table.is-striped {
+
+    background-image: none;
+}
+
+figure.wp-block-table.is-striped tr:nth-child(even) {
+
+    background-color: var(--table--stripe--even, lightgreen);
+
+    /* if gradient, background-image: var(--table--stripe--even); */
+    @supports (color: light-dark(black, white)) {
+        background-color: light-dark(var(--table--stripe--even), var(--table--stripe--even));
+    }
+}
+
+figure.wp-block-table.is-striped tr:nth-child(odd) {
+
+    background-image: var(--table--stripe--odd);
+    /* background-image: var(--wp--preset--gradient--secondary-gradient) */
+    /* background-image: linear-gradient(0, rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.07)); */
+}
+
+
+/* Header styles */
+
+/* Footer styles */
+
+
+/* Greenshift and Core Foundation styles */
+
+
+.coreframework-panel .coreframework-class {
+
+    /* make the interface list of classes display properly */
+    background: var(--cf-accent-d-4) !important;
+    color: var(--text-on-dark, black);
+
+    @supports (color: light-dark(black, white)) {
+        color: light-dark(var(--text-on-dark, lightgreen), var(--text-on-dark, lightgreen));
+    }
+}
+
+/* AI Toolkit button, so AI Toolkit and Accessibility Checker buttons aren't covering each other */
+.mwai-chat.T9GqU1_HCj_oHtw9lgwt {
+
+    position: fixed;
+    right: 10px;
+    bottom: 15px;
+    width: 64px;
+}
+
+/* Accessibility Checker button */
+.edac-highlight-panel {
+
+    bottom: 19px !important;
+    position: fixed !important;
+    right: calc(64px + 15px) !important;
+    width: auto;
+}
+
+/* Don't print elements
+ * assign class "no-print" to an element
+ */
+@media print {
+
+
+    .no-print,
+    .no-print * {
+        display: none !important;
+    }
+
+    a::after {
+
+        content: " (" attr(href) ")";
+    }
+
+    figure a::after {
+
+        content: none;
+    }
+}
+
+@media print {
+
+    body {
+        background: #fff none !important;
+        color: black;
+
+        @supports (color: light-dark(black, white)) {
+            color: light-dark(#000, #000);
+        }
+    }
+
+    #wrapper {
+
+        clear: both !important;
+        display: block !important;
+        float: none !important;
+        position: relative !important;
+    }
+
+    #header {
+
+        border-bottom: 2pt solid #000;
+        padding-bottom: 18pt;
+    }
+
+    #container,
+    #header,
+    #footer {
+
+        margin: 0;
+        width: 100%;
+    }
+
+    h1,
+    h2,
+    h3,
+    h2.wp-block-heading {
+
+        break-after: avoid-page;
+    }
+
+    /* site title fill space without site header-menu */
+    header.wp-block-template-part div,
+    header.wp-block-template-part div div,
+    header header,
+    header p {
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    header p {
+
+        font-size: 1.5rem;
+    }
+
+    header.wp-block-template-part header.pad-section--m {
+
+        margin: 0;
+        padding: 0;
+    }
+
+    .wp-block-uagb-container.uagb-is-root-container .uagb-block-a0c1171f {
+
+        max-width: 100% !important;
+        width: 100%;
+    }
+
+    .wp-block-uagb-container.uagb-block-4cf4b7a4 {
+
+        min-height: 1em;
+        row-gap: 5px;
+        column-gap: 10px;
+    }
+
+    main#wp--skip-link--target {
+
+        margin-top: -.5em !important;
+    }
+
+    .wp-block-group {
+
+        margin-top: 0.5em;
+        margin-bottom: 0;
+        min-height: 1em;
+    }
+
+    .entry-content {
+
+        font-size: 14pt;
+        line-height: 1.6em;
+    }
+
+    .entry-title {
+
+        font-size: 21pt;
+    }
+
+    .has-large-font-size {
+
+        font-size: 1.2em;
+    }
+
+    div.wp-block-cover p {
+
+        color: black;
+        background: lightgray;
+        opacity: .8;
+
+        @supports (color: light-dark(black, white)) {
+            color: light-dark(black, black);
+        }
+    }
+
+    /* Hide unnecessary print items */
+    #access,
+    #branding img,
+    #respond,
+    nav.header-menu,
+    .wp-block-uagb-container .uagb-block-1a3d352d,
+    /* .uagb-block-1a3d352d is nav menu container */
+    #edac-highlight-panel,
+    #mwai-chatbot-default,
+    div.wp-block-comments,
+    footer.wp-block-template-part,
+    .comment-edit-link,
+    .edit-link,
+    .navigation,
+    .page-link,
+    .widget-area {
+
+        display: none !important;
+    }
+}
