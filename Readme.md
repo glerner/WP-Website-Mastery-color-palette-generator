@@ -127,6 +127,71 @@ See `endpoints/` and related helpers for export implementation details. If hosti
 
 ---
 
+# Make color swatches appear in the Block Editor (sidebar)
+
+If your exported `theme.json` uses CSS variables in the palette values (for example, `"color": "var(--accent-darker)"`), the editor canvas resolves them when the exporter scopes variables to both `:root` and `.editor-styles-wrapper`. However, the sidebar color picker UI (the circular swatches) lives in the admin document outside the canvas and does not inherit your theme variables by default.
+
+Add the following dynamic, variation‑aware snippet to your active WordPress theme’s `functions.php` so the sidebar swatches always match the currently active Theme/Style Variation without hardcoding. This works with child themes via `get_stylesheet_directory()`.
+
+```php
+<?php
+// Ensure the Block Editor sidebar (admin chrome, outside the canvas iframe) can resolve
+// CSS variables from the ACTIVE theme/style variation without hardcoding.
+add_action('enqueue_block_editor_assets', function () {
+    // 1) Resolved variables + presets from the active theme/variation/user global styles
+    $globals_css = '';
+    if ( function_exists('wp_get_global_stylesheet') ) {
+        // Include variables + presets; reflects the ACTIVE style variation and user styles.
+        $globals_css = wp_get_global_stylesheet( array( 'variables', 'presets' ) );
+    }
+
+    // 2) Theme's own inline CSS from theme.json (exporter’s styles.css string)
+    $inline_css = '';
+    $theme_json_path = get_stylesheet_directory() . '/theme.json'; // supports child themes
+    if ( file_exists( $theme_json_path ) ) {
+        $json_raw = file_get_contents( $theme_json_path );
+        if ( $json_raw !== false ) {
+            $json = json_decode( $json_raw, true );
+            if ( is_array($json) && isset($json['styles']['css']) && is_string($json['styles']['css']) ) {
+                // Exporter scopes to :root,.editor-styles-wrapper{ ... }
+                $inline_css .= $json['styles']['css'];
+            }
+
+            // 3) Bridge preset variables to your aliases so both forms resolve in sidebar
+            if ( isset($json['settings']['color']['palette']) && is_array($json['settings']['color']['palette']) ) {
+                $map_rules = array();
+                foreach ( $json['settings']['color']['palette'] as $entry ) {
+                    if ( ! empty($entry['slug']) ) {
+                        $slug = sanitize_title( $entry['slug'] );
+                        // --wp--preset--color--<slug>: var(--<slug>)
+                        $map_rules[] = "--wp--preset--color--{$slug}: var(--{$slug})";
+                    }
+                }
+                if ( $map_rules ) {
+                    // Use :root for the admin document (sidebar chrome)
+                    $inline_css .= ':root{' . implode(';', $map_rules) . ';}';
+                }
+            }
+        }
+    }
+
+    // 4) Inject into the editor admin document (not the canvas iframe)
+    $final_css = trim( ($globals_css ?: '') . "\n" . ($inline_css ?: '') );
+    if ( $final_css !== '' ) {
+        // Use both handles for broad compatibility across WP versions
+        wp_add_inline_style( 'wp-edit-blocks',  $final_css );
+        wp_add_inline_style( 'wp-block-editor', $final_css );
+    }
+}, 20);
+```
+
+Notes:
+
+- The exporter already emits CSS variables to both `:root` and `.editor-styles-wrapper`, so the editor canvas resolves them. The snippet above adds them to the admin document so the sidebar swatches resolve too.
+- `wp_get_global_stylesheet([ 'variables', 'presets' ])` reflects the currently active Theme/Style Variation and user Global Styles, so swatches stay in sync when you switch styles or child themes.
+
+---
+
 # Troubleshooting
 
 * __Port busy__: run `npm run dev -- --port 5174` and open http://localhost:5174

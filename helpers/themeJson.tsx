@@ -243,7 +243,7 @@ export const buildWpVariationJson = (
     // base/contrast variables
     pieces.push(`--base: ${baseColor}`);
     pieces.push(`--contrast: ${contrastColor}`);
-    return `:root{ ${pieces.join('; ')}; }`;
+    return `:root,.editor-styles-wrapper{ ${pieces.join('; ')}; }`;
   };
 
   const out: any = {

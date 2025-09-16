@@ -53,118 +53,148 @@
 			"defaultDuotone": false,
 			"defaultGradients": false,
 			"custom": false,
-			"palette": [
-				{
-				"slug": "primary-dark",
-				"color": "var(--primary-dark)",
-				"name": "P Dark"
-				},
-				{
-				"slug": "secondary-dark",
-				"color": "var(--secondary-dark)",
-				"name": "S Dark"
-				},
-				{
-				"slug": "tertiary-dark",
-				"color": "var(--tertiary-dark)",
-				"name": "T Dark"
-				},
-				{
-				"slug": "accent-dark",
-				"color": "var(--accent-dark)",
-				"name": "A Dark"
-				},
-				{
-				"slug": "primary-darker",
-				"color": "var(--primary-darker)",
-				"name": "P Darker"
-				},
-				{
-				"slug": "secondary-darker",
-				"color": "var(--secondary-darker)",
-				"name": "S Darker"
-				},
-				{
-				"slug": "tertiary-darker",
-				"color": "var(--tertiary-darker)",
-				"name": "T Darker"
-				},
-				{
-				"slug": "accent-darker",
-				"color": "var(--accent-darker)",
-				"name": "A Darker"
-				},
-				{
-				"slug": "primary-light",
-				"color": "var(--primary-light)",
-				"name": "P Light"
-				},
-				{
-				"slug": "secondary-light",
-				"color": "var(--secondary-light)",
-				"name": "S Light"
-				},
-				{
-				"slug": "tertiary-light",
-				"color": "var(--tertiary-light)",
-				"name": "T Light"
-				},
-				{
-				"slug": "accent-light",
-				"color": "var(--accent-light)",
-				"name": "A Light"
-				},
-				{
-				"slug": "primary-lighter",
-				"color": "var(--primary-lighter)",
-				"name": "P Lighter"
-				},
-				{
-				"slug": "secondary-lighter",
-				"color": "var(--secondary-lighter)",
-				"name": "S Lighter"
-				},
-				{
-				"slug": "tertiary-lighter",
-				"color": "var(--tertiary-lighter)",
-				"name": "T Lighter"
-				},
-				{
-				"slug": "accent-lighter",
-				"color": "var(--accent-lighter)",
-				"name": "A Lighter"
-				},
-				{
-				"slug": "error",
-				"color": "var(--error-dark)",
-				"name": "Error"
-				},
-				{
-				"slug": "notice",
-				"color": "var(--notice-dark)",
-				"name": "Notice"
-				},
-				{
-				"slug": "success",
-				"color": "var(--success-dark)",
-				"name": "Success"
-				},
-				{
-				"slug": "base",
-				"color": "var(--base)",
-				"name": "Text on Dark"
-				},
-				{
-				"slug": "contrast",
-				"color": "var(--contrast)",
-				"name": "Text on Light"
-				},
-				{
-				"slug": "transparent",
-				"color": "transparent",
-				"name": "Transparent"
-				}
-			],
+      "palette": [
+        {
+          "slug": "primary-dark",
+          "color": "var(--primary-dark)",
+          "name": "P Dark"
+        },
+        {
+          "slug": "secondary-dark",
+          "color": "var(--secondary-dark)",
+          "name": "S Dark"
+        },
+        {
+          "slug": "tertiary-dark",
+          "color": "var(--tertiary-dark)",
+          "name": "T Dark"
+        },
+        {
+          "slug": "accent-dark",
+          "color": "var(--accent-dark)",
+          "name": "A Dark"
+        },
+        {
+          "slug": "primary-darker",
+          "color": "var(--primary-darker)",
+          "name": "P Darker"
+        },
+        {
+          "slug": "secondary-darker",
+          "color": "var(--secondary-darker)",
+          "name": "S Darker"
+        },
+        {
+          "slug": "tertiary-darker",
+          "color": "var(--tertiary-darker)",
+          "name": "T Darker"
+        },
+        {
+          "slug": "accent-darker",
+          "color": "var(--accent-darker)",
+          "name": "A Darker"
+        },
+        {
+          "slug": "primary-light",
+          "color": "var(--primary-light)",
+          "name": "P Light"
+        },
+        {
+          "slug": "secondary-light",
+          "color": "var(--secondary-light)",
+          "name": "S Light"
+        },
+        {
+          "slug": "tertiary-light",
+          "color": "var(--tertiary-light)",
+          "name": "T Light"
+        },
+        {
+          "slug": "accent-light",
+          "color": "var(--accent-light)",
+          "name": "A Light"
+        },
+        {
+          "slug": "primary-lighter",
+          "color": "var(--primary-lighter)",
+          "name": "P Lighter"
+        },
+        {
+          "slug": "secondary-lighter",
+          "color": "var(--secondary-lighter)",
+          "name": "S Lighter"
+        },
+        {
+          "slug": "tertiary-lighter",
+          "color": "var(--tertiary-lighter)",
+          "name": "T Lighter"
+        },
+        {
+          "slug": "accent-lighter",
+          "color": "var(--accent-lighter)",
+          "name": "A Lighter"
+        },
+        {
+          "slug": "error",
+          "color": "var(--error-dark)",
+          "name": "Error"
+        },
+        {
+          "slug": "notice",
+          "color": "var(--notice-dark)",
+          "name": "Notice"
+        },
+        {
+          "slug": "success",
+          "color": "var(--success-dark)",
+          "name": "Success"
+        },
+        {
+          "slug": "error-light",
+          "color": "var(--error-light)",
+          "name": "Error Light"
+        },
+        {
+          "slug": "error-dark",
+          "color": "var(--error-dark)",
+          "name": "Error Dark"
+        },
+        {
+          "slug": "notice-light",
+          "color": "var(--notice-light)",
+          "name": "Notice Light"
+        },
+        {
+          "slug": "notice-dark",
+          "color": "var(--notice-dark)",
+          "name": "Notice Dark"
+        },
+        {
+          "slug": "success-light",
+          "color": "var(--success-light)",
+          "name": "Success Light"
+        },
+        {
+          "slug": "success-dark",
+          "color": "var(--success-dark)",
+          "name": "Success Dark"
+        },
+        {
+          "slug": "base",
+          "color": "var(--base)",
+          "name": "Text on Dark"
+        },
+        {
+          "slug": "contrast",
+          "color": "var(--contrast)",
+          "name": "Text on Light"
+        },
+        {
+          "slug": "transparent",
+          "color": "transparent",
+          "name": "Transparent"
+        }
+      ],
 			"duotone": [
 				{
 					"colors": [
@@ -228,7 +258,7 @@
 				},
 				{
 					"name": "Secondary-Tertiary light",
-					"slug": "d-secondary--tertiary-gradient",
+					"slug": "d-secondary-tertiary-gradient",
 					"gradient": "linear-gradient(45deg, light-dark(var(--wp--preset--color--secondary-lighter), var(--wp--preset--color--secondary-darker)), light-dark(var(--wp--preset--color--tertiary-lighter), var(--wp--preset--color--tertiary-darker)))"
 				},
 				{
@@ -248,47 +278,47 @@
 				},
 				{
 					"name": "Primary-Tertiary vertical light",
-					"slug": "v-primary-to-tertiary",
+					"slug": "v-primary-tertiary",
 					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--primary-light), var(--wp--preset--color--primary-darker)) 0%, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 100%)"
 				},
 				{
 					"name": "Primary-Base vertical light",
-					"slug": "v-primary-to-background",
+					"slug": "v-primary-background",
 					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--primary-light), var(--wp--preset--color--primary-darker)) 0%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Secondary-Tertiary vertical light",
-					"slug": "v-secondary-to-tertiary",
+					"slug": "v-secondary-tertiary",
 					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--secondary-light), var(--wp--preset--color--secondary-darker)) 0%, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 100%)"
 				},
 				{
 					"name": "Secondary-Base vertical light",
-					"slug": "v-secondary-to-background",
+					"slug": "v-secondary-background",
 					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--secondary-light), var(--wp--preset--color--secondary-darker)) 0%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Tertiary-Base vertical light",
-					"slug": "v-tertiary-to-background",
+					"slug": "v-tertiary-background",
 					"gradient": "linear-gradient(to bottom, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 0%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Secondary-Base light",
-					"slug": "d-secondary-to-background",
+					"slug": "d-secondary-background",
 					"gradient": "linear-gradient(to bottom right, light-dark(var(--wp--preset--color--secondary-lighter), var(--wp--preset--color--secondary-darker)) 50%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Base-Secondary light",
-					"slug": "d-background-to-secondary",
+					"slug": "d-background-secondary",
 					"gradient": "linear-gradient(to bottom right, light-dark(var(--text-on-dark),var(--text-on-light)) 50%, light-dark(var(--wp--preset--color--secondary-light), var(--wp--preset--color--secondary-darker)) 100%)"
 				},
 				{
 					"name": "Tertiary-Base light",
-					"slug": "d-tertiary-to-background",
+					"slug": "d-tertiary-background",
 					"gradient": "linear-gradient(to bottom right, light-dark(var(--wp--preset--color--tertiary-lighter), var(--wp--preset--color--tertiary-darker)) 50%, light-dark(var(--text-on-dark),var(--text-on-light)) 100%)"
 				},
 				{
 					"name": "Base-Tertiary light",
-					"slug": "d-background-to-tertiary",
+					"slug": "d-background-tertiary",
 					"gradient": "linear-gradient(to bottom right, light-dark(var(--text-on-dark),var(--text-on-light)) 50%, light-dark(var(--wp--preset--color--tertiary-light), var(--wp--preset--color--tertiary-darker)) 100%)"
 				},
 				{
@@ -453,7 +483,7 @@
 		"useRootPaddingAwareAlignments": true
 	},
 	"styles": {
-	    "css": ":root{ --text-on-dark: #F7F3EE; --text-on-light: #453521; --primary-lighter: #dde6fc; --primary-light: #bed0f9; --primary-dark: #0e3894; --primary-darker: #0a2b71; --secondary-lighter: #faddfa; --secondary-light: #f6bef6; --secondary-dark: #701070; --secondary-darker: #570c57; --tertiary-lighter: #b4fce6; --tertiary-light: #08f1a9; --tertiary-dark: #03563c; --tertiary-darker: #02412d; --accent-lighter: #f9dbeb; --accent-light: #f3bcd9; --accent-dark: #83164f; --accent-darker: #5f1039; --error-light: #f1c6c6; --error-dark: #781d1d; --notice-light: #e8e100; --notice-dark: #504d00; --success-light: #a8e1c2; --success-dark: #1f5a3b; --base: #D6D2CE; --contrast: #1A1514; }",
+    	"css": ":root,.editor-styles-wrapper{ --text-on-dark: #F7F3EE; --text-on-light: #453521; --primary-lighter: #dde6fc; --primary-light: #bed0f9; --primary-dark: #0e3894; --primary-darker: #0a2b71; --secondary-lighter: #faddfa; --secondary-light: #f6bef6; --secondary-dark: #701070; --secondary-darker: #570c57; --tertiary-lighter: #b4fce6; --tertiary-light: #08f1a9; --tertiary-dark: #03563c; --tertiary-darker: #02412d; --accent-lighter: #f9dbeb; --accent-light: #f3bcd9; --accent-dark: #83164f; --accent-darker: #5f1039; --error-light: #f1c6c6; --error-dark: #781d1d; --notice-light: #e8e100; --notice-dark: #504d00; --success-light: #a8e1c2; --success-dark: #1f5a3b; --base: #D6D2CE; --contrast: #1A1514; }",
 		"blocks": {
 			"core/comments-title": {
 				"typography": {
