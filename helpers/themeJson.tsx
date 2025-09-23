@@ -50,9 +50,11 @@ export const validateBaseContrast = (
 // - title: exact theme/variation title to use
 // - fossil: optional theme.json-like object; we read settings.typography
 // - palette entries include:
-//   * base (#D6D2CE) and contrast (#1A1514) unless overridden by fossil.settings.color.palette
-//   * for primary/secondary/tertiary/accent: lighter, light, base, dark, darker
-//   * semantic colors: error, warning, success (single entries)
+//   * base and contrast slugs referencing CSS vars only (for theme compatibility):
+//       base -> var(--base) which maps to var(--text-on-dark) in exported CSS
+//       contrast -> var(--contrast) which maps to var(--text-on-light) in exported CSS
+//   * for primary/secondary/tertiary/accent: lighter, light, dark, darker
+//   * semantic colors: error, warning (notice), success (light/dark variants)
 type Band = 'lighter' | 'light' | 'dark' | 'darker';
 type SemanticPerScheme = { light: Band; dark: Band };
 type SemanticBandSelection = { error: SemanticPerScheme; warning: SemanticPerScheme; success: SemanticPerScheme };
@@ -73,30 +75,9 @@ export const buildWpVariationJson = (
     if (m) version = parseInt(v, 10);
   }
 
-  // Extract base/contrast from theme config if available; otherwise defaults
-  let baseColor = '#D6D2CE';
-  let contrastColor = '#1A1514';
-  const fossilPalette: Array<{ slug?: string; color?: string }> = themeConfig?.settings?.color?.palette || [];
-  if (Array.isArray(fossilPalette) && fossilPalette.length) {
-    for (const entry of fossilPalette) {
-      if (!entry || typeof entry !== 'object') continue;
-      if (entry.slug === 'base' && entry.color) baseColor = entry.color;
-      if (entry.slug === 'contrast' && entry.color) contrastColor = entry.color;
-    }
-  }
-
-  // Validate/swap base vs contrast if necessary (base should be lighter than contrast)
-  const baseLum = getLuminance(baseColor);
-  const contrastLum = getLuminance(contrastColor);
-  if (baseLum < contrastLum) {
-    // Likely a dark theme swap; auto-correct to keep downstream logic consistent
-    const tmp = baseColor;
-    baseColor = contrastColor;
-    contrastColor = tmp;
-    console.warn('Swapped base and contrast to ensure base is lighter than contrast for export.');
-  }
-
-  // Contrast checks are handled elsewhere in the app using configured thresholds.
+  // Base/contrast are NOT imported or computed here.
+  // They are exported as CSS variables only for compatibility with some WP themes.
+  // Contrast checks for other colors are handled elsewhere in the app using configured thresholds.
 
   // We intentionally DO NOT import/export typography, gradients, or duotone in variation JSON
   // Only palette is included to keep style variations minimal and compatible.
@@ -180,12 +161,7 @@ export const buildWpVariationJson = (
     }
     return map['dark'] ?? map['darker'] ?? map['light'] ?? map['lighter'] ?? (palette as any)[ct]?.hex;
   };
-  // Semantics: reference banded dark variables; 'warning' semantic is exported as 'notice'
-  paletteEntries.push(
-    { slug: 'error', color: 'var(--error-dark)', name: 'Error' },
-    { slug: 'notice', color: 'var(--notice-dark)', name: 'Notice' },
-    { slug: 'success', color: 'var(--success-dark)', name: 'Success' },
-  );
+  // Semantics: only export light/dark variants; 'warning' semantic is exported as 'notice'
   // Also expose light/dark variants as separate slugs for semantic colors
   paletteEntries.push(
     { slug: 'error-light', color: 'var(--error-light)', name: 'Error Light' },
@@ -195,11 +171,7 @@ export const buildWpVariationJson = (
     { slug: 'success-light', color: 'var(--success-light)', name: 'Success Light' },
     { slug: 'success-dark', color: 'var(--success-dark)', name: 'Success Dark' },
   );
-  // Then text on dark (base) and text on light (contrast)
-  paletteEntries.push(
-    { slug: 'base', color: 'var(--base)', name: 'Text on Dark' },
-    { slug: 'contrast', color: 'var(--contrast)', name: 'Text on Light' },
-  );
+  // Do NOT add base/contrast slugs to the palette; parent themes that expect them will resolve via CSS compatibility mappings.
   // Finally transparent convenience color
   paletteEntries.push({ slug: 'transparent', color: 'transparent', name: 'Transparent' });
 
@@ -240,9 +212,7 @@ export const buildWpVariationJson = (
     if (succ.light) pieces.push(`--success-light: ${succ.light}`);
     if (succ.dark) pieces.push(`--success-dark: ${succ.dark}`);
     // Note: No fallback semantic single variables (e.g., --error) are emitted here by design.
-    // base/contrast variables
-    pieces.push(`--base: ${baseColor}`);
-    pieces.push(`--contrast: ${contrastColor}`);
+    // Do NOT emit --base/--contrast here; themes may define them in style.css if desired.
     return `:root,.editor-styles-wrapper{ ${pieces.join('; ')}; }`;
   };
 

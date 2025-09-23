@@ -53,6 +53,17 @@ export const generateCssClasses = (
   css += ':root {\n';
   css += '  /* Hint to browsers that both color schemes are supported */\n';
   css += '  color-scheme: light dark;\n';
+  css += '  /* Compatibility mappings for parent themes expecting preset color slugs */\n';
+  css += '  /* These only apply when copied into your theme\'s style.css */\n';
+  css += '  --wp--preset--color--base: var(--text-on-dark, #ffffff);\n';
+  css += '  --wp--preset--color--contrast: var(--text-on-light, #000000);\n';
+  css += '  --wp--preset--color--white: var(--text-on-dark, #ffffff);\n';
+  css += '  --wp--preset--color--black: var(--text-on-light, #000000);\n';
+  css += '  /* Background convenience aliases */\n';
+  css += '  --bg-primary: var(--primary-dark);\n';
+  css += '  --bg-secondary: var(--secondary-dark);\n';
+  css += '  --bg-tertiary: var(--tertiary-dark);\n';
+  css += '  --bg-accent: var(--accent-dark);\n';
   css += '}\n\n';
 
   // Generate classes for main color variations (excluding base colors)
@@ -79,42 +90,60 @@ export const generateCssClasses = (
       // Merge .bg-* and .has-*-background-color into a single rule
       // Include .has-<family>-background-color on the 'dark' step for compatibility
       const extra = step === 'dark' ? `, .has-${colorType}-background-color` : '';
-      const lightVar = (step === 'dark' || step === 'darker')
-        ? (hasCounterpart ? `var(--${colorType}-${counterpart})` : `var(--${slug})`)
-        : `var(--${slug})`;
-      const darkVar = (step === 'dark' || step === 'darker')
-        ? `var(--${slug})`
-        : (hasCounterpart ? `var(--${colorType}-${counterpart})` : `var(--${slug})`);
+      // In @supports, always place the USER-SELECTED band first, and the opposite band second
+      const lightVar = `var(--${slug})`;
+      const darkVar = hasCounterpart ? `var(--${colorType}-${counterpart})` : `var(--${slug})`;
       css += `.bg-${colorType}-${step}, .has-${slug}-background-color${extra} {\n`;
       css += `  /* Fallback for browsers without light-dark(): */\n`;
-      css += `  background-color: ${darkVar};\n`;
-      css += `  color: var(--text-on-dark);\n`;
+      css += `  background-color: var(--${slug});\n`;
+      css += `  color: ${(step === 'lighter' || step === 'light') ? lightTextAlias : darkTextAlias};\n`;
       css += `}\n`;
       css += `@supports (color: light-dark(black, white)) {\n`;
       css += `  .bg-${colorType}-${step}, .has-${slug}-background-color${extra} {\n`;
       css += `    /* Modern color scheme aware version: */\n`;
       css += `    background-color: light-dark(${lightVar}, ${darkVar});\n`;
-      css += `    color: light-dark(${lightTextAlias}, ${darkTextAlias});\n`;
+      css += `    color: light-dark(${(step === 'lighter' || step === 'light') ? lightTextAlias : darkTextAlias}, ${(step === 'lighter' || step === 'light') ? darkTextAlias : lightTextAlias});\n`;
       css += `  }\n`;
       css += `}\n\n`;
     });
   });
 
-  // Generate classes for semantic colors using light/dark vars
-  ['error', 'warning', 'success'].forEach((colorType) => {
+  // Generate classes for semantic colors using LIGHT/DARK bands selected by the user
+  ;(['error', 'warning', 'success'] as const).forEach((colorType) => {
     const ctOut = colorType === 'warning' ? 'notice' : colorType;
-    const lightVar = `var(--${ctOut}-light)`;
-    const darkVar = `var(--${ctOut}-dark)`;
-    css += `.bg-${ctOut}, .has-${ctOut}-background-color {\n`;
+    const sel = semanticBandSelection?.[colorType];
+    const lightBand = (sel?.light as Band) || 'light';
+    const darkBand = (sel?.dark as Band) || 'dark';
+    const lightVar = `var(--${ctOut}-${lightBand})`;
+    const darkVar = `var(--${ctOut}-${darkBand})`;
+    const lightText = (lightBand === 'lighter' || lightBand === 'light') ? lightTextAlias : darkTextAlias;
+    const darkText = (darkBand === 'lighter' || darkBand === 'light') ? lightTextAlias : darkTextAlias;
+
+    // Group unbanded and -light selectors together
+    const lightSelectors = `.bg-${ctOut}, .bg-${ctOut}-light, .has-${ctOut}-background-color, .has-${ctOut}-light-background-color`;
+    css += `${lightSelectors} {\n`;
     css += `  /* Fallback for browsers without light-dark(): */\n`;
-    css += `  background-color: ${darkVar};\n`;
-    css += `  color: var(--text-on-dark);\n`;
+    css += `  background-color: ${lightVar};\n`;
+    css += `  color: ${lightText};\n`;
     css += `}\n`;
     css += `@supports (color: light-dark(black, white)) {\n`;
-    css += `  .bg-${ctOut}, .has-${ctOut}-background-color {\n`;
-    css += `    /* Modern color scheme aware version: */\n`;
+    css += `  ${lightSelectors} {\n`;
     css += `    background-color: light-dark(${lightVar}, ${darkVar});\n`;
-    css += `    color: light-dark(${lightTextAlias}, ${darkTextAlias});\n`;
+    css += `    color: light-dark(${lightText}, ${darkText});\n`;
+    css += `  }\n`;
+    css += `}\n\n`;
+
+    // Separate rule for -dark selectors
+    const darkSelectors = `.bg-${ctOut}-dark, .has-${ctOut}-dark-background-color`;
+    css += `${darkSelectors} {\n`;
+    css += `  /* Fallback for browsers without light-dark(): */\n`;
+    css += `  background-color: ${darkVar};\n`;
+    css += `  color: ${darkText};\n`;
+    css += `}\n`;
+    css += `@supports (color: light-dark(black, white)) {\n`;
+    css += `  ${darkSelectors} {\n`;
+    css += `    background-color: light-dark(${lightVar}, ${darkVar});\n`;
+    css += `    color: light-dark(${lightText}, ${darkText});\n`;
     css += `  }\n`;
     css += `}\n\n`;
   });
@@ -140,20 +169,16 @@ export const generateCssClasses = (
       const slug = `${colorType}-${step}`;
       const counterpart = stepCounterpart(step);
       const hasCounterpart = counterpart ? stepsMap.has(counterpart) : false;
-      const lightVarT = (step === 'dark' || step === 'darker')
-        ? (hasCounterpart ? `var(--${colorType}-${counterpart})` : `var(--${slug})`)
-        : `var(--${slug})`;
-      const darkVarT = (step === 'dark' || step === 'darker')
-        ? `var(--${slug})`
-        : (hasCounterpart ? `var(--${colorType}-${counterpart})` : `var(--${slug})`);
+      const selectedVar = `var(--${slug})`;
+      const oppositeVar = hasCounterpart ? `var(--${colorType}-${counterpart})` : selectedVar;
       css += `.text-${colorType}-${step} {\n`;
       css += `  /* Fallback for browsers without light-dark(): */\n`;
-      css += `  color: ${darkVarT};\n`;
+      css += `  color: ${selectedVar};\n`;
       css += `}\n`;
       css += `@supports (color: light-dark(black, white)) {\n`;
       css += `  .text-${colorType}-${step} {\n`;
       css += `    /* Modern color scheme aware version: */\n`;
-      css += `    color: light-dark(${lightVarT}, ${darkVarT});\n`;
+      css += `    color: light-dark(${selectedVar}, ${oppositeVar});\n`;
       css += `  }\n`;
       css += `}\n\n`;
     });

@@ -94,6 +94,8 @@ import { generateSemanticColors } from '../helpers/generateSemanticColors';
 import { buildWpVariationJson, validateBaseContrast } from '../helpers/themeJson';
 import AZLogo from '../AZ-WP-Website-Consulting-LLC.svg';
 import { applyPaletteToCSSVariables, exportCoreFoundationCSSFromCurrent } from '../helpers/themeRuntime';
+import includeEditorChromeStylesPhp from '../inc/fse-editor-chrome-styles.php?raw';
+import { RadioGroup, RadioGroupItem } from '../components/RadioGroup';
 
 // Resolve a hex color for a given color key and variation step for the Demo tab.
 // Falls back to the base hex when the requested step isn't present.
@@ -193,6 +195,8 @@ const GeneratorPage = () => {
   const savedManualJsonRef = useRef<string>('');
   const [demoScheme, setDemoScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [themeName, setThemeName] = useState<string>('');
+  // Export variation mode: 6 (rotate P/S/T; Accent fixed) or 24 (rotate P/S/T/Accent)
+  const [exportVariationMode, setExportVariationMode] = useState<'6' | '24'>('6');
   // Per-scheme selection of which band to export/use for semantic colors
   type Band = 'lighter' | 'light' | 'dark' | 'darker';
   type SemanticPerScheme = { light: Band; dark: Band };
@@ -376,6 +380,22 @@ const GeneratorPage = () => {
   }, [paletteWithVariations]);
 
 
+  // Heuristic: which of the four base colors is most "eye-catching" (highest saturation)
+  const mostEyeCatching = useMemo(() => {
+    try {
+      const bases = ['primary', 'secondary', 'tertiary', 'accent'] as const;
+      let bestKey: typeof bases[number] = 'accent';
+      let bestS = -1;
+      bases.forEach((k) => {
+        const hex = (palette as any)[k]?.hex as string | undefined;
+        if (!hex) return;
+        const { r, g, b } = hexToRgb(hex);
+        const { s } = rgbToHslNorm(r, g, b);
+        if (s > bestS) { bestS = s; bestKey = k; }
+      });
+      return bestKey;
+    } catch { return 'accent' as const; }
+  }, [palette]);
 
 
   // Load saved selections once, with migration from Y-based tints to index-based
@@ -575,17 +595,41 @@ const GeneratorPage = () => {
       // 1) Build assets for ALL P/S/T permutations (accent fixed as 'a')
       const titleSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
       const pv: any = paletteWithVariations as any;
-      const variants: Array<{ code: string; palette: any }> = [
-        { code: 'psta', palette: { ...pv, primary: pv.primary, secondary: pv.secondary, tertiary: pv.tertiary, accent: pv.accent } },
-        { code: 'ptsa', palette: { ...pv, primary: pv.primary, secondary: pv.tertiary, tertiary: pv.secondary, accent: pv.accent } },
-        { code: 'spta', palette: { ...pv, primary: pv.secondary, secondary: pv.primary, tertiary: pv.tertiary, accent: pv.accent } },
-        { code: 'stpa', palette: { ...pv, primary: pv.secondary, secondary: pv.tertiary, tertiary: pv.primary, accent: pv.accent } },
-        { code: 'tpsa', palette: { ...pv, primary: pv.tertiary, secondary: pv.primary, tertiary: pv.secondary, accent: pv.accent } },
-        { code: 'tspa', palette: { ...pv, primary: pv.tertiary, secondary: pv.secondary, tertiary: pv.primary, accent: pv.accent } },
-      ];
+      const buildPaletteFromCode = (code: string) => {
+        const pick = (ch: string) => ch === 'p' ? pv.primary : ch === 's' ? pv.secondary : ch === 't' ? pv.tertiary : pv.accent;
+        return { ...pv, primary: pick(code[0]!), secondary: pick(code[1]!), tertiary: pick(code[2]!), accent: pick(code[3]!) };
+      };
+      const permute = (arr: string[]): string[][] => {
+        const out: string[][] = [];
+        const used = new Array(arr.length).fill(false);
+        const backtrack = (path: string[]) => {
+          if (path.length === arr.length) { out.push(path.slice()); return; }
+          for (let i = 0; i < arr.length; i++) {
+            if (used[i]) continue;
+            const val = arr[i];
+            if (typeof val !== 'string') continue;
+            used[i] = true; path.push(val); backtrack(path); path.pop(); used[i] = false;
+          }
+        };
+        backtrack([]);
+        return out;
+      };
+      const codes: string[] = exportVariationMode === '24'
+        ? permute(['p', 's', 't', 'a']).map(x => x.join(''))
+        : ['psta', 'ptsa', 'spta', 'stpa', 'tpsa', 'tspa'];
+      const variants: Array<{ code: string; palette: any }> = codes.map(code => ({ code, palette: buildPaletteFromCode(code) }));
 
       const files: Record<string, Uint8Array> = {};
       const contentsList: string[] = [];
+      // Include helper file for users to drop into their child theme inc/ folder (use existing file content)
+      files['inc/fse-editor-chrome-styles.php'] = strToU8(includeEditorChromeStylesPhp);
+      contentsList.push(' - inc/fse-editor-chrome-styles.php');
+      // Generate a single shared utilities CSS file for all variations
+      const cssStrOnce = generateCssClasses(paletteWithVariations as any, semanticBandSelection as any, { textOnDark, textOnLight });
+      const utilitiesCssPath = `styles/${titleSlug}-utilities.css`;
+      files[utilitiesCssPath] = strToU8(cssStrOnce);
+      contentsList.push(` - ${utilitiesCssPath}`);
+
       for (const v of variants) {
         const jsonStr = buildWpVariationJson(
           v.palette,
@@ -593,31 +637,35 @@ const GeneratorPage = () => {
           themeConfig,
           { semanticBandSelection, textOnDark, textOnLight }
         );
-        const cssStr = generateCssClasses(v.palette, semanticBandSelection as any, { textOnDark, textOnLight });
         const jsonPath = `styles/${titleSlug}-${v.code}.json`;
-        const cssPath = `styles/${titleSlug}-${v.code}.css`;
         files[jsonPath] = strToU8(jsonStr);
-        files[cssPath] = strToU8(cssStr);
         contentsList.push(` - ${jsonPath}`);
-        contentsList.push(` - ${cssPath}`);
       }
 
+      const readmeModeLine = exportVariationMode === '24'
+        ? 'This archive contains ALL permutations of Primary/Secondary/Tertiary/Accent.'
+        : 'This archive contains ALL permutations of Primary/Secondary/Tertiary (Accent fixed).';
       const readme = [
         '# Generated by Color Palette Generator, by AZ WP Website Consulting LLC',
         '',
         `Title: ${title}`,
         `Filename suffix: ${suffix}`,
         '',
-        'This archive contains ALL permutations of Primary/Secondary/Tertiary (Accent fixed).',
-        'For each permutation, there is a theme style variation JSON and a matching CSS utilities file.',
+        readmeModeLine,
+        'For each permutation, there is a theme variation JSON. A single shared CSS utilities file is included for all variations.',
         '',
         'Contents:',
         ...contentsList,
         '',
         'How to use:',
-        '1) For WordPress: copy all your *.json and *.css files into wp-content/themes/your-theme/styles/',
+        '1) For WordPress: copy all your *.json and the single utilities *.css file into wp-content/themes/your-theme/styles/ (create styles folder if needed)',
         '   Then switch Style variation in the Site Editor > Styles.',
-        '2) Copy variables and classes from your chosen styles/*.css into your child theme style.css as needed.',
+        '2) Optional helper for editor sidebar swatches:',
+        '   - Copy inc/fse-editor-chrome-styles.php into wp-content/themes/your-child-theme/inc/ (create inc/ if needed).',
+        '   - Add the following to your child theme functions.php:',
+        "     require_once get_stylesheet_directory() . '/inc/fse-editor-chrome-styles.php';",
+        "     add_action('enqueue_block_editor_assets', 'fse_enqueue_block_editor_admin_chrome_styles', 20);",
+        '3) Merge variables and classes from styles/*-utilities.css into your child theme style.css as needed.',
       ].join('\n');
       files['README.txt'] = strToU8(readme);
 
@@ -659,7 +707,7 @@ const GeneratorPage = () => {
       const msg = (e && (e.message || e.toString())) || 'Unknown error';
       toast.error(`Export failed: ${msg}`);
     }
-  }, [paletteWithVariations, themeConfig, themeName, semanticBandSelection]);
+  }, [paletteWithVariations, themeConfig, themeName, semanticBandSelection, exportVariationMode, textOnDark, textOnLight]);
 
   // Track whether Manual form has unsaved changes compared to last saved snapshot
   const isManualDirty = useMemo(() => {
@@ -1785,6 +1833,29 @@ const GeneratorPage = () => {
                               <li><strong>Suggested file name:</strong> {filename}</li>
                               <li><strong>Destination:</strong> You will be prompted to choose a save location (or your browser will save to the default downloads folder).</li>
                             </ul>
+                            <div style={{ marginTop: 'var(--spacing-3)' }}>
+                              <label style={{ display: 'block', fontWeight: 600 }}>How many theme variations to export?</label>
+                              <RadioGroup
+                                value={exportVariationMode}
+                                onValueChange={(v) => setExportVariationMode((v === '24' ? '24' : '6'))}
+                                style={{ display: 'flex', gap: 'var(--spacing-3)', marginTop: 'var(--spacing-2)' }}
+                                aria-label="Variation count"
+                              >
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <RadioGroupItem value="6" />
+                                  <span>6 (rotate P/S/T; Accent fixed)</span>
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <RadioGroupItem value="24" />
+                                  <span>24 (rotate all four: P/S/T/Accent)</span>
+                                </label>
+                              </RadioGroup>
+                              <p className={styles.formHelp} style={{ marginTop: 'var(--spacing-2)', fontSize: 'var(--cf-text-s)' }}>
+                                {mostEyeCatching === 'accent'
+                                  ? 'Tip: Your Accent color appears the most eye‑catching. Consider exporting 6 variations so links, menus, and buttons use Accent consistently.'
+                                  : 'Tip: If one color is clearly more eye‑catching for links/menus/buttons, set it as Accent and export 6 variations.'}
+                              </p>
+                            </div>
                             <div style={{ marginTop: 'var(--spacing-3)' }}>
                               <Button
                                 onClick={handleExportGzipAll}

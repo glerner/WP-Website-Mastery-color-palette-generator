@@ -1,4 +1,4 @@
-# WPWM Color Palette Generator Project
+# WPWM Color Palette Generator
 by WP-Website-Mastery.com
 
 Color palette theme.json generator, automatically contrast adjusting. Select tints-shades from those that match WCAG AAA contrast. Generates WordPress Theme Variation palettes.
@@ -17,7 +17,7 @@ The WPWM Color Palette Generator focuses on creating a functional color palette 
   * Manual entry of the four core colors, and automatic fill-in any missing colors (using a selection from a list of common color harmonies)
   * Automatic generation of color tints/shades (not calling them "variations" since also using "WordPress Theme Variations").
     * Correct luminance ordering (white  → lighter → light → clear-gap-between-light-and-dark → dark → darker → black)
-  * All tints and shades have contrast checking against white or black text, required to exceed WCAG AAA color contrast, while not exceeding WCAG maximum recommended contrast ("pure white" against "pure black" is hard to read, too high contrast).
+  * All tints and shades have contrast checking against near-white or near-black text, required to exceed WCAG AAA color contrast, while not exceeding WCAG maximum recommended contrast ("pure white" against "pure black" is hard to read, too high contrast).
     * adjustable luminance target levels for lighter, light, dark, darker -- you select your favorite from several shown
 * Extended Color Set
   * Addition of utility colors (error, notice, success)
@@ -28,7 +28,9 @@ The WPWM Color Palette Generator focuses on creating a functional color palette 
   * Preview of different color combinations
 * WordPress Integration
   * Export of color palettes as theme.json Theme Variations
-  * Export of multiple theme variations (change the order of the generated colors, 6 combinations of primary, secondary and tertiary colors, or 24 combinations with accent colors )
+  * Export of multiple theme variations (change the order of the generated colors)
+    * Choose on the Export tab: 6 combinations (rotate Primary/Secondary/Tertiary; Accent fixed) or 24 combinations (rotate all four: P/S/T/Accent)
+    * Recommendation: if one color is most eye‑catching for links/menus/buttons (often the Accent), prefer 6 variations so that Accent consistently drives interactive elements
 
 # Quick Start (Local)
 
@@ -122,22 +124,34 @@ The app supports exporting palettes as WordPress `theme.json` Theme Variations. 
 * __Single archive (ZIP)__ containing multiple theme variations.
 * Each variation includes a `theme.json` and corresponding CSS.
 * Variations will permute primary/secondary/tertiary (and optionally accent) roles.
+* On the Export tab you can choose:
+  * __6 variations__: rotates Primary/Secondary/Tertiary while keeping Accent fixed. Recommended when your Accent is the most eye‑catching color (used for links/menus/buttons).
+  * __24 variations__: rotates all four roles (Primary/Secondary/Tertiary/Accent) for comprehensive exploration.
 
-See `endpoints/` and related helpers for export implementation details. If hosting within WordPress, you can proxy export via a WP REST endpoint and deliver the ZIP as a download.
+Copy the *.json and *.css files to your child theme's styles folder (create it if it doesn't exist).
 
----
+Variables like --primary-dark, --error-light, etc. are defined by your `theme-variation.json` styles.css section (in the several *.json files, there is a styles section, which has a css section).
+
+Copy the CSS from your chosen theme variation's *.css file, to your theme's style.css (don't overwrite the file, merge them).
+
+The CSS file provides utility classes that use the color variables.
 
 # Make color swatches appear in the Block Editor (sidebar)
 
-If your exported `theme.json` uses CSS variables in the palette values (for example, `"color": "var(--accent-darker)"`), the editor canvas resolves them when the exporter scopes variables to both `:root` and `.editor-styles-wrapper`. However, the sidebar color picker UI (the circular swatches) lives in the admin document outside the canvas and does not inherit your theme variables by default.
+Your exported `theme.json` uses CSS variables in the palette values (for example, `"color": "var(--accent-darker)"`). The editor canvas resolves them when the exporter scopes variables to both `:root` and `.editor-styles-wrapper`. However, the sidebar color picker UI (the circular swatches) lives in the admin document outside the canvas and does not inherit your theme variables by default.
 
 Add the following dynamic, variation‑aware snippet to your active WordPress theme’s `functions.php` so the sidebar swatches always match the currently active Theme/Style Variation without hardcoding. This works with child themes via `get_stylesheet_directory()`.
 
 ```php
-<?php
-// Ensure the Block Editor sidebar (admin chrome, outside the canvas iframe) can resolve
-// CSS variables from the ACTIVE theme/style variation without hardcoding.
-add_action('enqueue_block_editor_assets', function () {
+/**
+ * Ensure the Block Editor sidebar (admin chrome, outside the canvas iframe) can resolve
+ * CSS variables from the ACTIVE theme/style variation without hardcoding.
+ *
+ * - Includes WP resolved globals (variables + presets) via wp_get_global_stylesheet().
+ * - Includes the theme's own theme.json styles.css (emitted by your exporter).
+ * - Bridges --wp--preset--color--<slug> to your --<slug> alias so both resolve.
+ */
+function fse_enqueue_block_editor_admin_chrome_styles() {
     // 1) Resolved variables + presets from the active theme/variation/user global styles
     $globals_css = '';
     if ( function_exists('wp_get_global_stylesheet') ) {
@@ -145,7 +159,7 @@ add_action('enqueue_block_editor_assets', function () {
         $globals_css = wp_get_global_stylesheet( array( 'variables', 'presets' ) );
     }
 
-    // 2) Theme's own inline CSS from theme.json (exporter’s styles.css string)
+    // 2) Theme's own inline CSS from theme.json (your exporter's styles.css)
     $inline_css = '';
     $theme_json_path = get_stylesheet_directory() . '/theme.json'; // supports child themes
     if ( file_exists( $theme_json_path ) ) {
@@ -153,11 +167,11 @@ add_action('enqueue_block_editor_assets', function () {
         if ( $json_raw !== false ) {
             $json = json_decode( $json_raw, true );
             if ( is_array($json) && isset($json['styles']['css']) && is_string($json['styles']['css']) ) {
-                // Exporter scopes to :root,.editor-styles-wrapper{ ... }
+                // Your exporter already scopes to :root,.editor-styles-wrapper{ ... }
                 $inline_css .= $json['styles']['css'];
             }
 
-            // 3) Bridge preset variables to your aliases so both forms resolve in sidebar
+            // 3) Bridge preset variables to your aliases so both forms resolve in admin chrome
             if ( isset($json['settings']['color']['palette']) && is_array($json['settings']['color']['palette']) ) {
                 $map_rules = array();
                 foreach ( $json['settings']['color']['palette'] as $entry ) {
@@ -182,7 +196,9 @@ add_action('enqueue_block_editor_assets', function () {
         wp_add_inline_style( 'wp-edit-blocks',  $final_css );
         wp_add_inline_style( 'wp-block-editor', $final_css );
     }
-}, 20);
+}
+
+add_action('enqueue_block_editor_assets', 'fse_enqueue_block_editor_admin_chrome_styles', 20);
 ```
 
 Notes:
@@ -197,3 +213,6 @@ Notes:
 * __Port busy__: run `npm run dev -- --port 5174` and open http://localhost:5174
 * __Env not applied__: confirm values are in `.env.local` (not committed) and restart `npm run dev`.
 * __Type errors__: check recent edits in `helpers/ensureAAAContrast.tsx`, `helpers/colorUtils.tsx`, and `helpers/config.ts` for consistent imports/exports.
+
+## Copyright
+Copyright (c) AZ WP Website Consulting LLC, 2025
