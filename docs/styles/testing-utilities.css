@@ -1,0 +1,518 @@
+/* NOTE: For developer use only. WordPress does not load these generated CSS files by default.
+  Only your (child) theme's main style.css is used by WordPress automatically.
+  You may copy/paste variables and classes from this file into your child theme's style.css if desired.
+Also, you can export these to any other program with colors, e.g. Figma
+*/
+/* Color Palette CSS Classes */
+/* Generated with optimal contrast ratios */
+/* Only includes adjusted colors with proper contrast optimization */
+
+/* Variables like --primary-dark, --error-light, etc. are defined by your theme.json styles.css for each style variation. */
+/* This file provides utility classes that use those variables. */
+
+:root {
+  /* Hint to browsers that both color schemes are supported */
+  color-scheme: light dark;
+  /* Compatibility mappings for parent themes expecting preset color slugs */
+  /* These only apply when copied into your theme's style.css */
+  --wp--preset--color--base: var(--text-on-dark, #ffffff);
+  --wp--preset--color--contrast: var(--text-on-light, #000000);
+  --wp--preset--color--white: var(--text-on-dark, #ffffff);
+  --wp--preset--color--black: var(--text-on-light, #000000);
+  /* Background convenience aliases */
+  --bg-primary: var(--primary-dark);
+  --bg-secondary: var(--secondary-dark);
+  --bg-tertiary: var(--tertiary-dark);
+  --bg-accent: var(--accent-dark);
+}
+
+.bg-primary-lighter, .has-primary-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-lighter) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-lighter, .has-primary-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-lighter), var(--primary-darker)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-primary-light, .has-primary-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-light) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-light, .has-primary-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-light), var(--primary-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-primary-dark, .has-primary-dark-background-color, .has-primary-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-dark, .has-primary-dark-background-color, .has-primary-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-dark), var(--primary-light)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-primary-darker, .has-primary-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--primary-darker) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-primary-darker, .has-primary-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--primary-darker), var(--primary-lighter)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-secondary-lighter, .has-secondary-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-lighter) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-lighter, .has-secondary-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-lighter), var(--secondary-darker)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-secondary-light, .has-secondary-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-light) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-light, .has-secondary-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-light), var(--secondary-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-secondary-dark, .has-secondary-dark-background-color, .has-secondary-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-dark, .has-secondary-dark-background-color, .has-secondary-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-dark), var(--secondary-light)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-secondary-darker, .has-secondary-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--secondary-darker) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-secondary-darker, .has-secondary-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--secondary-darker), var(--secondary-lighter)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-tertiary-lighter, .has-tertiary-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-lighter) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-lighter, .has-tertiary-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-lighter), var(--tertiary-darker)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-tertiary-light, .has-tertiary-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-light) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-light, .has-tertiary-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-light), var(--tertiary-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-tertiary-dark, .has-tertiary-dark-background-color, .has-tertiary-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-dark, .has-tertiary-dark-background-color, .has-tertiary-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-dark), var(--tertiary-light)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-tertiary-darker, .has-tertiary-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--tertiary-darker) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-tertiary-darker, .has-tertiary-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--tertiary-darker), var(--tertiary-lighter)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-accent-lighter, .has-accent-lighter-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-lighter) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-lighter, .has-accent-lighter-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-lighter), var(--accent-darker)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-accent-light, .has-accent-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-light) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-light, .has-accent-light-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-light), var(--accent-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-accent-dark, .has-accent-dark-background-color, .has-accent-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-dark, .has-accent-dark-background-color, .has-accent-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-dark), var(--accent-light)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-accent-darker, .has-accent-darker-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--accent-darker) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-accent-darker, .has-accent-darker-background-color {
+    /* Modern color scheme aware version: */
+    background-color: light-dark(var(--accent-darker), var(--accent-lighter)) !important;
+    color: light-dark(var(--text-on-dark), var(--text-on-light)) !important;
+  }
+}
+
+.bg-error, .bg-error-light, .has-error-background-color, .has-error-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--error-light) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-error, .bg-error-light, .has-error-background-color, .has-error-light-background-color {
+    background-color: light-dark(var(--error-light), var(--error-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-error-dark, .has-error-dark-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--error-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-error-dark, .has-error-dark-background-color {
+    background-color: light-dark(var(--error-light), var(--error-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-notice, .bg-notice-light, .has-notice-background-color, .has-notice-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--notice-light) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-notice, .bg-notice-light, .has-notice-background-color, .has-notice-light-background-color {
+    background-color: light-dark(var(--notice-light), var(--notice-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-notice-dark, .has-notice-dark-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--notice-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-notice-dark, .has-notice-dark-background-color {
+    background-color: light-dark(var(--notice-light), var(--notice-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-success, .bg-success-light, .has-success-background-color, .has-success-light-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--success-light) !important;
+  color: var(--text-on-light) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-success, .bg-success-light, .has-success-background-color, .has-success-light-background-color {
+    background-color: light-dark(var(--success-light), var(--success-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+.bg-success-dark, .has-success-dark-background-color {
+  /* Fallback for browsers without light-dark(): */
+  background-color: var(--success-dark) !important;
+  color: var(--text-on-dark) !important;
+}
+@supports (color: light-dark(black, white)) {
+  .bg-success-dark, .has-success-dark-background-color {
+    background-color: light-dark(var(--success-light), var(--success-dark)) !important;
+    color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+  }
+}
+
+/* Utility classes for text colors only */
+.text-primary-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-lighter);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-lighter), var(--primary-darker));
+  }
+}
+
+.text-primary-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-light);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-light), var(--primary-dark));
+  }
+}
+
+.text-primary-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-dark), var(--primary-light));
+  }
+}
+
+.text-primary-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--primary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-primary-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--primary-darker), var(--primary-lighter));
+  }
+}
+
+.text-secondary-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-lighter);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-lighter), var(--secondary-darker));
+  }
+}
+
+.text-secondary-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-light);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-light), var(--secondary-dark));
+  }
+}
+
+.text-secondary-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-dark), var(--secondary-light));
+  }
+}
+
+.text-secondary-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--secondary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-secondary-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--secondary-darker), var(--secondary-lighter));
+  }
+}
+
+.text-tertiary-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-lighter);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-lighter), var(--tertiary-darker));
+  }
+}
+
+.text-tertiary-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-light);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-light), var(--tertiary-dark));
+  }
+}
+
+.text-tertiary-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-dark), var(--tertiary-light));
+  }
+}
+
+.text-tertiary-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--tertiary-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-tertiary-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--tertiary-darker), var(--tertiary-lighter));
+  }
+}
+
+.text-accent-lighter {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-lighter);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-lighter {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-lighter), var(--accent-darker));
+  }
+}
+
+.text-accent-light {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-light);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-light {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-light), var(--accent-dark));
+  }
+}
+
+.text-accent-dark {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-dark {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-dark), var(--accent-light));
+  }
+}
+
+.text-accent-darker {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--accent-darker);
+}
+@supports (color: light-dark(black, white)) {
+  .text-accent-darker {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--accent-darker), var(--accent-lighter));
+  }
+}
+
+.text-error {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--error-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-error {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--error-light), var(--error-dark));
+  }
+}
+
+.text-notice {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--notice-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-notice {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--notice-light), var(--notice-dark));
+  }
+}
+
+.text-success {
+  /* Fallback for browsers without light-dark(): */
+  color: var(--success-dark);
+}
+@supports (color: light-dark(black, white)) {
+  .text-success {
+    /* Modern color scheme aware version: */
+    color: light-dark(var(--success-light), var(--success-dark));
+  }
+}
+

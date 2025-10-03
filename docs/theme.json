@@ -483,7 +483,7 @@
 		"useRootPaddingAwareAlignments": true
 	},
 	"styles": {
-    	"css": ":root,.editor-styles-wrapper{ --text-on-dark: #F7F3EE; --text-on-light: #453521; --primary-lighter: #dde6fc; --primary-light: #bed0f9; --primary-dark: #0e3894; --primary-darker: #0a2b71; --secondary-lighter: #faddfa; --secondary-light: #f6bef6; --secondary-dark: #701070; --secondary-darker: #570c57; --tertiary-lighter: #b4fce6; --tertiary-light: #08f1a9; --tertiary-dark: #03563c; --tertiary-darker: #02412d; --accent-lighter: #f9dbeb; --accent-light: #f3bcd9; --accent-dark: #83164f; --accent-darker: #5f1039; --error-light: #f1c6c6; --error-dark: #781d1d; --notice-light: #e8e100; --notice-dark: #504d00; --success-light: #a8e1c2; --success-dark: #1f5a3b; --base: #D6D2CE; --contrast: #1A1514; }",
+    	"css": ":root,.editor-styles-wrapper{ --text-on-dark: #F8F7F7; --text-on-light: #453521; --primary-lighter: #e2eafc; --primary-light: #bed0f9; --primary-dark: #1146ba; --primary-darker: #0c3183; --secondary-lighter: #ebe2fb; --secondary-light: #d8c9f7; --secondary-dark: #561dc8; --secondary-darker: #421699; --tertiary-lighter: #c9f6fb; --tertiary-light: #6de5f3; --tertiary-dark: #085961; --tertiary-darker: #06464d; --accent-lighter: #f9def2; --accent-light: #f3bbe3; --accent-dark: #8a186a; --accent-darker: #6a1251; --error-light: #f1c6c6; --error-dark: #8d2222; --notice-light: #fffa50; --notice-dark: #f1e900; --success-light: #a8e1c2; --success-dark: #1f5a3b;",
 		"blocks": {
 			"core/comments-title": {
 				"typography": {

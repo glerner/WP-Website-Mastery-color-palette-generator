@@ -1,11 +1,4 @@
-html.cf-theme-dark {
-    color-scheme: dark;
-}
-
-:root,
-:root.cf-theme-dark .cf-theme-inverted,
-:root.cf-theme-dark .theme-always-light,
-:root.cf-theme-light .cf-theme-inverted .theme-always-light {
+:root {
     --cf-min-screen-width: 320px;
     --cf-max-screen-width: 1400px;
     /* Base brand colors set from Export panel (AAA-verified) */

@@ -208,6 +208,92 @@ Notes:
 
 ---
 
+# Visitor Light/Dark Toggle (WordPress)
+
+If your exported styles use `light-dark()` CSS function for variables, you can offer visitors a manual Light/Dark/Auto toggle that plays nicely with system preference and avoids flashes.
+
+This repo includes a small helper and script you can copy into a theme:
+
+- `inc/theme-color-scheme-toggle.php`
+- `assets/js/color-scheme-toggle.js`
+
+## Steps
+
+1) Copy the files into your theme
+
+- Copy `inc/theme-color-scheme-toggle.php` to your theme’s `inc/` folder
+- Copy `assets/js/color-scheme-toggle.js` to your theme, e.g. `assets/js/color-scheme-toggle.js`
+
+2) Wire it in `functions.php`
+
+```php
+// add to functions.php of your (child) theme
+/**
+ * Light/Dark/Auto visitor toggle hooks:
+ * - wpwm_output_initial_color_scheme: prints a tiny inline bootstrap in <head> to set
+ *   html[data-color-scheme] pre-paint to avoid flashes.
+ * - wpwm_enqueue_theme_color_scheme_toggle: enqueues the small front-end JS that manages
+ *   the toggle control and persists preference to localStorage.
+ * - wpwm_body_class_color_scheme (optional): adds a placeholder body class for SSR parity.
+ */
+require get_stylesheet_directory() . '/inc/theme-color-scheme-toggle.php';
+add_action( 'wp_head', 'wpwm_output_initial_color_scheme', 0 );
+add_action( 'wp_enqueue_scripts', 'wpwm_enqueue_theme_color_scheme_toggle' );
+add_filter( 'body_class', 'wpwm_body_class_color_scheme' ); // optional
+```
+
+If you put the JS in a different location, filter its URI:
+
+```php
+add_filter( 'wpwm_color_scheme_toggle_src', function( $src ){
+  return get_stylesheet_directory_uri() . '/path/to/your/color-scheme-toggle.js';
+});
+```
+
+3) Minimal CSS hooks (theme-level)
+
+Add these to ensure `light-dark()` responds to your current mode, and that manual overrides work:
+
+```css
+:root { color-scheme: light dark; }
+html[data-color-scheme="light"] { color-scheme: light; }
+html[data-color-scheme="dark"]  { color-scheme: dark; }
+```
+
+Your variables can continue to use `light-dark(lightValue, darkValue)`, for example:
+
+```css
+:root {
+  --bg: light-dark(white, #0b0b0c);
+  --fg: light-dark(#0c0c0d, white);
+}
+body { background: var(--bg); color: var(--fg); }
+```
+
+4) Add a menu item as the toggle
+
+Create a custom link in your main menu (Appearance → Menus or Navigation), and add the CSS class `js-theme-toggle` to that item. The script will upgrade it into a cyclic toggle (Auto → Dark → Light → Auto), persist choice to `localStorage`, and keep the label in sync.
+
+Optionally, add a span to control the label area without replacing icons:
+
+```html
+<a href="#" class="js-theme-toggle"><svg><!-- your icon --></svg> <span data-label>Auto</span></a>
+```
+
+5) Behavior details
+
+- The helper prints a tiny inline bootstrap in `<head>` to set `html[data-color-scheme]` before first paint, preventing flashes.
+- The JS listens for clicks on elements with `.js-theme-toggle` or `[data-theme-toggle]` and cycles a stored preference: `auto` | `dark` | `light`.
+- When set to `auto`, it reflects the system’s `prefers-color-scheme` dynamically (listens for changes and updates).
+- Adds convenience classes on `<html>`: `has-dark-scheme` / `has-light-scheme`.
+- Labels are localized via `WPWM_TOGGLE_LABELS` and can be filtered in PHP.
+
+6) Progressive enhancement
+
+Browsers that fully support `color-scheme` and `light-dark()` will seamlessly honor the manual mode using `html[data-color-scheme]`. Older browsers will at minimum respect the `color-scheme` hint; your palette should still be readable thanks to variable defaults.
+
+---
+
 # Troubleshooting
 
 * __Port busy__: run `npm run dev -- --port 5174` and open http://localhost:5174
