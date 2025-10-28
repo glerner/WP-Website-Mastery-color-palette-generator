@@ -177,6 +177,18 @@ pre code {
   --chart-color-5: hsl(260 60% 70%);
 }
 
+/*
+  Utilities
+  ------------------------------------------------------------------
+  Use these utilities to avoid ad-hoc inline styles and ensure
+  consistent list presentation where desired.
+*/
+/* Circular bullets utility: apply only where explicitly added */
+.u-list-circle li {
+  list-style: circle;
+  margin-left: 1em;
+}
+
 /* Ensure app takes full viewport height and prevent outer page scroll */
 html,
 body,
@@ -196,6 +208,22 @@ body {
 p {
   margin-bottom: 1em;
 }
+
+/* Global list styles: ensure bullets/numbers are visible with consistent spacing */
+ul,
+ol {
+  margin: 0 0 1em 0;
+  padding-left: 0; /* control indent via li margin */
+}
+ul li,
+ol li {
+  text-indent: 0;
+  margin-left: 1em;
+  padding-left: 0.1em;
+  list-style-position: outside;
+}
+ul li { list-style: circle; }
+ol li { list-style: decimal; }
 
 /* Inputs and interactive controls default to body size */
 button,

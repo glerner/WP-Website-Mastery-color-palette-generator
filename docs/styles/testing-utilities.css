@@ -10,6 +10,35 @@ Also, you can export these to any other program with colors, e.g. Figma
 /* Variables like --primary-dark, --error-light, etc. are defined by your theme.json styles.css for each style variation. */
 /* This file provides utility classes that use those variables. */
 
+/* Alias variables from your uploaded theme.json (copy to your child theme style.css). Best to assign generated proper-contrast Palette colors e.g. --accent: var(--accent-light); or --base: var(--text-on-dark); */
+:root, .editor-styles-wrapper {
+  --primary-dark: var(--primary-dark);
+  --secondary-dark: var(--secondary-dark);
+  --tertiary-dark: var(--tertiary-dark);
+  --accent-dark: var(--accent-dark);
+  --primary-darker: var(--primary-darker);
+  --secondary-darker: var(--secondary-darker);
+  --tertiary-darker: var(--tertiary-darker);
+  --accent-darker: var(--accent-darker);
+  --primary-light: var(--primary-light);
+  --secondary-light: var(--secondary-light);
+  --tertiary-light: var(--tertiary-light);
+  --accent-light: var(--accent-light);
+  --primary-lighter: var(--primary-lighter);
+  --secondary-lighter: var(--secondary-lighter);
+  --tertiary-lighter: var(--tertiary-lighter);
+  --accent-lighter: var(--accent-lighter);
+  --error-light: var(--error-light);
+  --error-dark: var(--error-dark);
+  --notice-light: var(--notice-light);
+  --notice-dark: var(--notice-dark);
+  --success-light: var(--success-light);
+  --success-dark: var(--success-dark);
+  --base: var(--base);
+  --contrast: var(--contrast);
+  --transparent: transparent;
+}
+
 :root {
   /* Hint to browsers that both color schemes are supported */
   color-scheme: light dark;

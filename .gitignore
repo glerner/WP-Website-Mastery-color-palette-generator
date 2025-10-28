@@ -65,3 +65,14 @@ changes.md
 
 # Generated CSS artifacts
 *.generated.css
+
+# PHP dependencies and tooling
+vendor/
+composer.phar
+.phpunit.result.cache
+
+# Generic caches and temp files
+.cache/
+*.swp
+*.swo
+*~

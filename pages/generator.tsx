@@ -208,7 +208,7 @@ const GeneratorPage = () => {
   };
   const [semanticBandSelection, setSemanticBandSelection] = useState<SemanticBandSelection>(SEMANTIC_BAND_DEFAULTS);
   const [themeConfig, setThemeConfig] = useState<any | undefined>(undefined);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dirInputRef = useRef<HTMLInputElement | null>(null);
   // Details parsed from an imported theme.json (for display only)
   const [importDetails, setImportDetails] = useState<{
     schema?: string;
@@ -227,10 +227,24 @@ const GeneratorPage = () => {
       if (rawDetails) setImportDetails(JSON.parse(rawDetails));
     } catch { }
   }, []);
+
+  // Ensure the folder picker input has proper directory attributes across browsers
+  useEffect(() => {
+    const el = dirInputRef.current;
+    if (!el) return;
+    try {
+      el.setAttribute('webkitdirectory', '');
+      el.setAttribute('directory', '');
+      el.setAttribute('mozdirectory', '');
+    } catch { }
+  }, []);
+
+
+
   // Default when nothing has been saved yet; a hydration effect below will
   // load persisted values from localStorage and overwrite these shortly.
   // Defaults per request
-  const [textOnDark, setTextOnDark] = useState<string>('#F7F3EE');
+  const [textOnDark, setTextOnDark] = useState<string>('#F8F7F7');
   const [textOnLight, setTextOnLight] = useState<string>('#453521');
 
   // Build variations with semantics applied
@@ -283,17 +297,14 @@ const GeneratorPage = () => {
     }
   }, [palette, exactSelections]);
 
-  // Keep exactSelections (Palette/Export source) in sync with current Adjust selections
-  // whenever the underlying palette/variations or selections change. This ensures that
-  // editing on the Manual tab (which updates the base palette) propagates through Adjust
-  // into the Palette tab without requiring additional user interaction.
-  useEffect(() => {
+  // Keep exactSelections (Palette/Export source) in sync with current Adjust selections.
+  const syncExactFromSelections = useCallback(() => {
     try {
       const families = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const);
       const next: typeof exactSelections = { ...(exactSelections as any) } as any;
       families.forEach((k) => {
         const sel = (selections as any)[k];
-        if (!sel) return; // nothing to sync for this family
+        if (!sel) return;
         const hasAnySelection = sel.lighterIndex != null || sel.lightIndex != null || sel.darkY != null || sel.darkerY != null;
         if (!hasAnySelection) return;
         const entry = (paletteWithVariations as any)[k];
@@ -328,9 +339,23 @@ const GeneratorPage = () => {
         addPick('dark', undefined, sel.darkY);
         addPick('darker', undefined, sel.darkerY);
       });
-      setExactSelections(next);
+      // Avoid unnecessary state updates that cause render loops
+      const same = (() => {
+        try { return JSON.stringify(next) === JSON.stringify(exactSelections); } catch { return false; }
+      })();
+      if (!same) setExactSelections(next);
     } catch { }
-  }, [paletteWithVariations, selections, textOnLight, textOnDark]);
+  }, [paletteWithVariations, selections, textOnLight, textOnDark, exactSelections]);
+
+  useEffect(() => { syncExactFromSelections(); }, [paletteWithVariations, selections, textOnLight, textOnDark, syncExactFromSelections]);
+
+  // When switching to Palette tab, ensure sync has occurred (covers user-perceived lag after edits)
+  useEffect(() => {
+    if (activeTab === 'palette') {
+      // Defer one tick to allow any in-flight palette recalcs to complete
+      setTimeout(() => { try { syncExactFromSelections(); } catch { } }, 0);
+    }
+  }, [activeTab, syncExactFromSelections]);
 
   // Synchronize Adjust highlights (selections) from exactSelections so the initially highlighted
   // swatches match what Palette/Export are using.
@@ -367,7 +392,9 @@ const GeneratorPage = () => {
         });
         (next as any)[k] = cur;
       });
-      setSelections(next);
+      // Avoid unnecessary state updates to prevent render loops
+      const same = (() => { try { return JSON.stringify(next) === JSON.stringify(selections); } catch { return false; } })();
+      if (!same) setSelections(next);
     } catch { }
   }, [exactSelections, paletteWithVariations]);
 
@@ -625,7 +652,17 @@ const GeneratorPage = () => {
       files['inc/fse-editor-chrome-styles.php'] = strToU8(includeEditorChromeStylesPhp);
       contentsList.push(' - inc/fse-editor-chrome-styles.php');
       // Generate a single shared utilities CSS file for all variations
-      const cssStrOnce = generateCssClasses(paletteWithVariations as any, semanticBandSelection as any, { textOnDark, textOnLight });
+      // Prepare alias variables from the uploaded theme.json palette (if any)
+      const themeAliases: Array<{ slug: string; color: string; name?: string }> = Array.isArray((themeConfig as any)?.settings?.color?.palette)
+        ? ((themeConfig as any).settings.color.palette as Array<any>)
+          .filter((e) => e && typeof e.slug === 'string' && typeof e.color === 'string' && e.slug.trim() && e.color.trim())
+          .map((e) => ({ slug: String(e.slug).trim().toLowerCase(), color: String(e.color).trim(), name: e.name }))
+        : [];
+      const cssStrOnce = generateCssClasses(
+        paletteWithVariations as any,
+        semanticBandSelection as any,
+        { textOnDark, textOnLight, themeAliases }
+      );
       const utilitiesCssPath = `styles/${titleSlug}-utilities.css`;
       files[utilitiesCssPath] = strToU8(cssStrOnce);
       contentsList.push(` - ${utilitiesCssPath}`);
@@ -773,7 +810,7 @@ const GeneratorPage = () => {
   }, [semanticBandSelection]);
 
   // Import an existing theme.json to read schema/version and surface base/contrast colors for the user to copy
-  const handleImportThemeJson = useCallback(async (file: File) => {
+  const handleImportThemeJson = useCallback(async (file: File, rawInputPath?: string) => {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
@@ -809,11 +846,30 @@ const GeneratorPage = () => {
       }
 
       // Build details object without undefined optional keys (exactOptionalPropertyTypes)
+      // Use the file input's value as-is for display (browsers usually return a fake path for security).
+      const nicePath = (() => {
+        const s = typeof rawInputPath === 'string' ? rawInputPath : '';
+        return s || undefined;
+      })();
       const details: any = { colors, warnings };
+      // Build a concise display path: wp-content/themes/<theme>/theme.json when possible
+      const deriveDisplayPath = (): string => {
+        const src = nicePath || '';
+        if (src) {
+          const norm = src.replace(/\\/g, '/');
+          const m = norm.match(/wp-content\/themes\/([^/]+)\/theme\.json$/i);
+          if (m) return `wp-content/themes/${m[1]}/theme.json`;
+          const m2 = norm.match(/themes\/([^/]+)\/theme\.json$/i);
+          if (m2) return `themes/${m2[1]}/theme.json`;
+        }
+        return file?.name || 'theme.json';
+      };
+      details.file = deriveDisplayPath();
       if (schema) details.schema = schema;
       if (version != null) details.version = version;
       if (typeof parsed?.title === 'string') details.title = parsed.title;
       setImportDetails(details);
+      try { localStorage.setItem('gl_import_details', JSON.stringify(details)); } catch {}
 
       // Do not show a success toast; details are displayed inline under the explanation.
     } catch (e) {
@@ -821,6 +877,75 @@ const GeneratorPage = () => {
       setImportDetails({ error: 'Invalid theme.json file. Please select a valid JSON.' });
     }
   }, [themeName]);
+
+  // Import style.css to extract Theme Name from header
+  const handleImportStyleCss = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
+      // WordPress header is in a CSS comment at the top; scan first ~200 lines
+      const lines = text.split(/\r?\n/).slice(0, 200);
+      let found: string | undefined;
+      for (const ln of lines) {
+        const m1 = ln.match(/^\s*Theme\s*Name\s*:\s*(.+)$/i);
+        const m2 = m1 ? null : ln.match(/^\s*Theme\s*:\s*(.+)$/i);
+        const m = m1 || m2;
+        if (m && m[1]) { found = String(m[1]).trim(); break; }
+      }
+      if (found) {
+        setThemeName(found);
+        // Merge into importDetails for display
+        setImportDetails((prev) => ({ ...(prev||{}), title: found }));
+        try { localStorage.setItem('gl_theme_name', found); } catch {}
+      }
+    } catch { }
+  }, []);
+
+  // Import both theme.json and style.css from a selected theme directory
+  const handleImportThemeDir = useCallback(async (files: FileList | null) => {
+    try {
+      if (!files || files.length === 0) return;
+      const all = Array.from(files);
+      const getRel = (f: File) => ((f as any).webkitRelativePath || f.name || '').replace(/\\/g, '/');
+      // Find theme.json
+      const themeFile = all.find(f => /(^|\/)theme\.json$/i.test(getRel(f)));
+      if (themeFile) {
+        await handleImportThemeJson(themeFile, getRel(themeFile));
+      }
+      // Find style.css in same folder as theme.json if possible
+      if (themeFile) {
+        const rel = getRel(themeFile);
+        const baseDir = rel.replace(/\/theme\.json$/i, '').replace(/\/$/, '');
+        const styleExact = all.find(f => getRel(f).toLowerCase() === `${baseDir}/style.css`.toLowerCase());
+        const styleFile = styleExact || all.find(f => /(^|\/)style\.css$/i.test(getRel(f)));
+        if (styleFile) await handleImportStyleCss(styleFile);
+      }
+    } catch { }
+  }, [handleImportThemeJson, handleImportStyleCss]);
+
+  // Prefer File System Access API for folder-pick to avoid selecting many files; fallback to hidden input
+  const handlePickThemeFolder = useCallback(async () => {
+    try {
+      const navAny: any = typeof window !== 'undefined' ? (window as any) : undefined;
+      const fsPicker = navAny?.showDirectoryPicker;
+      if (!fsPicker) { dirInputRef.current?.click(); return; }
+      const dirHandle: any = await fsPicker.call(navAny, { id: 'wp-theme-folder', mode: 'read' });
+      if (!dirHandle) return;
+      const getFileIfExists = async (name: string) => {
+        try { const h = await dirHandle.getFileHandle(name, { create: false }); return await h.getFile(); } catch { return undefined; }
+      };
+      const themeFile = await getFileIfExists('theme.json');
+      if (themeFile) await handleImportThemeJson(themeFile, `themes/${String(dirHandle?.name || '')}/theme.json`);
+      const styleFile = await getFileIfExists('style.css');
+      if (styleFile) await handleImportStyleCss(styleFile);
+      if (themeFile && dirHandle?.name) {
+        const folder = String(dirHandle.name);
+        setImportDetails((prev) => ({ ...(prev || {}), file: `themes/${folder}/theme.json` }));
+      }
+    } catch {
+      // Fall back to legacy input if picker not available or user cancels
+      dirInputRef.current?.click();
+    }
+  }, [handleImportThemeJson, handleImportStyleCss]);
 
   // Build AAA-compliant tint target lists for a very light base color and resolve Y from an index
   const getTintTargets = React.useCallback((textOnDarkHex: string) => {
@@ -1081,17 +1206,29 @@ const GeneratorPage = () => {
               <TabsContent value="instructions" className={styles.tabContent}>
                 <div className={styles.instructionsContent}>
                   <h2 className={styles.sectionTitle}>Instructions</h2>
+                  <p><strong>This application generates Color Palettes for WordPress.</strong></p>
+                  <ul className="u-list-circle">
+                    <li>It adjusts every color you enter, to ensure proper contrast and readability.</li>
+                    <li>You will have 2 tints and 2 shades of each color, to use on your website.</li>
+                    <li>You will also have colors for notice, error, success that are adjusted for contrast.</li>
+                    <li>The Palette will also have light mode and dark mode, using <em>your colors</em> not colors made up by some algorithm.</li>
+                    <li>Instead of <b>color numbers</b> embedded in your pages (so to change site colors, you would have to edit every Block where you set a color, on every page), you will now have <b>named color variables</b> assigned to blocks where you specify a color. Change the site colors by changing the color palette; easy.</li>
+                  </ul>
                   <p>Use the <strong>AI</strong> tab (coming soon) or <strong>Manual</strong> tab to set your basic colors.</p>
-                  <p>In the <strong>Manual</strong> tab, enter your Theme Name (brief, appears in WordPress tooltip in Palette selection).</p>
-                  <p>Upload your child theme's <code>theme.json</code> file (needed so your generated theme variations match the version).</p>
-                  <p>In the <strong>Manual</strong> tab, enter hex color numbers, or click on the color swatch for HSL adjustment slider and picker.</p>
+                  <p>In the <strong>Manual</strong> tab:</p>
+                  <ul>
+                    <li>Upload your child theme's <code>theme.json</code> file. This is *needed* so your generated theme variations match the version, and so all the colors your theme expects will be available (you can set the color to a new color number; but you shouldn't skip defining it, even if you don't plan to use it).</li>
+                    <li>Enter your Theme Name (brief, as it appears in a WordPress tooltip in Palette selection).</li>
+                    <li>Enter hex color numbers, or click on the color swatch for HSL adjustment.</li>
+                    <li>There is a color wheel, so you can check that colors aren't too close to each other. Generally have colors with a hue difference of at least 30.</li>
+                  </ul>
                   <p>These will all be adjusted for proper text color contrast.</p>
                   <p>Click the "Save colors and settings" button so your choices are there when you restart.</p>
-                  <p>Open the <strong>Palette</strong> tab to review color variations. Click any swatch to jump to its <strong>Adjust</strong> section.</p>
-                  <p>In the <strong>Adjust</strong> tab, fine-tune tints and shades (luminance). Your selections are saved locally, since you will likely use the same selection even as you change hues.</p>
+                  <p>Open the <strong>Palette</strong> tab to review the current contrast-adjusted colors. Click any swatch to <strong>Adjust</strong> the selected tints and shades, if they don't look "right" or to check which you like best.</p>
+                  <p>In the <strong>Adjust</strong> tab, select your preferred tints and shades from among those that have excellent contrast (and are visibly different). Your selections for each row are saved locally, since you will likely use the same selection even as you change hues.</p>
                   <p>Use the <strong>Demo</strong> tab to preview components in light/dark schemes.</p>
-                  <p>When satisfied, go to <strong>Export</strong> to download your ZIP file with all the <code>theme.json</code> Palette files, with combinations of the Primary, Secondary and Tertiary colors. Also has companion CSS variables and color classes. The file name has the dark color numbers.</p>
-                  <p>The Export tab also shows Hex and HSL, convenient for copying. </p>
+                  <p>When satisfied, go to <strong>Export</strong> to download your ZIP file with all your Theme Variations. You can export either <strong>6 variations</strong> (rotate Primary/Secondary/Tertiary; Accent fixed) or <strong>24 variations</strong> (rotate Primary/Secondary/Tertiary/Accent).</p>
+                  <p>The ZIP includes Theme Variation <code>styles/*.json</code> files and a companion CSS utilities file. The Export tab also shows copy‑friendly HEX and HSL lists.</p>
                   <p>Copy the <code>theme.json</code> files into your child theme's <code>styles</code> folder (create it if there isn't one). They will show as Palettes in your WordPress Site Editor.</p>
                   <p>You can also copy the CSS files to the styles folder, but WordPress won't use them. When you've chosen which Palette you prefer, copy the corresponding CSS to add to your existing <code>style.css</code> file.</p>
                   <img
@@ -1257,44 +1394,128 @@ const GeneratorPage = () => {
                       {/* Explanation + Import row */}
                       <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                         <div>
-                          <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Import the schema and version from your child theme's theme.json,  to ensure exported files match it.</p>
-                          <Button variant="outline" wrap onClick={() => fileInputRef.current?.click()} style={{ marginTop: 'var(--spacing-2)' }}>Import theme.json</Button>
+                          <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
+                            Import the schema and version from your child theme's theme.json (to ensure exported files match it), and load the theme name from style.css.
+                            Only theme.json and style.css are read; other files are ignored and never uploaded.
+                          </p>
+                          <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <Button variant="outline" wrap onClick={handlePickThemeFolder} style={{ marginTop: 'var(--spacing-2)' }}>Import theme folder</Button>
+                          </div>
                           {importDetails && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
-                              {(importDetails.schema || importDetails.version != null || importDetails.title) && (
-                                <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
-                                  {importDetails.title ? (<>
-                                    <strong>Title:</strong> {importDetails.title} {' '}
-                                  </>) : null}
-                                  {importDetails.schema ? (<>
-                                    <strong>Schema:</strong> {importDetails.schema} {' '}
-                                  </>) : null}
-                                  {importDetails.version != null ? (<>
-                                    <strong>Version:</strong> {String(importDetails.version)}
-                                  </>) : null}
-                                </p>
-                              )}
-                              {importDetails.warnings && importDetails.warnings.length > 0 && (
-                                <ul className={styles.formHelp} style={{ margin: 0, paddingLeft: '1.2em', fontSize: 'var(--cf-text-s)' }}>
-                                  {importDetails.warnings.map((w, i) => (
-                                    <li key={i}>{w}</li>
-                                  ))}
-                                </ul>
-                              )}
-                              {importDetails.error && (
-                                <p className={styles.formHelp} style={{ color: 'var(--error-text, #b00020)', fontSize: 'var(--cf-text-s)' }}>{importDetails.error}</p>
-                              )}
-                              {importDetails.colors && importDetails.colors.length > 0 && (
-                                <div>
-                                  <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>Detected palette entries (copy/paste if desired):</p>
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-3)' }}>
-                                    {importDetails.colors.map((c) => (
-                                      <div key={`${c.slug}:${c.color}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ width: 14, height: 14, borderRadius: 3, background: c.color, border: '1px solid #ccc', display: 'inline-block' }} />
-                                        <code style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}: {c.color}</code>
-                                      </div>
-                                    ))}
-                                  </div>
+                              {(importDetails.schema || importDetails.version != null || importDetails.title || (importDetails as any)?.file) && (
+                                <div className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
+                                  {(importDetails as any)?.file ? (
+                                    <div><strong>File:</strong> {(importDetails as any).file}</div>
+                                  ) : null}
+                                  {importDetails?.title ? (
+                                    <div><strong>Theme name:</strong> {importDetails.title}</div>
+                                  ) : null}
+                                  {(() => {
+                                    try {
+                                      const schemaStr = (themeConfig && typeof (themeConfig as any).$schema === 'string')
+                                        ? (themeConfig as any).$schema
+                                        : (importDetails?.schema || '');
+                                      const versionStr = (themeConfig && (themeConfig as any).version != null)
+                                        ? String((themeConfig as any).version)
+                                        : (importDetails?.version != null ? String(importDetails.version) : '');
+                                      const themePalette: Array<{ slug: string; color: string }> = Array.isArray((themeConfig as any)?.settings?.color?.palette)
+                                        ? (themeConfig as any).settings.color.palette
+                                        : [];
+                                      const detailsPalette: Array<{ slug: string; color: string }> = Array.isArray(importDetails?.colors)
+                                        ? (importDetails as any).colors
+                                        : [];
+                                      const mergedRaw = [...themePalette, ...detailsPalette];
+                                      const dedup = new Map<string, { slug: string; value: string }>();
+                                      mergedRaw.forEach((c: any) => {
+                                        if (!c) return;
+                                        const slug = String(c.slug || '').trim();
+                                        const color = String(c.color || '').trim();
+                                        if (!slug || !color) return;
+                                        const value = color;
+                                        dedup.set(slug + '::' + value, { slug, value });
+                                      });
+                                      const cols = Array.from(dedup.values());
+                                      // Partition entries
+                                      const hexRegex = /^#[0-9a-fA-F]{6}$/;
+                                      const hexEntries = cols.filter(c => hexRegex.test(c.value)).map(c => {
+                                        const { r, g, b } = hexToRgb(c.value);
+                                        const { h } = rgbToHslNorm(r, g, b);
+                                        const Y = luminance(r, g, b);
+                                        return { ...c, h, Y } as { slug: string; value: string; h: number; Y: number };
+                                      });
+                                      const nonHexEntries = cols.filter(c => !hexRegex.test(c.value));
+                                      // Best base/contrast from luminance extremes (if available)
+                                      const mostWhite = hexEntries.length ? hexEntries.slice().sort((a, b) => b.Y - a.Y)[0] : undefined;
+                                      const mostBlack = hexEntries.length ? hexEntries.slice().sort((a, b) => a.Y - b.Y)[0] : undefined;
+                                      // Sort remaining hex by hue
+                                      const byHue = hexEntries.slice().sort((a, b) => a.h - b.h);
+                                      // Build final ordered list: best base/contrast (dedup), then hue, then non-hex (by slug)
+                                      const seen = new Set<string>();
+                                      const ordered: Array<{ slug: string; value: string; badge?: string }> = [];
+                                      const pushUnique = (item?: { slug: string; value: string }, badge?: string) => {
+                                        if (!item) return;
+                                        const key = item.slug + '::' + item.value;
+                                        if (seen.has(key)) return;
+                                        seen.add(key);
+                                        // Avoid specifying optional property when undefined (exactOptionalPropertyTypes)
+                                        ordered.push(badge ? { ...item, badge } : { ...item });
+                                      };
+                                      pushUnique(mostWhite, 'best for Text on Dark (near white)');
+                                      pushUnique(mostBlack, 'best for Text on Light (near black)');
+                                      byHue.forEach(e => pushUnique({ slug: e.slug, value: e.value }));
+                                      nonHexEntries
+                                        .slice()
+                                        .sort((a, b) => a.slug.localeCompare(b.slug))
+                                        .forEach(e => pushUnique(e));
+                                      return (
+                                        <div style={{ display: 'grid', gap: 8 }}>
+                                          <div style={{ fontSize: 'var(--cf-text-s)' }}>
+                                            <strong>Schema:</strong> {schemaStr || '—'}
+                                          </div>
+                                          <div style={{ fontSize: 'var(--cf-text-s)' }}>
+                                            <strong>Version:</strong> {versionStr || '—'}
+                                          </div>
+                                          <div style={{ fontWeight: 600 }}>Detected palette entries (copy/paste if desired):</div>
+                                          <div>
+                                            <p className={styles.formHelp} style={{ marginTop: 8, marginBottom: 8 }}>Click the color swatch or color number to copy to the clipboard. (Sorted by Hue)</p>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+                                              {ordered.map((c) => (
+                                                <div
+                                                  key={c.slug + String(c.value)}
+                                                  onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
+                                                  role="button"
+                                                  tabIndex={0}
+                                                  onKeyDown={async (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } } }}
+                                                  title="Click to copy"
+                                                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                                                >
+                                                  <button
+                                                    type="button"
+                                                    title="Click to copy"
+                                                    onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
+                                                    style={{ width: 28, height: 28, borderRadius: 4, background: (c as any).value, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.2)', border: 'none', cursor: 'pointer' }}
+                                                  />
+                                                  <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                                                    <span style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}</span>
+                                                    <button
+                                                      type="button"
+                                                      title="Click to copy"
+                                                      onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
+                                                      className={styles.copyCodeButton}
+                                                    >{(c as any).value}</button>
+                                                    {c.badge && (
+                                                      <span style={{ fontSize: 'var(--cf-text-xs)', opacity: 0.8 }}>{c.badge}</span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    } catch { return null; }
+                                  })()}
                                 </div>
                               )}
                             </div>
@@ -1307,13 +1528,14 @@ const GeneratorPage = () => {
                           }}
                         />
                         <input
-                          ref={fileInputRef}
+                          ref={dirInputRef}
                           type="file"
-                          accept="application/json,.json"
+                          multiple
+                          accept=".json,.css"
                           style={{ display: 'none' }}
                           onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleImportThemeJson(f);
+                            const list = e.target.files;
+                            handleImportThemeDir(list);
                             e.currentTarget.value = '';
                           }}
                         />
@@ -1321,7 +1543,7 @@ const GeneratorPage = () => {
 
                       {/* Theme Name block */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
-                        <label className={styles.formLabel} style={{ margin: 0 }}>Theme Name</label>
+                        <label className={styles.formLabel} style={{ margin: 0 }}>Output Theme Name</label>
                         <Input
                           placeholder="e.g., Business Calm"
                           value={manualForm.values.themeName}
@@ -1386,12 +1608,12 @@ const GeneratorPage = () => {
                             } catch { }
                             // Reset state to initial defaults
                             setThemeName('');
-                            setTextOnDark('#F7F3EE');
+                            setTextOnDark('#F8F7F7');
                             setTextOnLight('#453521');
                             setPalette(initialPalette);
                             manualForm.setValues({
                               themeName: '',
-                              textOnDark: '#F7F3EE',
+                              textOnDark: '#F8F7F7',
                               textOnLight: '#453521',
                               primary: initialPalette.primary.hex,
                               secondary: initialPalette.secondary.hex,
@@ -1502,6 +1724,8 @@ const GeneratorPage = () => {
                         {/* Legend grid removed in favor of pointer-style labels */}
                       </div>
                       {/* Save button moved above, next to Theme Name */}
+
+                      {/* Imported theme.json palette block moved above (replaces partial list) */}
                     </div>
 
                     {/* Right column: color entry controls */}
@@ -1617,7 +1841,7 @@ const GeneratorPage = () => {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => {
-                                            const hex = '#f2f2f2';
+                                            const hex = '#F8F7F7';
                                             manualForm.setValues({ ...manualForm.values, textOnDark: hex });
                                             setTextOnDark(hex);
                                           }}
@@ -1633,6 +1857,7 @@ const GeneratorPage = () => {
                           </FormControl>
                           <FormMessage />
                         </FormItem>
+
                         {(Object.keys(palette) as (ColorType | SemanticColorType)[]).map((key) => (
                           <FormItem key={key} name={key}>
                             <FormControl>

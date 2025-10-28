@@ -7,7 +7,7 @@ type SemanticBandSelection = { error: SemanticPerScheme; warning: SemanticPerSch
 export const generateCssClasses = (
   palette: PaletteWithVariations,
   semanticBandSelection?: SemanticBandSelection,
-  opts?: { textOnDark?: string; textOnLight?: string }
+  opts?: { textOnDark?: string; textOnLight?: string; themeAliases?: Array<{ slug: string; color: string; name?: string }> }
 ): string => {
   let css = '/* ';
   css += 'NOTE: For developer use only. WordPress does not load these generated CSS files by default.\n';
@@ -50,21 +50,36 @@ export const generateCssClasses = (
   // Informational comments for developers consuming this CSS
   css += '/* Variables like --primary-dark, --error-light, etc. are defined by your theme.json styles.css for each style variation. */\n';
   css += '/* This file provides utility classes that use those variables. */\n\n';
-  css += ':root {\n';
+  // Include theme alias variables, if provided (from the uploaded theme.json)
+  if (Array.isArray(opts?.themeAliases) && opts!.themeAliases!.length) {
+    css += '/* Alias variables from your uploaded theme.json (copy to your child theme style.css). Best to assign generated proper-contrast Palette colors e.g. --accent: var(--accent-light); or --base: var(--text-on-dark); */\n';
+    css += ':root, .editor-styles-wrapper {\n';
+    opts!.themeAliases!.forEach(({ slug, color }) => {
+      if (!slug || !color) return;
+      css += `  --${slug}: ${color};\n`;
+    });
+    css += '}\n\n';
+  }
+
+  css += ':root, .editor-styles-wrapper {\n';
   css += '  /* Hint to browsers that both color schemes are supported */\n';
   css += '  color-scheme: light dark;\n';
   css += '  /* Compatibility mappings for parent themes expecting preset color slugs */\n';
   css += '  /* These only apply when copied into your theme\'s style.css */\n';
-  css += '  --wp--preset--color--base: var(--text-on-dark, #ffffff);\n';
-  css += '  --wp--preset--color--contrast: var(--text-on-light, #000000);\n';
-  css += '  --wp--preset--color--white: var(--text-on-dark, #ffffff);\n';
-  css += '  --wp--preset--color--black: var(--text-on-light, #000000);\n';
+  css += '  /* Don\'t re-define the CSS variables WordPress generates from theme.json (--wp--preset--*); that can cause mismatches.\n';
+  css += '   * Examples (commented on purpose):\n';
+  css += '   * --wp--preset--color--base: var(--text-on-dark, #ffffff);\n';
+  css += '   * --wp--preset--color--contrast: var(--text-on-light, #000000);\n';
+  css += '   */\n';
   css += '  /* Background convenience aliases */\n';
   css += '  --bg-primary: var(--primary-dark);\n';
   css += '  --bg-secondary: var(--secondary-dark);\n';
   css += '  --bg-tertiary: var(--tertiary-dark);\n';
   css += '  --bg-accent: var(--accent-dark);\n';
   css += '}\n\n';
+
+  // Global note about !important for WP preset classes
+  css += '/* WordPress gives all .has-* class colors !important, so !important is required to override. */\n\n';
 
   // Generate classes for main color variations (excluding base colors)
   ['primary', 'secondary', 'tertiary', 'accent'].forEach((colorType) => {
@@ -97,9 +112,7 @@ export const generateCssClasses = (
       css += `  /* Fallback for browsers without light-dark(): */\n`;
       css += `  background-color: var(--${slug}) !important;\n`;
       css += `  color: ${(step === 'lighter' || step === 'light') ? lightTextAlias : darkTextAlias} !important;\n`;
-      css += `}\n`;
-      css += `@supports (color: light-dark(black, white)) {\n`;
-      css += `  .bg-${colorType}-${step}, .has-${slug}-background-color${extra} {\n`;
+      css += `  @supports (color: light-dark(black, white)) {\n`;
       css += `    /* Modern color scheme aware version: */\n`;
       css += `    background-color: light-dark(${lightVar}, ${darkVar}) !important;\n`;
       css += `    color: light-dark(${(step === 'lighter' || step === 'light') ? lightTextAlias : darkTextAlias}, ${(step === 'lighter' || step === 'light') ? darkTextAlias : lightTextAlias}) !important;\n`;
@@ -125,9 +138,7 @@ export const generateCssClasses = (
     css += `  /* Fallback for browsers without light-dark(): */\n`;
     css += `  background-color: ${lightVar} !important;\n`;
     css += `  color: ${lightText} !important;\n`;
-    css += `}\n`;
-    css += `@supports (color: light-dark(black, white)) {\n`;
-    css += `  ${lightSelectors} {\n`;
+    css += `  @supports (color: light-dark(black, white)) {\n`;
     css += `    background-color: light-dark(${lightVar}, ${darkVar}) !important;\n`;
     css += `    color: light-dark(${lightText}, ${darkText}) !important;\n`;
     css += `  }\n`;
@@ -139,9 +150,7 @@ export const generateCssClasses = (
     css += `  /* Fallback for browsers without light-dark(): */\n`;
     css += `  background-color: ${darkVar} !important;\n`;
     css += `  color: ${darkText} !important;\n`;
-    css += `}\n`;
-    css += `@supports (color: light-dark(black, white)) {\n`;
-    css += `  ${darkSelectors} {\n`;
+    css += `  @supports (color: light-dark(black, white)) {\n`;
     css += `    background-color: light-dark(${lightVar}, ${darkVar}) !important;\n`;
     css += `    color: light-dark(${lightText}, ${darkText}) !important;\n`;
     css += `  }\n`;
@@ -174,9 +183,7 @@ export const generateCssClasses = (
       css += `.text-${colorType}-${step} {\n`;
       css += `  /* Fallback for browsers without light-dark(): */\n`;
       css += `  color: ${selectedVar};\n`;
-      css += `}\n`;
-      css += `@supports (color: light-dark(black, white)) {\n`;
-      css += `  .text-${colorType}-${step} {\n`;
+      css += `  @supports (color: light-dark(black, white)) {\n`;
       css += `    /* Modern color scheme aware version: */\n`;
       css += `    color: light-dark(${selectedVar}, ${oppositeVar});\n`;
       css += `  }\n`;
@@ -192,9 +199,7 @@ export const generateCssClasses = (
     css += `.text-${ctOut} {\n`;
     css += `  /* Fallback for browsers without light-dark(): */\n`;
     css += `  color: ${darkVar};\n`;
-    css += `}\n`;
-    css += `@supports (color: light-dark(black, white)) {\n`;
-    css += `  .text-${ctOut} {\n`;
+    css += `  @supports (color: light-dark(black, white)) {\n`;
     css += `    /* Modern color scheme aware version: */\n`;
     css += `    color: light-dark(${lightVar}, ${darkVar});\n`;
     css += `  }\n`;

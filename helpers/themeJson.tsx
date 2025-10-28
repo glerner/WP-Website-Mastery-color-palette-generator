@@ -115,8 +115,8 @@ export const buildWpVariationJson = (
 
   const paletteEntries: Array<{ slug: string; color: string; name: string }> = [];
   // Order: lighter(all), light(all), dark(all), darker(all)
-  const familyOrder: Array<'primary' | 'secondary' | 'tertiary' | 'accent'> = ['primary','secondary','tertiary','accent'];
-  const steps: Array<{ step: 'lighter'|'light'|'dark'|'darker'; labelSuffix: string }> = [
+  const familyOrder: Array<'primary' | 'secondary' | 'tertiary' | 'accent'> = ['primary', 'secondary', 'tertiary', 'accent'];
+  const steps: Array<{ step: 'lighter' | 'light' | 'dark' | 'darker'; labelSuffix: string }> = [
     { step: 'dark', labelSuffix: 'Dark' },
     { step: 'darker', labelSuffix: 'Darker' },
     { step: 'light', labelSuffix: 'Light' },
@@ -171,19 +171,65 @@ export const buildWpVariationJson = (
     { slug: 'success-light', color: 'var(--success-light)', name: 'Success Light' },
     { slug: 'success-dark', color: 'var(--success-dark)', name: 'Success Dark' },
   );
+  // Add explicit text-on-light/dark entries (these are essential for editor choices)
+  paletteEntries.push(
+    { slug: 'text-on-light', color: 'var(--text-on-light)', name: 'Text on Light' },
+    { slug: 'text-on-dark', color: 'var(--text-on-dark)', name: 'Text on Dark' },
+  );
   // Do NOT add base/contrast slugs to the palette; parent themes that expect them will resolve via CSS compatibility mappings.
   // Finally transparent convenience color
   paletteEntries.push({ slug: 'transparent', color: 'transparent', name: 'Transparent' });
 
   // Build a one-line :root CSS string for this variation with concrete hex values
+  // Prepare alias definitions for any slugs sourced from the uploaded theme.json
+  const sourcePalette: Array<{ slug: string; color?: string; name?: string }> = Array.isArray(themeConfig?.settings?.color?.palette)
+    ? themeConfig.settings.color.palette
+    : [];
+  const themeAliasPieces: string[] = [];
+  sourcePalette.forEach((entry) => {
+    if (!entry || typeof entry.slug !== 'string') return;
+    const slug = entry.slug.trim().toLowerCase();
+    const color = typeof entry.color === 'string' && entry.color.trim() ? entry.color.trim() : '';
+    if (color) themeAliasPieces.push(`--${slug}: ${color}`);
+  });
+
+  // Append theme slugs to the exported palette (deduped)
+  const existing = new Set(paletteEntries.map((e) => e.slug));
+  sourcePalette.forEach((entry) => {
+    if (!entry || typeof entry.slug !== 'string') return;
+    const slug = entry.slug.trim().toLowerCase();
+    if (existing.has(slug)) return;
+    const name = typeof entry.name === 'string' && entry.name.trim() ? entry.name : slug;
+    paletteEntries.push({ slug, color: `var(--${slug})`, name });
+    existing.add(slug);
+  });
+
   const buildOneLineCss = () => {
-    const families: Array<'primary'|'secondary'|'tertiary'|'accent'> = ['primary','secondary','tertiary','accent'];
-    const stepsList: Array<'lighter'|'light'|'dark'|'darker'> = ['lighter','light','dark','darker'];
+    const families: Array<'primary' | 'secondary' | 'tertiary' | 'accent'> = ['primary', 'secondary', 'tertiary', 'accent'];
+    const stepsList: Array<'lighter' | 'light' | 'dark' | 'darker'> = ['lighter', 'light', 'dark', 'darker'];
     const tokDark = (opts?.textOnDark && /^#[0-9a-f]{6}$/i.test(opts.textOnDark)) ? opts!.textOnDark! : '#FFFFF0';
     const tokLight = (opts?.textOnLight && /^#[0-9a-f]{6}$/i.test(opts.textOnLight)) ? opts!.textOnLight! : '#1B2227';
     const pieces: string[] = [];
+    // Canonical readable text tokens
     pieces.push(`--text-on-dark: ${tokDark}`);
     pieces.push(`--text-on-light: ${tokLight}`);
+    // Core canon and aliases
+    pieces.push(`--white: #ffffff`);
+    pieces.push(`--black: #000000`);
+    // Background and foreground: default to light-scheme sensible values; can be overridden by theme
+    pieces.push(`--surface: #ffffff`);
+    pieces.push(`--bg: var(--surface)`);
+    pieces.push(`--fg: var(--text-on-light)`);
+    pieces.push(`--text-on-white: var(--text-on-light)`);
+    pieces.push(`--text-on-black: var(--text-on-dark)`);
+    // WordPress preset compatibility (keeps existing content working) + TT23/24/25 tokens
+    pieces.push(`--wp--preset--color--base: var(--bg)`);
+    pieces.push(`--wp--preset--color--contrast: var(--fg)`);
+    pieces.push(`--wp--preset--color--background: var(--bg)`);
+    pieces.push(`--wp--preset--color--foreground: var(--fg)`);
+    // Common aliases used by themes/content
+    pieces.push(`--base: var(--bg)`);
+    pieces.push(`--contrast: var(--fg)`);
     // family steps
     families.forEach((k) => {
       const vars = ((palette as any)[k]?.variations || []) as { name: string; hex: string; step?: string }[];
@@ -194,7 +240,7 @@ export const buildWpVariationJson = (
       });
     });
     // semantics light/dark
-    const mkLD = (ct: 'error'|'warning'|'success') => {
+    const mkLD = (ct: 'error' | 'warning' | 'success') => {
       const vars = ((palette as any)[ct]?.variations || []) as { name: string; hex: string; step?: string }[];
       const map = byName(vars);
       const sel = opts?.semanticBandSelection?.[ct];
@@ -212,8 +258,9 @@ export const buildWpVariationJson = (
     if (succ.light) pieces.push(`--success-light: ${succ.light}`);
     if (succ.dark) pieces.push(`--success-dark: ${succ.dark}`);
     // Note: No fallback semantic single variables (e.g., --error) are emitted here by design.
-    // Do NOT emit --base/--contrast here; themes may define them in style.css if desired.
-    return `:root,.editor-styles-wrapper{ ${pieces.join('; ')}; }`;
+    // Base/contrast aliases added above map to bg/fg for compatibility.
+    const joined = pieces.concat(themeAliasPieces);
+    return `:root, .editor-styles-wrapper { ${joined.join('; ')}; }`;
   };
 
   const out: any = {

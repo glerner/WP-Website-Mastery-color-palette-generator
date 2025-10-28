@@ -270,7 +270,9 @@
     red, magenta, blue, cyan, lime, yellow, red
   );
   box-shadow: inset 0 0 0 10px rgba(255,255,255,0.7), 0 0 0 1px var(--border);
-  margin-right: var(--cf-space-l);
+  /* Provide outer breathing room equal to radius so labels and ticks don't clip;
+     add a little extra horizontal room to the sides. */
+  margin: var(--wheel-radius) calc(var(--wheel-radius) + 20px);
   /* Tick placement */
   --tick-radius: calc(var(--wheel-size) / 2 - 6px);
   /* Move labels slightly outside the wheel to fit 3-digit values */
@@ -615,4 +617,23 @@
 /* Add left margin when a metaLabel follows another metaLabel */
 .metaLabel + .metaLabel {
   margin-left: 8px;
+}
+
+/* Monospace code-like inline text for color values (e.g., hex or var(--token)) */
+.codeValue {
+  font-family: "Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace;
+  font-size: var(--cf-text-s);
+  color: var(--foreground);
+}
+
+/* Button version of codeValue for copy-to-clipboard elements */
+.copyCodeButton {
+  font-family: "Fira Code", "Liberation Mono", "Nimbus Mono L", "FreeMono", "DejaVu Mono", "Bitstream Vera Mono", "Lucida Console", "Andale Mono", "Courier New", monospace;
+  font-size: var(--cf-text-s);
+  color: var(--foreground);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
 }

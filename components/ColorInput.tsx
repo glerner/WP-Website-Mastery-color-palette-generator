@@ -26,6 +26,8 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
     const { r, g, b } = hexToRgb(/^#[0-9a-f]{6}$/i.test(value) ? value : '#000000');
     return rgbToHslNorm(r, g, b);
   });
+  // Track the HSL at popover open for cancel behavior
+  const startHslRef = useRef<{ h: number; s: number; l: number } | null>(null);
   const fromPickerRef = useRef(false);
   const rafIdRef = useRef<number | null>(null);
   const pendingHslRef = useRef<{ h: number; s: number; l: number } | null>(null);
@@ -77,7 +79,8 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
   };
 
   const handlePickerClick = () => {
-    // Open custom HSL popover by default
+    // Open custom HSL popover and remember starting HSL for cancel
+    startHslRef.current = hsl;
     setShowPopover(true);
   };
 
@@ -118,16 +121,34 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
   };
 
   // Close popover when clicking outside
+  const commitPopover = () => {
+    // Convert current HSL to HEX, update and propagate
+    const rgb = hslNormToRgb(hsl.h, hsl.s, hsl.l);
+    const hex = rgbToHex(rgb.r, rgb.g, rgb.b).toUpperCase();
+    setInternalValue(hex);
+    lastValidRef.current = hex;
+    onChange(hex);
+    setShowPopover(false);
+  };
+
+  const cancelPopover = () => {
+    // Revert HSL to starting value; do not propagate changes
+    if (startHslRef.current) {
+      setHsl(startHslRef.current);
+    }
+    setShowPopover(false);
+  };
+
   useEffect(() => {
     if (!showPopover) return;
     const onDocMouseDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (wrapperRef.current && !wrapperRef.current.contains(t)) {
-        setShowPopover(false);
+        cancelPopover();
       }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowPopover(false);
+      if (e.key === 'Escape') cancelPopover();
     };
     document.addEventListener('mousedown', onDocMouseDown);
     document.addEventListener('keydown', onKeyDown);
@@ -140,7 +161,7 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
   // react-colorful's HslColorPicker uses h in degrees, s/l in [0,100].
   // Our helpers expect h in degrees, s/l in [0,1].
   const handleHslChange = (next: { h: number; s: number; l: number }) => {
-    // Throttle updates to once per animation frame
+    // Throttle updates to once per animation frame; update HSL state only (no HEX propagation)
     pendingHslRef.current = next;
     if (rafIdRef.current == null) {
       rafIdRef.current = requestAnimationFrame(() => {
@@ -164,13 +185,6 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
           }
           return normalized;
         });
-        const rgb = hslNormToRgb(normalized.h, normalized.s, normalized.l);
-        const hex = rgbToHex(rgb.r, rgb.g, rgb.b).toUpperCase();
-        if (hex !== lastValidRef.current) {
-          setInternalValue(hex);
-          lastValidRef.current = hex;
-          onChange(hex);
-        }
         // Allow external sync on next frame after state settles
         requestAnimationFrame(() => {
           fromPickerRef.current = false;
@@ -282,13 +296,13 @@ export const ColorInput = ({ value, onChange, className, trailing, id, ...rest }
               </div>
             </label>
           </div>
-          {/* Fallback access to native picker */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-            <button type="button" onClick={() => setShowPopover(false)} style={{ fontSize: 'var(--cf-text-s)' }}>
-              Close
+          {/* Actions */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 8 }}>
+            <button type="button" onClick={cancelPopover} style={{ fontSize: 'var(--cf-text-s)' }}>
+              Cancel
             </button>
-            <button type="button" onClick={() => { setShowPopover(false); colorPickerRef.current?.click(); }} style={{ fontSize: 'var(--cf-text-s)' }}>
-              Native Picker
+            <button type="button" onClick={commitPopover} style={{ fontSize: 'var(--cf-text-s)' }}>
+              OK
             </button>
           </div>
         </div>

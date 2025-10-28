@@ -1,7 +1,121 @@
 # WPWM Color Palette Generator
 by WP-Website-Mastery.com
 
-Color palette theme.json generator, automatically contrast adjusting. Select tints-shades from those that match WCAG AAA contrast. Generates WordPress Theme Variation palettes.
+## Make Your Website Colors Look Great (Plain-English Guide)
+
+This tool creates a professional color set for your website and checks contrast so text stays easy to read. It plugs into WordPress “Theme Variations”, so you can switch complete looks in one click.
+
+- Generates WordPress Theme Variation palettes, and CSS variables for use in WordPress block editor and some page builders.
+- 3 basic colors, and an accent color
+- 2 light tints (-lighter and -light) and 2 dark shades (-darker and -dark) each
+- 3 semantic colors (error, notice/warning, success) light and dark variants
+- Automatically adjusts color contrast.
+- You select your preferred tints-shades from those that match WCAG AAA contrast.
+
+## What you get
+- **Better readability**: Consistent high-contrast text color (text-on-light and text-on-dark) for accessibility; if you use only these text colors, you will have WCAG AAA contrast.
+- **Brand-friendly palette**: Primary, Secondary, Tertiary, Accent, plus helpful colors like Error/Notice/Success.
+- **Ready for WordPress**: We generate CSS style classes your theme can use right away. The styles/<name>-*.json files use CSS variables, and define the colors for WordPress Theme Variations.
+- **Multiple Theme Variations**: You pick the combination of colors (which one is the site's primary color, which one is the secondary color, etc.) that you prefer, by *previewing* them on your site. Your choice of 6 variations (with the accent color set), or 24 variations (primary, secondary, tertiary and accent can all be seen in each position).
+- **Added Light-Dark Mode**: Add a companion plugin, and your website has a light and dark mode toggle. Both light mode and dark mode use colors from your Palette (not calculated colors like many light-dark plugins assign).
+- **Works with the Block Editor**: and also works in some page builders. With other page builders, you may have to paste the hex color numbers in the builder.
+
+### Do you want the main color to be the blue, the green, or the blue-green?
+- Generates all the combinations of the 3 basic colors (primary, secondary, tertiary), plus optionally accent, with the tints and shades.
+- Preview your site with the WordPress Theme Variations (this is built into WordPress), and select your preference.
+
+### Future changes to your palette
+- Most themes store color numbers in your page or post. If you change your palette, you will have to update every page element that uses a color from your palette.
+- The Theme Variations this generates, will store a color variable instead of a color number.
+- WordPress block editor (and some page builders) will store color variables instead of hard-coding color numbers (e.g., var(--primary-lighter) instead of #hex).
+- Next time you modify your color palette, you won't have to update every page element that uses a color from your palette.
+- (If your plugins and blocks follow your Palette; not all do.)
+
+### Light and Dark Mode
+- Install the optional companion light-dark toggle plugin `wpwm-color-scheme-toggle`.
+- This Color Palette Generator defines CSS variables that can be used with the CSS light-dark() function, so your site will be automatically adjusted for light and dark mode. Modern CSS light-dark() function with your palette colors, so colors adapt with your palette.
+
+
+## What you need
+- Your theme’s settings file: `theme.json` (from your parent or child theme).
+  - Many themes define their own colors as 'slug' (identifiers). Uploading your file lets this export the Palette colors and define those exact color 'slugs' your theme needs.
+  - If you can’t upload the actual theme.json file, use the “Twenty Twenty‑Five” option to try a standard setup.
+
+## How to use it
+1) **Upload** your theme’s `theme.json` (or choose the Twenty Twenty‑Five option).
+2) **Pick your two text colors**: one for light backgrounds (Text on Light), one for dark backgrounds (Text on Dark).
+3) **Adjust your brand colors**: Primary, Secondary, Tertiary, Accent. The tool keeps contrast high for readability.
+4) **Fine Tune the Tints and Shades**: Pick from among the tints and shade that have excellent color contrast. Consider the gap between white and lighter, between lighter and light, between dark and darker, and between darker and black. Since you will likely use similar selections for similar colors, the index of the selection is saved for you.
+4) **Export**: You’ll get a folder with multiple Theme Variation files and one utilities CSS.
+5) **Dark mode**: Your pages will use the colors you picked for your palette; if you specified "Primary Light" for an element in light mode, then your dark mode will have "Primary Dark"; if you specified an element uses "Secondary Darker" in light mode, then your dark mode will show "Secondary Lighter".
+6) **Future Palettes**: You can use this tool to generate new palettes for your website. All the elements on your page where you picked a background or text color using this Palette Generator, will use the colors from your new palette, automatically. Instead of colors being hard-coded to a color number, they are now set to use a color variable; this means that if you change a color in your palette, all the elements on your page will use the new color. (Note: that is *if* the element follows your palette; not all plugins and blocks do.)
+
+## Install on WordPress
+1) Unzip the exported file. Copy all files in the exported `styles/` folder into:
+   `wp-content/themes/your-(child-)theme/styles/` (create the folder if needed)
+2) In your dashboard, open **Site Editor → Styles → Browse styles**, and select a new style.
+3) Recommended: open `styles/<YourTitle>-utilities.css`, copy the block of color variables like:
+   ```css
+   :root, .editor-styles-wrapper {
+     --your-color-name: #hex;
+   }
+   ```
+   Paste it into your theme’s `style.css`. You can assign your theme's color variables from the contrast‑tested palette values, for example:
+   ```css
+   :root, .editor-styles-wrapper {
+     --base: var(--text-on-dark);
+     --contrast: var(--text-on-light);
+     --accent: var(--accent-light);
+     --your-heading: var(--primary-dark);
+     --your-button-background: var(--accent-darker);
+     --your-button-text: var(--text-on-dark);
+   }
+   ```
+
+## Page Builders
+
+If your builder supports CSS variables, you can use the variable names shown at the top of styles/<YourTitle>-utilities.css (e.g., `var(--primary-light)` ).
+
+### Elementor
+
+If you're using a *block theme*, Elementor respects the global CSS variables WordPress makes (e.g., --wp--preset--color--primary-lighter) from the Color Palette Generator theme.json files. Elementor will display them in its color picker.
+
+- Elementor stores global colors as CSS variables (e.g., --e-global-color-primary) in the active Kit.
+- Respects colors defined in theme.json (e.g., --wp--preset--color--primary).
+- Custom CSS variables prefixed with --e-global-color-* are recognized and appear in the color picker.
+
+### Beaver Builder
+
+While Beaver Builder does not directly import a color palette from a `theme.json` file, you can achieve similar results by defining custom CSS variables in your theme or child theme and then using them in Beaver Builder's color picker by entering the variable name (e.g., var(--css-var-name)) in the input field at the top of the color picker.
+
+This method allows you to integrate colors defined in theme.json or styles.css into Beaver Builder's interface, ensuring consistency across your site.
+
+You will find these variable names in your exported styles/<YourTitle>-utilities.css file.
+
+Beaver Builder uses color variables in your pages/posts, so updating your color palette is easy and shows in your existing site.
+
+- Automatically converts Global Colors into CSS variables like --fl-global-primary-color.
+- Supports custom prefixes via the Prefix option (e.g., --my-prefix-primary-color).
+- Allows direct input of CSS variables (e.g., var(--my-color)) in the color picker.
+
+### Oxygen Builder
+- Uses CSS variables extensively; all global colors and typography settings are stored as variables.
+- Variables are scoped globally or per template, enabling dynamic, theme-wide changes.
+
+### Bricks Builder
+- Leverages CSS variables for global styles, including colors, fonts, and spacing.
+- Supports integration with theme.json and allows defining custom variables in the theme.
+
+These builders promote maintainability by centralizing color definitions, reducing reliance on hardcoded values in HTML or the database.
+
+## Notes
+- You only need one main text color in the palette. If your theme uses a second text color (most often for shadows or other decorative elements), define it in your CSS.
+- Fonts are not changed by this tool; keep them in your `theme.json`, theme settings or `style.css`.
+- Don’t worry about technical terms — just think of your existing color names as “your colors”, and map our tested palette variables to them for better readability.
+
+For developer setup and advanced details, see: `docs/technical-details.md`.
+
+## Additional Information
 
 [See it run](https://gl-color-palette-generator.vercel.app)
 [Github](https://github.com/glerner/WP-Website-Mastery-color-palette-generator.git)
