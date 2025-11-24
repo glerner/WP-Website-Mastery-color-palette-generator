@@ -234,3 +234,93 @@ Recommend Option B initially for usability, with a toggle for strictness.
 - **[U2]** Imported entries can be assigned to palette/semantic bands or overridden by a custom hex.
 - **[U3]** Contrast flags update immediately when tokens or assignments change.
 - **[U4]** Export policy is enforced per selected option (strict/warn/partial).
+
+---
+
+## Implementation Plan & Commit Stages
+
+This section outlines a practical, staged implementation order for the dataflow and unified catalog work above, with natural boundaries for `git commit`.
+
+### Stage 0 – Baseline & Mapping (no behavior changes)
+
+- Map current implementations of `selections`, `exactSelections`, `paletteWithVariations`, text tokens, and Adjust/ribbon logic in `pages/generator.tsx` and `components/LuminanceTestStrips.tsx` to this spec.
+- Capture which invariants already hold and where reselection / Target Y logic is currently missing.
+
+**Commit:** docs-only / tiny refactor.
+
+### Stage 1 – Data Model Prep for Invariants & Target Y
+
+- Extend `selections` to include `lighterY` and `lightY` (tints) where needed.
+- Ensure `exactSelections` type matches the spec and can store a `SwatchPick` per band.
+- Optionally add small helpers for constructing a `SwatchPick` from a ribbon slot without changing behavior.
+
+**Commit:** prepare `selections` / `exactSelections` for new Adjust dataflow (types and model only).
+
+### Stage 2 – Initialization & Invariant [I1]
+
+- Ensure that on startup / first Adjust mount, `exactSelections[k][b]` is populated from the currently shown slot in each ribbon.
+- Fill any missing `exactSelections` entries immediately so that [I1] (“Always-selected”) holds after init.
+
+**Commit:** ensure initial `exactSelections` for all palette/semantic bands on startup.
+
+### Stage 3 – Reselection Architecture (useEffect + helpers)
+
+- In `pages/generator.tsx`, define pure helpers:
+  - `resolveTargetY(k, band)`
+  - `readBandCandidates(k, band)`
+  - `adoptClosestSlot(k, band, targetY)`
+  - `applySelectionAtomically(update)`
+- Add the reselection `useEffect` with the dependencies listed above (`paletteWithVariations`, base hexes, `textOnLight`, `textOnDark`) and no dependency on `selections` or `exactSelections`.
+- Initially, it is acceptable to log or partially update state while validating behavior.
+
+**Commit:** add core reselection effect and helper functions (architecture only).
+
+### Stage 4 – Full Reselection Wiring (Manual + Text Tokens)
+
+- Wire the `useEffect` to fully implement [T1] and [T2]:
+  - Loop over all color keys and bands.
+  - Resolve `targetY`, read candidates, throw explicit error if empty.
+  - Choose closest-by-Y slot, construct `SwatchPick`, and update `selections` / `exactSelections` via `applySelectionAtomically`.
+- Verify that Adjust highlights and Palette/Export respond correctly when:
+  - Editing any `palette.<key>.hex`.
+  - Editing `textOnLight` or `textOnDark`.
+
+**Commit:** reselect closest-by-Y Adjust slots on Manual base and text token changes.
+
+### Stage 5 – Adjust Tab Click Behavior Wiring
+
+- In `components/LuminanceTestStrips.tsx`:
+  - For tint clicks, keep existing `onSelectTintIndex` calls.
+  - Also store `lighterY` / `lightY` in `selections` and update `exactSelections` with the clicked `SwatchPick`.
+- Confirm shade clicks already store Y and exact pick as required; adjust only if needed.
+
+**Commit:** sync Adjust tint clicks with `selections` Y and `exactSelections` while preserving ribbon computation.
+
+### Stage 6 – Error Handling & Optional Persistence
+
+- Finalize explicit error throwing when `candidates.length === 0` for any band, including helpful context.
+- Implement `persistSelections()` (if desired) to sync `selections` and `exactSelections` to `localStorage`, and decide when to call it.
+
+**Commit:** add explicit Adjust band error handling and optional selections persistence.
+
+### Stage 7 – Unified Color Catalog: Data Model Only
+
+- Introduce `UnifiedColorCatalog` types for `palette`, `semantic`, and `imported` entries.
+- Define `assignment`, `contrastFlags`, and `status` fields.
+- Stub helpers `resolveEffectiveHex`, `validateContrast`, and `recomputeImportedFlags` as pure functions.
+
+**Commit:** introduce unified color catalog data model and helpers (no UI changes yet).
+
+### Stage 8 – Assigned Colors UI & Export Policy (optional / later)
+
+- Implement the “Assigned Colors” tab UI for imported `theme.json` entries, using the unified catalog.
+- Wire live contrast flags and assignment/override controls.
+- Implement the chosen export policy option (strict / warn + allow / partial) using the catalog.
+
+**Commit:** add Assigned Colors tab and export policy for imported `theme.json` colors.
+
+### Natural Stopping Points
+
+- After Stage 6: Adjust/manual dataflow is complete and stable.
+- After Stage 7: unified catalog data model is in place without UI.
+- After Stage 8: full Adjust + catalog + import/export experience is implemented.

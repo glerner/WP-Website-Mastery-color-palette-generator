@@ -605,7 +605,14 @@ export function LuminanceTestStrips({
   onTokensAutoAdjusted,
 }: {
   palette: PaletteWithVariations;
-  selections: Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>;
+  selections: Partial<Record<ColorType | SemanticColorType, {
+    lighterIndex?: number;
+    lightIndex?: number;
+    lighterY?: number;
+    lightY?: number;
+    darkerY?: number;
+    darkY?: number
+  }>>;
   onSelectTintIndex: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', index: number) => void;
   onSelectShadeY: (colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', y: number) => void;
   onSelectTint?: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', pick: SwatchPick) => void;

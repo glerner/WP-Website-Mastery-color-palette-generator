@@ -236,6 +236,7 @@
 /* Color wheel row: wheel + legend */
 .wheelRow {
   display: flex;
+  justify-content: center;
   align-items: flex-start;
   gap: var(--cf-space-m);
   flex-wrap: wrap;
@@ -243,15 +244,24 @@
   margin: var(--cf-space-xs);
   padding-top: var(--cf-space-xl);
   padding-bottom: var(--cf-space-2xl);
-  padding-left: var(--cf-space-2xl);
-  padding-right: var(--cf-space-2xl);
+  /* Define wheel size at the row level so parent calculations can reference it */
+  /* Responsive size: never smaller than 200px, prefer up to 70vw, cap at 220px */
+  --wheel-size: clamp(200px, 70vw, 220px);
+  /* Estimated max label width beyond the centerline (can be overridden).
+     Use character width for text-driven sizing, but keep a pixel floor. */
+  --wheel-label-max: max(22ch, 180px);
+  /* Leave room at the left for the longest label extending beyond the wheel center */
+  /* wheel radius + estimated max label width */
+  padding-left: calc((var(--wheel-size) / 2) + var(--wheel-label-max));
+  padding-right: calc((var(--wheel-size) / 2) + var(--wheel-label-max));
   position: relative;
+  /* Avoid clipping on narrow screens; allow horizontal scroll if needed */
+  overflow-x: auto;
   /* Reserve space for labels without changing the circle's aspect */
   min-height: calc(var(--wheel-size) + 72px);
 }
 
 .colorWheel {
-  --wheel-size: 220px;
   /* Marker and band sizing */
   --marker-size: 18px;
   --ring-width: var(--marker-size);
@@ -265,10 +275,16 @@
   height: var(--wheel-size);
   border-radius: 50%;
   /* Math convention: 0° at right, angles increase CCW so 90° is at top.
-     conic-gradient increases clockwise, so we reverse color order to make hues increase CCW. */
-  background: conic-gradient(from 90deg,
-    red, magenta, blue, cyan, lime, yellow, red
-  );
+     conic-gradient increases clockwise, so we reverse color order to make hues increase CCW.
+     Overlay a radial gradient that fades to white at the center to emulate lower saturation toward the center. */
+  background:
+    radial-gradient(circle at center,
+      rgba(255,255,255,0.95) 0%,
+      rgba(255,255,255,0.0) 60%
+    ),
+    conic-gradient(from 90deg,
+      red, magenta, blue, cyan, lime, yellow, red
+    );
   box-shadow: inset 0 0 0 10px rgba(255,255,255,0.7), 0 0 0 1px var(--border);
   /* Provide outer breathing room equal to radius so labels and ticks don't clip;
      add a little extra horizontal room to the sides. */

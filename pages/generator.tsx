@@ -164,9 +164,18 @@ const initialPalette: Palette = {
 const GeneratorPage = () => {
   const [palette, setPalette] = useState<Palette>(initialPalette);
   const [selections, setSelections] = useState<
-    Partial<Record<ColorType | SemanticColorType, { lighterIndex?: number; lightIndex?: number; darkerY?: number; darkY?: number }>>
+    Partial<Record<ColorType | SemanticColorType, {
+      lighterIndex?: number;
+      lightIndex?: number;
+      lighterY?: number;  // Target Y for lighter band (tints)
+      lightY?: number;    // Target Y for light band (tints)
+      darkerY?: number;
+      darkY?: number
+    }>>
   >({});
   // Exact picks captured from Adjust (used to override Palette/Export)
+  // Type matches spec: Partial<Record<ColorType|SemanticColorType, { lighter?: SwatchPick; light?: SwatchPick; dark?: SwatchPick; darker?: SwatchPick }>>
+  // Invariant [I1]: After initialization, every color key and band should have an exact selection
   const [exactSelections, setExactSelections] = useState<
     Partial<Record<ColorType | SemanticColorType, { lighter?: SwatchPick; light?: SwatchPick; dark?: SwatchPick; darker?: SwatchPick }>>
   >(() => {
@@ -209,6 +218,17 @@ const GeneratorPage = () => {
   const [semanticBandSelection, setSemanticBandSelection] = useState<SemanticBandSelection>(SEMANTIC_BAND_DEFAULTS);
   const [themeConfig, setThemeConfig] = useState<any | undefined>(undefined);
   const dirInputRef = useRef<HTMLInputElement | null>(null);
+  const wheelRowRef = useRef<HTMLDivElement | null>(null);
+  const [showWheelHint, setShowWheelHint] = useState<boolean>(false);
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
+  const [diagnostics, setDiagnostics] = useState<{
+    method?: 'picker' | 'legacy';
+    rawStartingPath?: string; // exact path string first seen for theme JSON
+    folderFromPicker?: string;
+    themeJsonRel?: string;
+    styleCssRelTried?: string;
+    styleCssFound?: boolean;
+  }>({});
   // Details parsed from an imported theme.json (for display only)
   const [importDetails, setImportDetails] = useState<{
     schema?: string;
@@ -224,9 +244,34 @@ const GeneratorPage = () => {
       const rawTheme = localStorage.getItem('gl_imported_theme_json');
       if (rawTheme) setThemeConfig(JSON.parse(rawTheme));
       const rawDetails = localStorage.getItem('gl_import_details');
-      if (rawDetails) setImportDetails(JSON.parse(rawDetails));
+      if (rawDetails) {
+        const parsed: any = JSON.parse(rawDetails);
+        let next = parsed && typeof parsed === 'object' ? { ...parsed } : {};
+        setImportDetails(next);
+      }
     } catch { }
   }, []);
+
+  // Show drag hint only when the wheel row actually overflows horizontally
+  useEffect(() => {
+    const el = wheelRowRef.current;
+    if (!el) return;
+    const check = () => {
+      try {
+        const hasOverflow = el.scrollWidth > el.clientWidth + 1; // +1 for FP rounding
+        setShowWheelHint(hasOverflow);
+      } catch { }
+    };
+    check();
+    const ro = new (window as any).ResizeObserver ? new ResizeObserver(check) : null;
+    if (ro) ro.observe(el);
+    const onWin = () => check();
+    window.addEventListener('resize', onWin);
+    return () => {
+      window.removeEventListener('resize', onWin);
+      if (ro) try { ro.disconnect(); } catch { }
+    };
+  }, [wheelRowRef]);
 
   // Ensure the folder picker input has proper directory attributes across browsers
   useEffect(() => {
@@ -861,15 +906,24 @@ const GeneratorPage = () => {
           if (m) return `wp-content/themes/${m[1]}/theme.json`;
           const m2 = norm.match(/themes\/([^/]+)\/theme\.json$/i);
           if (m2) return `themes/${m2[1]}/theme.json`;
+          // General: show <parent-folder>/theme.json. If the immediate parent is 'theme.json', back up one more segment.
+          const idx = norm.toLowerCase().lastIndexOf('/theme.json');
+          if (idx >= 0) {
+            const dir = norm.slice(0, idx).replace(/\/$/, '');
+            const parts = dir.split('/').filter(Boolean);
+            let folder = parts.pop();
+            if (folder && folder.toLowerCase() === 'theme.json') folder = parts.pop();
+            if (folder) return `${folder}/theme.json`;
+          }
         }
         return file?.name || 'theme.json';
       };
       details.file = deriveDisplayPath();
+      try { localStorage.setItem('gl_theme_input_path', nicePath || ''); } catch { }
       if (schema) details.schema = schema;
       if (version != null) details.version = version;
-      if (typeof parsed?.title === 'string') details.title = parsed.title;
       setImportDetails(details);
-      try { localStorage.setItem('gl_import_details', JSON.stringify(details)); } catch {}
+      try { localStorage.setItem('gl_import_details', JSON.stringify(details)); } catch { }
 
       // Do not show a success toast; details are displayed inline under the explanation.
     } catch (e) {
@@ -894,8 +948,13 @@ const GeneratorPage = () => {
       if (found) {
         setThemeName(found);
         // Merge into importDetails for display
-        setImportDetails((prev) => ({ ...(prev||{}), title: found }));
-        try { localStorage.setItem('gl_theme_name', found); } catch {}
+        setImportDetails((prev) => ({ ...(prev || {}), title: found }));
+        try { localStorage.setItem('gl_style_theme_name', found); } catch { }
+      } else {
+        setImportDetails((prev) => {
+          const warnings = [...(prev?.warnings || []), 'Theme name not found in style.css'];
+          return { ...(prev || {}), warnings } as any;
+        });
       }
     } catch { }
   }, []);
@@ -904,12 +963,15 @@ const GeneratorPage = () => {
   const handleImportThemeDir = useCallback(async (files: FileList | null) => {
     try {
       if (!files || files.length === 0) return;
+      setDiagnostics((d) => ({ ...d, method: 'legacy' }));
       const all = Array.from(files);
       const getRel = (f: File) => ((f as any).webkitRelativePath || f.name || '').replace(/\\/g, '/');
       // Find theme.json
       const themeFile = all.find(f => /(^|\/)theme\.json$/i.test(getRel(f)));
       if (themeFile) {
-        await handleImportThemeJson(themeFile, getRel(themeFile));
+        const rel0 = getRel(themeFile);
+        setDiagnostics((d) => ({ ...d, rawStartingPath: rel0, themeJsonRel: rel0 }));
+        await handleImportThemeJson(themeFile, rel0);
       }
       // Find style.css in same folder as theme.json if possible
       if (themeFile) {
@@ -917,7 +979,28 @@ const GeneratorPage = () => {
         const baseDir = rel.replace(/\/theme\.json$/i, '').replace(/\/$/, '');
         const styleExact = all.find(f => getRel(f).toLowerCase() === `${baseDir}/style.css`.toLowerCase());
         const styleFile = styleExact || all.find(f => /(^|\/)style\.css$/i.test(getRel(f)));
-        if (styleFile) await handleImportStyleCss(styleFile);
+        if (styleFile) {
+          await handleImportStyleCss(styleFile);
+          setDiagnostics((d) => ({ ...d, styleCssRelTried: `${baseDir}/style.css`, styleCssFound: true }));
+        } else {
+          setDiagnostics((d) => ({ ...d, styleCssRelTried: `${baseDir}/style.css`, styleCssFound: false }));
+          setImportDetails((prev) => {
+            const warnings = [...(prev?.warnings || []), 'style.css not found in the selected folder; cannot determine Theme Name.'];
+            return { ...(prev || {}), warnings } as any;
+          });
+        }
+        // Set import details File: themes/<folder>/theme.json and persist
+        const folder = baseDir.split('/').filter(Boolean).pop() || '';
+        if (folder) {
+          const filePath = `themes/${folder}/theme.json`;
+          setImportDetails((prev) => ({ ...(prev || {}), file: filePath }));
+          try { localStorage.setItem('gl_theme_dir', folder); } catch { }
+          try {
+            const raw = localStorage.getItem('gl_import_details');
+            const prev = raw ? JSON.parse(raw) : {};
+            localStorage.setItem('gl_import_details', JSON.stringify({ ...(prev || {}), file: filePath }));
+          } catch { }
+        }
       }
     } catch { }
   }, [handleImportThemeJson, handleImportStyleCss]);
@@ -930,16 +1013,26 @@ const GeneratorPage = () => {
       if (!fsPicker) { dirInputRef.current?.click(); return; }
       const dirHandle: any = await fsPicker.call(navAny, { id: 'wp-theme-folder', mode: 'read' });
       if (!dirHandle) return;
+      setDiagnostics((d) => ({ ...d, method: 'picker' }));
       const getFileIfExists = async (name: string) => {
         try { const h = await dirHandle.getFileHandle(name, { create: false }); return await h.getFile(); } catch { return undefined; }
       };
       const themeFile = await getFileIfExists('theme.json');
-      if (themeFile) await handleImportThemeJson(themeFile, `themes/${String(dirHandle?.name || '')}/theme.json`);
+      const folderName = String(dirHandle?.name || '').trim();
+      setDiagnostics((d) => ({ ...d, folderFromPicker: folderName, rawStartingPath: `themes/${folderName}/theme.json` }));
+      if (themeFile) await handleImportThemeJson(themeFile, `themes/${folderName}/theme.json`);
       const styleFile = await getFileIfExists('style.css');
-      if (styleFile) await handleImportStyleCss(styleFile);
-      if (themeFile && dirHandle?.name) {
-        const folder = String(dirHandle.name);
-        setImportDetails((prev) => ({ ...(prev || {}), file: `themes/${folder}/theme.json` }));
+      if (styleFile) { await handleImportStyleCss(styleFile); setDiagnostics((d) => ({ ...d, styleCssRelTried: `themes/${folderName}/style.css`, styleCssFound: true })); }
+      else { setDiagnostics((d) => ({ ...d, styleCssRelTried: `themes/${folderName}/style.css`, styleCssFound: false })); }
+      if (themeFile && folderName) {
+        const filePath = `themes/${folderName}/theme.json`;
+        setImportDetails((prev) => ({ ...(prev || {}), file: filePath }));
+        try { localStorage.setItem('gl_theme_dir', folderName); } catch { }
+        try {
+          const raw = localStorage.getItem('gl_import_details');
+          const prev = raw ? JSON.parse(raw) : {};
+          localStorage.setItem('gl_import_details', JSON.stringify({ ...(prev || {}), file: filePath }));
+        } catch { }
       }
     } catch {
       // Fall back to legacy input if picker not available or user cancels
@@ -1400,126 +1493,172 @@ const GeneratorPage = () => {
                           </p>
                           <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', flexWrap: 'wrap' }}>
                             <Button variant="outline" wrap onClick={handlePickThemeFolder} style={{ marginTop: 'var(--spacing-2)' }}>Import theme folder</Button>
+                            <Button variant="outline" wrap onClick={() => setShowDiagnostics(v => !v)} style={{ marginTop: 'var(--spacing-2)' }}>
+                              {showDiagnostics ? 'Hide diagnostics' : 'Show diagnostics'}
+                            </Button>
                           </div>
-                          {importDetails && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
-                              {(importDetails.schema || importDetails.version != null || importDetails.title || (importDetails as any)?.file) && (
-                                <div className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
-                                  {(importDetails as any)?.file ? (
-                                    <div><strong>File:</strong> {(importDetails as any).file}</div>
-                                  ) : null}
-                                  {importDetails?.title ? (
-                                    <div><strong>Theme name:</strong> {importDetails.title}</div>
-                                  ) : null}
-                                  {(() => {
-                                    try {
-                                      const schemaStr = (themeConfig && typeof (themeConfig as any).$schema === 'string')
-                                        ? (themeConfig as any).$schema
-                                        : (importDetails?.schema || '');
-                                      const versionStr = (themeConfig && (themeConfig as any).version != null)
-                                        ? String((themeConfig as any).version)
-                                        : (importDetails?.version != null ? String(importDetails.version) : '');
-                                      const themePalette: Array<{ slug: string; color: string }> = Array.isArray((themeConfig as any)?.settings?.color?.palette)
-                                        ? (themeConfig as any).settings.color.palette
-                                        : [];
-                                      const detailsPalette: Array<{ slug: string; color: string }> = Array.isArray(importDetails?.colors)
-                                        ? (importDetails as any).colors
-                                        : [];
-                                      const mergedRaw = [...themePalette, ...detailsPalette];
-                                      const dedup = new Map<string, { slug: string; value: string }>();
-                                      mergedRaw.forEach((c: any) => {
-                                        if (!c) return;
-                                        const slug = String(c.slug || '').trim();
-                                        const color = String(c.color || '').trim();
-                                        if (!slug || !color) return;
-                                        const value = color;
-                                        dedup.set(slug + '::' + value, { slug, value });
-                                      });
-                                      const cols = Array.from(dedup.values());
-                                      // Partition entries
-                                      const hexRegex = /^#[0-9a-fA-F]{6}$/;
-                                      const hexEntries = cols.filter(c => hexRegex.test(c.value)).map(c => {
-                                        const { r, g, b } = hexToRgb(c.value);
-                                        const { h } = rgbToHslNorm(r, g, b);
-                                        const Y = luminance(r, g, b);
-                                        return { ...c, h, Y } as { slug: string; value: string; h: number; Y: number };
-                                      });
-                                      const nonHexEntries = cols.filter(c => !hexRegex.test(c.value));
-                                      // Best base/contrast from luminance extremes (if available)
-                                      const mostWhite = hexEntries.length ? hexEntries.slice().sort((a, b) => b.Y - a.Y)[0] : undefined;
-                                      const mostBlack = hexEntries.length ? hexEntries.slice().sort((a, b) => a.Y - b.Y)[0] : undefined;
-                                      // Sort remaining hex by hue
-                                      const byHue = hexEntries.slice().sort((a, b) => a.h - b.h);
-                                      // Build final ordered list: best base/contrast (dedup), then hue, then non-hex (by slug)
-                                      const seen = new Set<string>();
-                                      const ordered: Array<{ slug: string; value: string; badge?: string }> = [];
-                                      const pushUnique = (item?: { slug: string; value: string }, badge?: string) => {
-                                        if (!item) return;
-                                        const key = item.slug + '::' + item.value;
-                                        if (seen.has(key)) return;
-                                        seen.add(key);
-                                        // Avoid specifying optional property when undefined (exactOptionalPropertyTypes)
-                                        ordered.push(badge ? { ...item, badge } : { ...item });
-                                      };
-                                      pushUnique(mostWhite, 'best for Text on Dark (near white)');
-                                      pushUnique(mostBlack, 'best for Text on Light (near black)');
-                                      byHue.forEach(e => pushUnique({ slug: e.slug, value: e.value }));
-                                      nonHexEntries
-                                        .slice()
-                                        .sort((a, b) => a.slug.localeCompare(b.slug))
-                                        .forEach(e => pushUnique(e));
-                                      return (
-                                        <div style={{ display: 'grid', gap: 8 }}>
-                                          <div style={{ fontSize: 'var(--cf-text-s)' }}>
-                                            <strong>Schema:</strong> {schemaStr || '—'}
-                                          </div>
-                                          <div style={{ fontSize: 'var(--cf-text-s)' }}>
-                                            <strong>Version:</strong> {versionStr || '—'}
-                                          </div>
-                                          <div style={{ fontWeight: 600 }}>Detected palette entries (copy/paste if desired):</div>
-                                          <div>
-                                            <p className={styles.formHelp} style={{ marginTop: 8, marginBottom: 8 }}>Click the color swatch or color number to copy to the clipboard. (Sorted by Hue)</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
-                                              {ordered.map((c) => (
-                                                <div
-                                                  key={c.slug + String(c.value)}
-                                                  onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
-                                                  role="button"
-                                                  tabIndex={0}
-                                                  onKeyDown={async (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } } }}
-                                                  title="Click to copy"
-                                                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-                                                >
-                                                  <button
-                                                    type="button"
-                                                    title="Click to copy"
-                                                    onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
-                                                    style={{ width: 28, height: 28, borderRadius: 4, background: (c as any).value, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.2)', border: 'none', cursor: 'pointer' }}
-                                                  />
-                                                  <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-                                                    <span style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}</span>
-                                                    <button
-                                                      type="button"
-                                                      title="Click to copy"
-                                                      onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
-                                                      className={styles.copyCodeButton}
-                                                    >{(c as any).value}</button>
-                                                    {c.badge && (
-                                                      <span style={{ fontSize: 'var(--cf-text-xs)', opacity: 0.8 }}>{c.badge}</span>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    } catch { return null; }
-                                  })()}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
+                            <div className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
+                              <div>
+                                <strong>File:</strong>{' '}
+                                {(() => {
+                                  try {
+                                    const raw0 = (importDetails as any)?.file || (typeof localStorage !== 'undefined' ? (localStorage.getItem('gl_theme_input_path') || '') : '');
+                                    const p = String(raw0 || '').replace(/\\/g, '/');
+                                    if (!p) return '(unknown)';
+                                    // Prefer wp-content/themes/<folder>
+                                    const mWp = p.match(/wp-content\/themes\/([^/]+)\/([^/]+)$/i);
+                                    if (mWp) {
+                                      const folder = String(mWp[1] || '');
+                                      const file = String(mWp[2] || '');
+                                      return /^(theme\.json)$/i.test(file) ? folder : `${folder}/${file}`;
+                                    }
+                                    // Prefer themes/<folder>
+                                    const mThemes = p.match(/themes\/([^/]+)\/([^/]+)$/i);
+                                    if (mThemes) {
+                                      const folder = String(mThemes[1] || '');
+                                      const file = String(mThemes[2] || '');
+                                      return /^(theme\.json)$/i.test(file) ? folder : `${folder}/${file}`;
+                                    }
+                                    // General: split into folder + filename
+                                    const parts = p.split('/').filter(Boolean);
+                                    if (parts.length >= 2) {
+                                      const file = parts.pop()!;
+                                      const folder = parts.pop()!;
+                                      return /^(theme\.json)$/i.test(file) ? folder : `${folder}/${file}`;
+                                    }
+                                    return '(unknown)';
+                                  } catch { return '(unknown)'; }
+                                })()}
+                              </div>
+                              {showDiagnostics && (
+                                <div style={{ marginTop: 6, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: '12px', background: 'var(--muted)', padding: '8px', borderRadius: 6 }}>
+                                  <div><strong>Diagnostics</strong></div>
+                                  <div>method: {diagnostics.method || '(unknown)'}</div>
+                                  <div>rawStartingPath: {diagnostics.rawStartingPath || '(none)'}</div>
+                                  <div>folderFromPicker: {diagnostics.folderFromPicker || '(n/a)'}</div>
+                                  <div>themeJsonRel: {diagnostics.themeJsonRel || '(n/a)'}</div>
+                                  <div>styleCssRelTried: {diagnostics.styleCssRelTried || '(n/a)'}</div>
+                                  <div>styleCssFound: {String(diagnostics.styleCssFound ?? false)}</div>
+                                  <div>importDetails.file: {String((importDetails as any)?.file || '(none)')}</div>
+                                  <div>gl_theme_input_path: {String((typeof localStorage !== 'undefined' && localStorage.getItem('gl_theme_input_path')) || '(none)')}</div>
                                 </div>
                               )}
+                              <div><strong>Theme name:</strong> {importDetails?.title || '(not loaded from style.css)'}</div>
+                              {Array.isArray(importDetails?.warnings) && (importDetails!.warnings as string[]).length > 0 && (
+                                <div style={{ marginTop: 6 }}>
+                                  {(importDetails!.warnings as string[]).map((w, i) => (
+                                    <div key={i} style={{ color: 'var(--foreground)', opacity: 0.8 }}>• {w}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {(() => {
+                                try {
+                                  const schemaStr = (themeConfig && typeof (themeConfig as any).$schema === 'string')
+                                    ? (themeConfig as any).$schema
+                                    : (importDetails?.schema || '');
+                                  const versionStr = (themeConfig && (themeConfig as any).version != null)
+                                    ? String((themeConfig as any).version)
+                                    : (importDetails?.version != null ? String(importDetails.version) : '');
+                                  const themePalette: Array<{ slug: string; color: string }> = Array.isArray((themeConfig as any)?.settings?.color?.palette)
+                                    ? (themeConfig as any).settings.color.palette
+                                    : [];
+                                  const detailsPalette: Array<{ slug: string; color: string }> = Array.isArray(importDetails?.colors)
+                                    ? (importDetails as any).colors
+                                    : [];
+                                  const mergedRaw = [...themePalette, ...detailsPalette];
+                                  const dedup = new Map<string, { slug: string; value: string }>();
+                                  mergedRaw.forEach((c: any) => {
+                                    if (!c) return;
+                                    const slug = String(c.slug || '').trim();
+                                    const color = String(c.color || '').trim();
+                                    if (!slug || !color) return;
+                                    const value = color;
+                                    dedup.set(slug + '::' + value, { slug, value });
+                                  });
+                                  const cols = Array.from(dedup.values());
+                                  // Partition entries
+                                  const hexRegex = /^#[0-9a-fA-F]{6}$/;
+                                  const hexEntries = cols.filter(c => hexRegex.test(c.value)).map(c => {
+                                    const { r, g, b } = hexToRgb(c.value);
+                                    const { h } = rgbToHslNorm(r, g, b);
+                                    const Y = luminance(r, g, b);
+                                    return { ...c, h, Y } as { slug: string; value: string; h: number; Y: number };
+                                  });
+                                  const nonHexEntries = cols.filter(c => !hexRegex.test(c.value));
+                                  // Best base/contrast from luminance extremes (if available)
+                                  const mostWhite = hexEntries.length ? hexEntries.slice().sort((a, b) => b.Y - a.Y)[0] : undefined;
+                                  const mostBlack = hexEntries.length ? hexEntries.slice().sort((a, b) => a.Y - b.Y)[0] : undefined;
+                                  // Sort remaining hex by hue
+                                  const byHue = hexEntries.slice().sort((a, b) => a.h - b.h);
+                                  // Build final ordered list: best base/contrast (dedup), then hue, then non-hex (by slug)
+                                  const seen = new Set<string>();
+                                  const ordered: Array<{ slug: string; value: string; badge?: string }> = [];
+                                  const pushUnique = (item?: { slug: string; value: string }, badge?: string) => {
+                                    if (!item) return;
+                                    const key = item.slug + '::' + item.value;
+                                    if (seen.has(key)) return;
+                                    seen.add(key);
+                                    // Avoid specifying optional property when undefined (exactOptionalPropertyTypes)
+                                    ordered.push(badge ? { ...item, badge } : { ...item });
+                                  };
+                                  pushUnique(mostWhite, 'best for Text on Dark (near white)');
+                                  pushUnique(mostBlack, 'best for Text on Light (near black)');
+                                  byHue.forEach(e => pushUnique({ slug: e.slug, value: e.value }));
+                                  nonHexEntries
+                                    .slice()
+                                    .sort((a, b) => a.slug.localeCompare(b.slug))
+                                    .forEach(e => pushUnique(e));
+                                  return (
+                                    <div style={{ display: 'grid', gap: 8 }}>
+                                      <div style={{ fontSize: 'var(--cf-text-s)' }}>
+                                        <strong>Schema:</strong> {schemaStr || '—'}
+                                      </div>
+                                      <div style={{ fontSize: 'var(--cf-text-s)' }}>
+                                        <strong>Version:</strong> {versionStr || '—'}
+                                      </div>
+                                      <div style={{ fontWeight: 600 }}>Detected palette entries (copy/paste if desired):</div>
+                                      <div>
+                                        <p className={styles.formHelp} style={{ marginTop: 8, marginBottom: 8 }}>Click the color swatch or color number to copy to the clipboard. (Sorted by Hue)</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+                                          {ordered.map((c) => (
+                                            <div
+                                              key={c.slug + String(c.value)}
+                                              onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
+                                              role="button"
+                                              tabIndex={0}
+                                              onKeyDown={async (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } } }}
+                                              title="Click to copy"
+                                              style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                                            >
+                                              <button
+                                                type="button"
+                                                title="Click to copy"
+                                                onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
+                                                style={{ width: 28, height: 28, borderRadius: 4, background: (c as any).value, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.2)', border: 'none', cursor: 'pointer' }}
+                                              />
+                                              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                                                <span style={{ fontSize: 'var(--cf-text-s)' }}>{c.slug}</span>
+                                                <button
+                                                  type="button"
+                                                  title="Click to copy"
+                                                  onClick={async () => { try { await navigator.clipboard.writeText((c as any).value); toast.success('Copied'); } catch { toast.error('Copy failed'); } }}
+                                                  className={styles.copyCodeButton}
+                                                >{(c as any).value}</button>
+                                                {c.badge && (
+                                                  <span style={{ fontSize: 'var(--cf-text-xs)', opacity: 0.8 }}>{c.badge}</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                } catch { return null; }
+                              })()}
                             </div>
-                          )}
+                          </div>
                         </div>
                         <hr
                           className={styles.tertiaryDivider}
@@ -1661,7 +1800,7 @@ const GeneratorPage = () => {
                         }}
                       />
                       {/* Color Wheel (non-interactive) */}
-                      <div className={styles.wheelRow}>
+                      <div className={styles.wheelRow} ref={wheelRowRef}>
                         <div className={styles.colorWheel}>
                           {/* ticks at 0/90/180/270 */}
                           {([0, 90, 180, 270] as number[]).map((deg) => (
@@ -1726,6 +1865,11 @@ const GeneratorPage = () => {
                       {/* Save button moved above, next to Theme Name */}
 
                       {/* Imported theme.json palette block moved above (replaces partial list) */}
+                      {showWheelHint && (
+                        <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-xs)', textAlign: 'center', marginTop: 'var(--spacing-1)' }}>
+                          On narrow screens, drag horizontally to view the full color wheel and labels.
+                        </p>
+                      )}
                     </div>
 
                     {/* Right column: color entry controls */}
