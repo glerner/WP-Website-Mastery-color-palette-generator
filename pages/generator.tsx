@@ -443,6 +443,70 @@ const GeneratorPage = () => {
     } catch { }
   }, [exactSelections, paletteWithVariations]);
 
+  // Stage 2: Ensure invariant [I1] - all exactSelections[k][b] are populated after first render
+  // This guarantees that every color key and band has an exact selection for Target Y Resolution
+  useEffect(() => {
+    try {
+      if (!paletteWithVariations) return;
+      const families = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const);
+      const bands = (['lighter', 'light', 'dark', 'darker'] as const);
+      let needsInit = false;
+
+      // Check if any band is missing
+      families.forEach((k) => {
+        bands.forEach((b) => {
+          if (!(exactSelections as any)?.[k]?.[b]) needsInit = true;
+        });
+      });
+
+      if (!needsInit) return; // All bands already populated
+
+      // Populate missing bands with middle slot from each ribbon
+      const next: typeof exactSelections = { ...(exactSelections as any) } as any;
+      families.forEach((k) => {
+        const entry = (paletteWithVariations as any)[k];
+        const arr: Array<{ step: string; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+
+        bands.forEach((step) => {
+          // Skip if already exists
+          if ((next as any)?.[k]?.[step]) return;
+
+          const candidates = arr.filter((v) => v.step === step);
+          if (candidates.length === 0) return; // No candidates available (will be handled by error in Stage 6)
+
+          // Pick middle slot as default
+          const midIdx = Math.floor(candidates.length / 2);
+          const hex = candidates[midIdx]?.hex;
+          if (!hex) return;
+
+          const { r, g, b } = hexToRgb(hex);
+          const { h, s, l } = rgbToHslNorm(r, g, b);
+          const y = luminance(r, g, b);
+          const cLight = getContrastRatio({ r, g, b }, hexToRgb(textOnLight));
+          const cDark = getContrastRatio({ r, g, b }, hexToRgb(textOnDark));
+          const preferWhite = (step === 'dark' || step === 'darker');
+
+          const pick: SwatchPick = {
+            colorKey: k,
+            step,
+            indexDisplayed: midIdx,
+            hex,
+            hsl: { h, s, l },
+            y,
+            contrastVsTextOnLight: cLight,
+            contrastVsTextOnDark: cDark,
+            textToneUsed: preferWhite ? 'light' : 'dark',
+          };
+
+          if (!(next as any)[k]) (next as any)[k] = {};
+          (next as any)[k][step] = pick;
+        });
+      });
+
+      setExactSelections(next);
+    } catch { }
+  }, [paletteWithVariations, textOnLight, textOnDark]); // Run when palette/tokens change, but NOT on exactSelections change
+
   // Helpful derived colors and filenames
   const accentDarkHex = useMemo(() => demoStepHex(paletteWithVariations, 'accent', 'dark'), [paletteWithVariations]);
   const warningDarkHex = useMemo(() => demoStepHex(paletteWithVariations, 'warning', 'dark'), [paletteWithVariations]);
