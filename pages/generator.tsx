@@ -342,6 +342,166 @@ const GeneratorPage = () => {
     }
   }, [palette, exactSelections]);
 
+  // ============================================================================
+  // Stage 3: Reselection Architecture - Helper Functions
+  // ============================================================================
+
+  // Resolve target Y for reselection using spec priority rules
+  const resolveTargetY = useCallback((
+    k: ColorType | SemanticColorType,
+    band: 'lighter' | 'light' | 'dark' | 'darker'
+  ): number | undefined => {
+    try {
+      // Priority 1: Use exactSelections[k][band].y if present
+      const exactY = (exactSelections as any)?.[k]?.[band]?.y;
+      if (typeof exactY === 'number' && Number.isFinite(exactY)) return exactY;
+
+      // Priority 2: Compute Y from exactSelections[k][band].hex
+      const exactHex = (exactSelections as any)?.[k]?.[band]?.hex;
+      if (typeof exactHex === 'string' && /^#[0-9a-fA-F]{6}$/.test(exactHex)) {
+        const { r, g, b } = hexToRgb(exactHex);
+        return luminance(r, g, b);
+      }
+
+      // Priority 3: Use selections[k].<bandY> (for backwards compatibility)
+      const bandYKey = `${band}Y` as 'lighterY' | 'lightY' | 'darkY' | 'darkerY';
+      const selY = (selections as any)?.[k]?.[bandYKey];
+      if (typeof selY === 'number' && Number.isFinite(selY)) return selY;
+
+      return undefined; // No target Y available
+    } catch {
+      return undefined;
+    }
+  }, [exactSelections, selections]);
+
+  // Read band candidates from paletteWithVariations
+  const readBandCandidates = useCallback((
+    k: ColorType | SemanticColorType,
+    band: 'lighter' | 'light' | 'dark' | 'darker'
+  ): Array<{ hex: string; step: string }> => {
+    try {
+      const entry = (paletteWithVariations as any)?.[k];
+      const variations: Array<{ hex: string; step: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+      return variations.filter(v => v.step === band);
+    } catch {
+      return [];
+    }
+  }, [paletteWithVariations]);
+
+  // Adopt closest slot by Y distance
+  const adoptClosestSlot = useCallback((
+    k: ColorType | SemanticColorType,
+    band: 'lighter' | 'light' | 'dark' | 'darker',
+    targetY: number
+  ): { index: number; pick: SwatchPick } | undefined => {
+    try {
+      const candidates = readBandCandidates(k, band);
+      if (candidates.length === 0) return undefined;
+
+      // Find closest by Y
+      let bestIdx = 0;
+      let bestDist = Infinity;
+      candidates.forEach((cand, i) => {
+        const { r, g, b } = hexToRgb(cand.hex);
+        const y = luminance(r, g, b);
+        const dist = Math.abs(y - targetY);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIdx = i;
+        }
+      });
+
+      const hex = candidates[bestIdx]?.hex;
+      if (!hex) return undefined;
+
+      // Build full SwatchPick
+      const { r, g, b } = hexToRgb(hex);
+      const { h, s, l } = rgbToHslNorm(r, g, b);
+      const y = luminance(r, g, b);
+      const cLight = getContrastRatio({ r, g, b }, hexToRgb(textOnLight));
+      const cDark = getContrastRatio({ r, g, b }, hexToRgb(textOnDark));
+      const preferWhite = (band === 'dark' || band === 'darker');
+
+      const pick: SwatchPick = {
+        colorKey: k,
+        step: band,
+        indexDisplayed: bestIdx,
+        hex,
+        hsl: { h, s, l },
+        y,
+        contrastVsTextOnLight: cLight,
+        contrastVsTextOnDark: cDark,
+        textToneUsed: preferWhite ? 'light' : 'dark',
+      };
+
+      return { index: bestIdx, pick };
+    } catch {
+      return undefined;
+    }
+  }, [readBandCandidates, textOnLight, textOnDark]);
+
+  // Apply selection updates atomically (batch state update)
+  const applySelectionAtomically = useCallback((updates: {
+    selections: typeof selections;
+    exactSelections: typeof exactSelections;
+  }) => {
+    try {
+      // Update both states in sequence (React will batch these)
+      setSelections(updates.selections);
+      setExactSelections(updates.exactSelections);
+    } catch { }
+  }, []);
+
+  // ============================================================================
+  // Stage 3: Reselection Effect (logs only, no state updates yet)
+  // ============================================================================
+
+  useEffect(() => {
+    try {
+      const families = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const);
+      const bands = (['lighter', 'light', 'dark', 'darker'] as const);
+
+      // Log reselection candidates for validation (Stage 3: architecture only)
+      families.forEach((k) => {
+        bands.forEach((band) => {
+          const targetY = resolveTargetY(k, band);
+          const candidates = readBandCandidates(k, band);
+
+          if (candidates.length === 0) {
+            console.warn(`[Stage 3] No candidates for ${k}-${band}; baseHex=${(palette as any)[k]?.hex}, textOnLight=${textOnLight}, textOnDark=${textOnDark}`);
+            return;
+          }
+
+          if (targetY == null) {
+            console.log(`[Stage 3] No target Y for ${k}-${band}, skipping reselection`);
+            return;
+          }
+
+          const result = adoptClosestSlot(k, band, targetY);
+          if (result) {
+            console.log(`[Stage 3] Would reselect ${k}-${band}: targetY=${targetY.toFixed(3)}, closestY=${result.pick.y.toFixed(3)}, index=${result.index}`);
+          }
+        });
+      });
+    } catch (err) {
+      console.error('[Stage 3] Reselection effect error:', err);
+    }
+  }, [
+    paletteWithVariations,
+    palette.primary.hex,
+    palette.secondary.hex,
+    palette.tertiary.hex,
+    palette.accent.hex,
+    palette.error.hex,
+    palette.warning.hex,
+    palette.success.hex,
+    textOnLight,
+    textOnDark,
+    resolveTargetY,
+    readBandCandidates,
+    adoptClosestSlot,
+  ]); // Note: Does NOT depend on selections or exactSelections to avoid loops
+
   // Keep exactSelections (Palette/Export source) in sync with current Adjust selections.
   const syncExactFromSelections = useCallback(() => {
     try {
