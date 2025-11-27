@@ -1,20 +1,39 @@
-# Stage 3 Changes Summary: Reselection Architecture (useEffect + helpers)
+# Stage 3 Changes Summary: Reselection Architecture + Enhanced Logging
 
 ## Goal
-Implement the core reselection architecture with helper functions and a logging-only effect to validate behavior before full state wiring in Stage 4.
+Implement the core reselection architecture with helper functions, enhanced logging with trigger messages, and improved text color adjustment warnings to show actual values used.
 
 ## Changes Made
 
+### Added trigger tracking refs in `pages/generator.tsx` (lines 292-301)
+
+**Purpose:** Track previous values to detect what changed and build informative trigger messages.
+
+**Refs added:**
+- `prevTextOnLightRef`, `prevTextOnDarkRef` - Track text color changes
+- `prevPrimaryHexRef`, `prevSecondaryHexRef`, `prevTertiaryHexRef`, `prevAccentHexRef` - Track base color changes
+- `prevErrorHexRef`, `prevWarningHexRef`, `prevSuccessHexRef` - Track semantic color changes
+
+**Usage:** Compared against current values in reselection effect to build trigger messages like "Text-on-Light: #7b1b11 → #a51b11".
+
 ### Added helper functions in `pages/generator.tsx` (lines 345-453)
 
-#### 1. `resolveTargetY(k, band)` (lines 350-375)
-**Purpose:** Resolve target Y for reselection using spec priority rules.
+#### 1. `resolveTargetY(k, band)` (lines 350-380)
+**Purpose:** Resolve target Y for reselection using spec priority rules and provide diagnostic information.
+
+**Returns:** `{ y: number; source: string; hex?: string } | undefined`
 
 **Logic:**
-1. **Priority 1:** Use `exactSelections[k][band].y` if present and finite
-2. **Priority 2:** Compute Y from `exactSelections[k][band].hex` if valid hex
-3. **Priority 3:** Use `selections[k].<bandY>` for backwards compatibility
+1. **Priority 1:** Use `exactSelections[k][band].y` if present (source: 'exactSelections.y')
+2. **Priority 2:** Compute Y from `exactSelections[k][band].hex` if valid hex (source: 'exactSelections.hex')
+3. **Priority 3:** Use `selections[k].<bandY>` for backwards compatibility (source: 'selections.bandY')
 4. Return `undefined` if no target Y available
+
+**Diagnostic Benefits:**
+- Track where target Y values come from
+- Identify stale target Y values (when source hex doesn't match current base color)
+- See which priority path is used
+- Associate target Y with source hex color for debugging
 
 **Dependencies:** `[exactSelections, selections]`
 
@@ -62,19 +81,39 @@ Implement the core reselection architecture with helper functions and a logging-
 
 **Note:** Currently unused in Stage 3 (will be used in Stage 4).
 
-### Added reselection effect in `pages/generator.tsx` (lines 455-503)
+### Enhanced text color adjustment warnings in `components/LuminanceTestStrips.tsx`
+
+**Purpose:** Show users exactly what text color values are being used when automatic adjustments occur.
+
+**Changes:**
+1. Added refs to capture original textOnLight/textOnDark values before adjustment (lines 733-735)
+2. Capture original values in adjustment effect before notifying parent (lines 774-787)
+3. Updated warning messages to show "Adjusted from {original} to {adjusted}" (lines 796-804)
+
+**Example output:**
+```
+Text-on-light was out of recommended range. Adjusted from #a51b11 to #7e150d to ensure at least 3 visibly-distinct tints available for each main color.
+```
+
+**Problem solved:** Previously showed "from X to X" (same value) because parent component updated the prop before warning rendered. Now captures original value before notification.
+
+### Added reselection effect in `pages/generator.tsx` (lines 475-580)
 
 **Purpose:** Validate reselection logic with console logging before full state wiring.
 
 **What it does:**
-1. Loops over all 7 color keys × 4 bands = 28 combinations
-2. For each band:
-   - Resolves target Y via `resolveTargetY`
+1. Detects what triggered the effect by comparing current vs previous values (base colors, text colors)
+2. Builds trigger message (e.g., "Text-on-Light: #7b1b11 → #a51b11" or "Primary: #E60000 → #0000FF")
+3. Opens collapsible console group with trigger message
+4. Loops over all 7 color keys × 4 bands = 28 combinations
+5. For each band:
+   - Resolves target Y via `resolveTargetY` (gets diagnostic info)
    - Reads candidates via `readBandCandidates`
    - Warns if no candidates exist
    - Logs if no target Y available
    - Computes closest slot via `adoptClosestSlot`
-   - Logs what would be reselected (targetY, closestY, index)
+   - Logs what would be reselected with full details (targetY, source, picked color hex/HSL, actual Y, index)
+6. Updates refs for next comparison
 
 **Dependencies (critical for avoiding loops):**
 ```javascript
@@ -209,5 +248,19 @@ Refs: docs/manual-adjust-palette-dataflow.md Stage 3
 
 ## Files Modified
 
-- `pages/generator.tsx`: Added helper functions and logging-only reselection effect (lines 345-503)
-- `docs/manual-adjust-palette-dataflow-stage-3-changes-summary.md`: Created (this file)
+- `pages/generator.tsx`:
+  - Added refs for trigger tracking (lines 292-301)
+  - Enhanced `resolveTargetY` to return diagnostic object (lines 350-380)
+  - Enhanced Stage 3 effect with trigger messages (lines 475-580)
+  - ~90 lines modified, ~60 lines added
+
+- `components/LuminanceTestStrips.tsx`:
+  - Added refs to capture original values (lines 733-735)
+  - Updated adjustment effect to capture originals (lines 774-787)
+  - Updated warning messages to show from/to (lines 796-804)
+  - ~15 lines modified
+
+- Documentation files:
+  - `docs/manual-adjust-palette-dataflow-stage-3-logging-implementation.md`: Created
+  - `docs/manual-adjust-palette-dataflow-stage-3-log-format-reference.md`: Created
+  - `docs/manual-adjust-palette-dataflow-stage-3-changes-summary.md`: Updated (this file)

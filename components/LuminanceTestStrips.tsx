@@ -730,6 +730,10 @@ export function LuminanceTestStrips({
     };
   }, []);
 
+  // Track original values before adjustment for warning messages
+  const originalTextOnLightRef = React.useRef<string | undefined>(textOnLight);
+  const originalTextOnDarkRef = React.useRef<string | undefined>(textOnDark);
+
   // Decide whether to clamp based on available options (need at least 3 in each band)
   const { textOnLightRgb, textOnDarkRgb, adjustedNotice, adjustedLight, adjustedDark } = React.useMemo(() => {
     // Check all color families; clamp if ANY has < 3 options in any band
@@ -767,11 +771,19 @@ export function LuminanceTestStrips({
     const out: { textOnLight?: string; textOnDark?: string } = {};
     if (textOnLightRgb && textOnLight) {
       const hex = rgbToHex(textOnLightRgb.r, textOnLightRgb.g, textOnLightRgb.b);
-      if (hex.toLowerCase() !== textOnLight.toLowerCase()) out.textOnLight = hex;
+      if (hex.toLowerCase() !== textOnLight.toLowerCase()) {
+        // Capture original before adjustment
+        originalTextOnLightRef.current = textOnLight;
+        out.textOnLight = hex;
+      }
     }
     if (textOnDarkRgb && textOnDark) {
       const hex = rgbToHex(textOnDarkRgb.r, textOnDarkRgb.g, textOnDarkRgb.b);
-      if (hex.toLowerCase() !== textOnDark.toLowerCase()) out.textOnDark = hex;
+      if (hex.toLowerCase() !== textOnDark.toLowerCase()) {
+        // Capture original before adjustment
+        originalTextOnDarkRef.current = textOnDark;
+        out.textOnDark = hex;
+      }
     }
     if (out.textOnLight || out.textOnDark) onTokensAutoAdjusted(out);
   }, [adjustedNotice, onTokensAutoAdjusted, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark]);
@@ -781,14 +793,14 @@ export function LuminanceTestStrips({
         <h2 className={styles.sectionTitle}>Luminance test strips</h2>
         <div className={styles.sectionNote}>Each group: tint choices and shade choices (all have at least AAA contrast with black or white text). "Y values" are the luminance.</div>
       </div>
-      {adjustedNotice && adjustedLight && (
+      {adjustedNotice && adjustedLight && textOnLightRgb && (
         <div className={styles.warningInline}>
-          Text-on-light was out of recommended range. Adjusted it to ensure at least 3 visibly-distinct tints available for each main color.
+          Text-on-light was out of recommended range. Adjusted from {originalTextOnLightRef.current || textOnLight} to {rgbToHex(textOnLightRgb.r, textOnLightRgb.g, textOnLightRgb.b)} to ensure at least 3 visibly-distinct tints available for each main color.
         </div>
       )}
-      {adjustedNotice && adjustedDark && (
+      {adjustedNotice && adjustedDark && textOnDarkRgb && (
         <div className={styles.warningInline}>
-          Text-on-dark was out of recommended range. Adjusted it to ensure at least 3 visibly-distinct shades available for each main color.
+          Text-on-dark was out of recommended range. Adjusted from {originalTextOnDarkRef.current || textOnDark} to {rgbToHex(textOnDarkRgb.r, textOnDarkRgb.g, textOnDarkRgb.b)} to ensure at least 3 visibly-distinct shades available for each main color.
         </div>
       )}
 

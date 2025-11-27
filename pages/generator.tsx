@@ -292,6 +292,17 @@ const GeneratorPage = () => {
   const [textOnDark, setTextOnDark] = useState<string>('#F8F7F7');
   const [textOnLight, setTextOnLight] = useState<string>('#453521');
 
+  // Track previous values for Stage 3 trigger logging
+  const prevTextOnLightRef = useRef<string>(textOnLight);
+  const prevTextOnDarkRef = useRef<string>(textOnDark);
+  const prevPrimaryHexRef = useRef<string>(palette.primary.hex);
+  const prevSecondaryHexRef = useRef<string>(palette.secondary.hex);
+  const prevTertiaryHexRef = useRef<string>(palette.tertiary.hex);
+  const prevAccentHexRef = useRef<string>(palette.accent.hex);
+  const prevErrorHexRef = useRef<string>(palette.error.hex);
+  const prevWarningHexRef = useRef<string>(palette.warning.hex);
+  const prevSuccessHexRef = useRef<string>(palette.success.hex);
+
   // Build variations with semantics applied
   const paletteWithVariations = useMemo<PaletteWithVariations>(() => {
     try {
@@ -350,23 +361,28 @@ const GeneratorPage = () => {
   const resolveTargetY = useCallback((
     k: ColorType | SemanticColorType,
     band: 'lighter' | 'light' | 'dark' | 'darker'
-  ): number | undefined => {
+  ): { y: number; source: string; hex?: string } | undefined => {
     try {
       // Priority 1: Use exactSelections[k][band].y if present
       const exactY = (exactSelections as any)?.[k]?.[band]?.y;
-      if (typeof exactY === 'number' && Number.isFinite(exactY)) return exactY;
+      if (typeof exactY === 'number' && Number.isFinite(exactY)) {
+        const exactHex = (exactSelections as any)?.[k]?.[band]?.hex;
+        return { y: exactY, source: 'exactSelections.y', hex: exactHex };
+      }
 
       // Priority 2: Compute Y from exactSelections[k][band].hex
       const exactHex = (exactSelections as any)?.[k]?.[band]?.hex;
       if (typeof exactHex === 'string' && /^#[0-9a-fA-F]{6}$/.test(exactHex)) {
         const { r, g, b } = hexToRgb(exactHex);
-        return luminance(r, g, b);
+        return { y: luminance(r, g, b), source: 'exactSelections.hex', hex: exactHex };
       }
 
       // Priority 3: Use selections[k].<bandY> (for backwards compatibility)
       const bandYKey = `${band}Y` as 'lighterY' | 'lightY' | 'darkY' | 'darkerY';
       const selY = (selections as any)?.[k]?.[bandYKey];
-      if (typeof selY === 'number' && Number.isFinite(selY)) return selY;
+      if (typeof selY === 'number' && Number.isFinite(selY)) {
+        return { y: selY, source: 'selections.bandY' };
+      }
 
       return undefined; // No target Y available
     } catch {
@@ -461,28 +477,92 @@ const GeneratorPage = () => {
       const families = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const);
       const bands = (['lighter', 'light', 'dark', 'darker'] as const);
 
+      // Build trigger message showing what changed
+      const triggers: string[] = [];
+
+      if (textOnLight !== prevTextOnLightRef.current) {
+        triggers.push(`Text-on-Light: ${prevTextOnLightRef.current} → ${textOnLight}`);
+      }
+      if (textOnDark !== prevTextOnDarkRef.current) {
+        triggers.push(`Text-on-Dark: ${prevTextOnDarkRef.current} → ${textOnDark}`);
+      }
+      if (palette.primary.hex !== prevPrimaryHexRef.current) {
+        triggers.push(`Primary: ${prevPrimaryHexRef.current} → ${palette.primary.hex}`);
+      }
+      if (palette.secondary.hex !== prevSecondaryHexRef.current) {
+        triggers.push(`Secondary: ${prevSecondaryHexRef.current} → ${palette.secondary.hex}`);
+      }
+      if (palette.tertiary.hex !== prevTertiaryHexRef.current) {
+        triggers.push(`Tertiary: ${prevTertiaryHexRef.current} → ${palette.tertiary.hex}`);
+      }
+      if (palette.accent.hex !== prevAccentHexRef.current) {
+        triggers.push(`Accent: ${prevAccentHexRef.current} → ${palette.accent.hex}`);
+      }
+      if (palette.error.hex !== prevErrorHexRef.current) {
+        triggers.push(`Error: ${prevErrorHexRef.current} → ${palette.error.hex}`);
+      }
+      if (palette.warning.hex !== prevWarningHexRef.current) {
+        triggers.push(`Warning: ${prevWarningHexRef.current} → ${palette.warning.hex}`);
+      }
+      if (palette.success.hex !== prevSuccessHexRef.current) {
+        triggers.push(`Success: ${prevSuccessHexRef.current} → ${palette.success.hex}`);
+      }
+
+      const triggerMsg = triggers.length > 0 ? triggers.join(', ') : 'Initial load';
+      console.groupCollapsed(`[Stage 3] ${triggerMsg}`);
+
       // Log reselection candidates for validation (Stage 3: architecture only)
       families.forEach((k) => {
+        const baseHex = (palette as any)[k]?.hex;
+        let hasLogs = false;
+
         bands.forEach((band) => {
-          const targetY = resolveTargetY(k, band);
+          const targetInfo = resolveTargetY(k, band);
           const candidates = readBandCandidates(k, band);
 
           if (candidates.length === 0) {
-            console.warn(`[Stage 3] No candidates for ${k}-${band}; baseHex=${(palette as any)[k]?.hex}, textOnLight=${textOnLight}, textOnDark=${textOnDark}`);
+            if (!hasLogs) {
+              console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
+              hasLogs = true;
+            }
+            console.warn(`  ${band}: No candidates; textOnLight=${textOnLight}, textOnDark=${textOnDark}`);
             return;
           }
 
-          if (targetY == null) {
-            console.log(`[Stage 3] No target Y for ${k}-${band}, skipping reselection`);
+          if (!targetInfo) {
+            if (!hasLogs) {
+              console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
+              hasLogs = true;
+            }
+            console.log(`  ${band}: No target Y, skipping reselection`);
             return;
           }
 
-          const result = adoptClosestSlot(k, band, targetY);
+          const result = adoptClosestSlot(k, band, targetInfo.y);
           if (result) {
-            console.log(`[Stage 3] Would reselect ${k}-${band}: targetY=${targetY.toFixed(3)}, closestY=${result.pick.y.toFixed(3)}, index=${result.index}`);
+            if (!hasLogs) {
+              console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
+              hasLogs = true;
+            }
+            const hslStr = `hsl(${(result.pick.hsl.h * 360).toFixed(1)}, ${(result.pick.hsl.s * 100).toFixed(1)}%, ${(result.pick.hsl.l * 100).toFixed(1)}%)`;
+            const sourceInfo = targetInfo.hex ? `${targetInfo.source} (${targetInfo.hex})` : targetInfo.source;
+            console.log(`  ${band}: target Y=${targetInfo.y.toFixed(3)} [${sourceInfo}] → picked ${result.pick.hex} ${hslStr} Y=${result.pick.y.toFixed(3)} [${result.index}/${candidates.length - 1}]`);
           }
         });
       });
+
+      console.groupEnd();
+
+      // Update refs for next comparison
+      prevTextOnLightRef.current = textOnLight;
+      prevTextOnDarkRef.current = textOnDark;
+      prevPrimaryHexRef.current = palette.primary.hex;
+      prevSecondaryHexRef.current = palette.secondary.hex;
+      prevTertiaryHexRef.current = palette.tertiary.hex;
+      prevAccentHexRef.current = palette.accent.hex;
+      prevErrorHexRef.current = palette.error.hex;
+      prevWarningHexRef.current = palette.warning.hex;
+      prevSuccessHexRef.current = palette.success.hex;
     } catch (err) {
       console.error('[Stage 3] Reselection effect error:', err);
     }
