@@ -172,7 +172,20 @@ const GeneratorPage = () => {
       darkerY?: number;
       darkY?: number
     }>>
-  >({});
+  >(() => {
+    // Initialize with default indices for all colors
+    // These match the Adjust tab's default selections
+    const families: (ColorType | SemanticColorType)[] = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'];
+    const defaults: any = {};
+    families.forEach(k => {
+      defaults[k] = {
+        lighterIndex: 0,  // First (darkest) of lighter ribbon
+        lightIndex: 0,    // First (darkest) of light ribbon
+        // darkerY and darkY will be set by Adjust tab's auto-initialization
+      };
+    });
+    return defaults;
+  });
   // Exact picks captured from Adjust (used to override Palette/Export)
   // Type matches spec: Partial<Record<ColorType|SemanticColorType, { lighter?: SwatchPick; light?: SwatchPick; dark?: SwatchPick; darker?: SwatchPick }>>
   // Invariant [I1]: After initialization, every color key and band should have an exact selection
@@ -293,18 +306,20 @@ const GeneratorPage = () => {
   const [textOnLight, setTextOnLight] = useState<string>('#453521');
 
   // Track previous values for Stage 3 trigger logging
-  const prevTextOnLightRef = useRef<string>(textOnLight);
-  const prevTextOnDarkRef = useRef<string>(textOnDark);
-  const prevPrimaryHexRef = useRef<string>(palette.primary.hex);
-  const prevSecondaryHexRef = useRef<string>(palette.secondary.hex);
-  const prevTertiaryHexRef = useRef<string>(palette.tertiary.hex);
-  const prevAccentHexRef = useRef<string>(palette.accent.hex);
-  const prevErrorHexRef = useRef<string>(palette.error.hex);
-  const prevWarningHexRef = useRef<string>(palette.warning.hex);
-  const prevSuccessHexRef = useRef<string>(palette.success.hex);
+  // Initialize to undefined so first run is detected as "Initial load"
+  const prevTextOnLightRef = useRef<string | undefined>(undefined);
+  const prevTextOnDarkRef = useRef<string | undefined>(undefined);
+  const prevPrimaryHexRef = useRef<string | undefined>(undefined);
+  const prevSecondaryHexRef = useRef<string | undefined>(undefined);
+  const prevTertiaryHexRef = useRef<string | undefined>(undefined);
+  const prevAccentHexRef = useRef<string | undefined>(undefined);
+  const prevErrorHexRef = useRef<string | undefined>(undefined);
+  const prevWarningHexRef = useRef<string | undefined>(undefined);
+  const prevSuccessHexRef = useRef<string | undefined>(undefined);
 
-  // Build variations with semantics applied
-  const paletteWithVariations = useMemo<PaletteWithVariations>(() => {
+
+  // Build base variations without exactSelections overrides (for reselection candidates)
+  const paletteWithVariationsBase = useMemo<PaletteWithVariations>(() => {
     try {
       // Apply semantic defaults to ensure error/warning/success exist with valid hexes
       const withSem = generateSemanticColors(palette as any) as any;
@@ -316,7 +331,7 @@ const GeneratorPage = () => {
           : generateShades(entry.hex, key as string);
         return { ...entry, variations };
       };
-      const out: PaletteWithVariations = {
+      return {
         primary: build('primary'),
         secondary: build('secondary'),
         tertiary: build('tertiary'),
@@ -325,6 +340,22 @@ const GeneratorPage = () => {
         warning: build('warning'),
         success: build('success'),
       };
+    } catch {
+      // Safe fallback: mirror current palette with empty variations to avoid crashes
+      const fb: any = {};
+      (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
+        fb[k] = { ...(palette as any)[k], variations: [] };
+      });
+      return fb as PaletteWithVariations;
+    }
+  }, [palette]);
+
+  // Build variations with exactSelections overrides applied (for display in Palette tab)
+  const paletteWithVariations = useMemo<PaletteWithVariations>(() => {
+    try {
+      // Start with base variations
+      const out: PaletteWithVariations = JSON.parse(JSON.stringify(paletteWithVariationsBase));
+
       // Override any generated band hexes with exact user picks
       const applyExact = (key: keyof PaletteWithVariations) => {
         const picks = (exactSelections as any)?.[key];
@@ -344,14 +375,9 @@ const GeneratorPage = () => {
         .forEach(applyExact);
       return out;
     } catch {
-      // Safe fallback: mirror current palette with empty variations to avoid crashes
-      const fb: any = {};
-      (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
-        fb[k] = { ...(palette as any)[k], variations: [] };
-      });
-      return fb as PaletteWithVariations;
+      return paletteWithVariationsBase;
     }
-  }, [palette, exactSelections]);
+  }, [paletteWithVariationsBase, exactSelections]);
 
   // ============================================================================
   // Stage 3: Reselection Architecture - Helper Functions
@@ -390,19 +416,20 @@ const GeneratorPage = () => {
     }
   }, [exactSelections, selections]);
 
-  // Read band candidates from paletteWithVariations
-  const readBandCandidates = useCallback((
+  // Read band candidates from paletteWithVariationsBase (without exactSelections overrides)
+  // Note: Not using useCallback to avoid stale closures - effect will read fresh paletteWithVariationsBase
+  const readBandCandidates = (
     k: ColorType | SemanticColorType,
     band: 'lighter' | 'light' | 'dark' | 'darker'
   ): Array<{ hex: string; step: string }> => {
     try {
-      const entry = (paletteWithVariations as any)?.[k];
+      const entry = (paletteWithVariationsBase as any)?.[k];
       const variations: Array<{ hex: string; step: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
       return variations.filter(v => v.step === band);
     } catch {
       return [];
     }
-  }, [paletteWithVariations]);
+  };
 
   // Adopt closest slot by Y distance
   const adoptClosestSlot = useCallback((
@@ -469,9 +496,8 @@ const GeneratorPage = () => {
   }, []);
 
   // ============================================================================
-  // Stage 3: Reselection Effect (logs only, no state updates yet)
+  // Stage 4: Reselection Effect (with state updates)
   // ============================================================================
-
   useEffect(() => {
     try {
       const families = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const);
@@ -508,50 +534,131 @@ const GeneratorPage = () => {
         triggers.push(`Success: ${prevSuccessHexRef.current} → ${palette.success.hex}`);
       }
 
-      const triggerMsg = triggers.length > 0 ? triggers.join(', ') : 'Initial load';
-      console.groupCollapsed(`[Stage 3] ${triggerMsg}`);
+      // Determine trigger message and whether to proceed with reselection
+      let triggerMsg: string;
+      let shouldReselect = false;
 
-      // Log reselection candidates for validation (Stage 3: architecture only)
-      families.forEach((k) => {
-        const baseHex = (palette as any)[k]?.hex;
-        let hasLogs = false;
+      if (triggers.length > 0) {
+        triggerMsg = triggers.join(', ');
+        shouldReselect = true; // Base colors or text colors changed
+      } else if (prevTextOnLightRef.current === undefined) {
+        // First run - refs not yet initialized
+        triggerMsg = 'Initial load';
+        shouldReselect = true;
+      } else {
+        // Subsequent run with no tracked changes (e.g., from toggling diagnostics, user clicking Adjust tab)
+        triggerMsg = 'Re-render (no tracked changes)';
+        shouldReselect = false; // Don't reselect on user clicks
+      }
 
-        bands.forEach((band) => {
-          const targetInfo = resolveTargetY(k, band);
-          const candidates = readBandCandidates(k, band);
+      // Only log if Show Diagnostics is enabled
+      if (showDiagnostics) {
+        console.groupCollapsed(`[Stage 4] ${triggerMsg}`);
+      }
 
-          if (candidates.length === 0) {
-            if (!hasLogs) {
-              console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
-              hasLogs = true;
+      // Build state updates (using functional setState to avoid dependency on selections/exactSelections)
+      let hasUpdates = false;
+      const updates: Array<{ k: ColorType | SemanticColorType; band: 'lighter' | 'light' | 'dark' | 'darker'; result: { index: number; pick: SwatchPick } }> = [];
+
+      // Only perform reselection if triggered by base/text color changes, not user clicks
+      if (shouldReselect) {
+        // Perform reselection for all families and bands
+        families.forEach((k) => {
+          const baseHex = (palette as any)[k]?.hex;
+          let hasLogs = false;
+
+          bands.forEach((band) => {
+            const targetInfo = resolveTargetY(k, band);
+            const candidates = readBandCandidates(k, band);
+
+            if (candidates.length === 0) {
+              if (showDiagnostics) {
+                if (!hasLogs) {
+                  console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
+                  hasLogs = true;
+                }
+                console.warn(`  ${band}: No candidates; textOnLight=${textOnLight}, textOnDark=${textOnDark}`);
+              }
+              // Throw error for empty candidates
+              throw new Error(`No candidates for ${k}-${band}. Base: ${baseHex}, textOnLight: ${textOnLight}, textOnDark: ${textOnDark}`);
             }
-            console.warn(`  ${band}: No candidates; textOnLight=${textOnLight}, textOnDark=${textOnDark}`);
-            return;
-          }
 
-          if (!targetInfo) {
-            if (!hasLogs) {
-              console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
-              hasLogs = true;
+            if (!targetInfo) {
+              if (showDiagnostics) {
+                if (!hasLogs) {
+                  console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
+                  hasLogs = true;
+                }
+                console.log(`  ${band}: No target Y, skipping reselection`);
+              }
+              return;
             }
-            console.log(`  ${band}: No target Y, skipping reselection`);
-            return;
-          }
 
-          const result = adoptClosestSlot(k, band, targetInfo.y);
-          if (result) {
-            if (!hasLogs) {
-              console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
-              hasLogs = true;
+            const result = adoptClosestSlot(k, band, targetInfo.y);
+            if (result) {
+              if (showDiagnostics) {
+                if (!hasLogs) {
+                  console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
+                  hasLogs = true;
+                }
+                const hslStr = `hsl(${(result.pick.hsl.h * 360).toFixed(1)}, ${(result.pick.hsl.s * 100).toFixed(1)}%, ${(result.pick.hsl.l * 100).toFixed(1)}%)`;
+                const sourceInfo = targetInfo.hex ? `${targetInfo.source} (${targetInfo.hex})` : targetInfo.source;
+                console.log(`  ${band}: target Y=${targetInfo.y.toFixed(3)} [${sourceInfo}] → picked ${result.pick.hex} ${hslStr} Y=${result.pick.y.toFixed(3)} [${result.index}/${candidates.length - 1}]`);
+              }
+
+              // Collect update for later application
+              updates.push({ k, band, result });
+              hasUpdates = true;
             }
-            const hslStr = `hsl(${(result.pick.hsl.h * 360).toFixed(1)}, ${(result.pick.hsl.s * 100).toFixed(1)}%, ${(result.pick.hsl.l * 100).toFixed(1)}%)`;
-            const sourceInfo = targetInfo.hex ? `${targetInfo.source} (${targetInfo.hex})` : targetInfo.source;
-            console.log(`  ${band}: target Y=${targetInfo.y.toFixed(3)} [${sourceInfo}] → picked ${result.pick.hex} ${hslStr} Y=${result.pick.y.toFixed(3)} [${result.index}/${candidates.length - 1}]`);
-          }
+          });
         });
-      });
+      } // End shouldReselect
 
-      console.groupEnd();
+      if (showDiagnostics) {
+        console.log(`[Stage 4] Collected ${updates.length} updates, hasUpdates=${hasUpdates}`);
+        console.groupEnd();
+      }
+
+      // Apply state updates using functional setState to avoid dependency loop
+      // Only update if values actually changed
+      // NOTE: We only update selections (Y targets), not exactSelections
+      // The Adjust tab will pick the actual colors based on these Y targets
+      if (hasUpdates) {
+        setSelections((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          updates.forEach(({ k, band, result }) => {
+            if (!next[k]) next[k] = {};
+            if (band === 'lighter') {
+              // Don't update index - let Adjust tab's initialization handle it
+              if (next[k]!.lighterY !== result.pick.y) {
+                next[k]!.lighterY = result.pick.y;
+                changed = true;
+              }
+            } else if (band === 'light') {
+              // Don't update index - let Adjust tab's initialization handle it
+              if (next[k]!.lightY !== result.pick.y) {
+                next[k]!.lightY = result.pick.y;
+                changed = true;
+              }
+            } else if (band === 'dark') {
+              if (next[k]!.darkY !== result.pick.y) {
+                next[k]!.darkY = result.pick.y;
+                changed = true;
+              }
+            } else if (band === 'darker') {
+              if (next[k]!.darkerY !== result.pick.y) {
+                next[k]!.darkerY = result.pick.y;
+                changed = true;
+              }
+            }
+          });
+          return changed ? next : prev;
+        });
+
+        // Don't update exactSelections from reselection - let Adjust tab handle it
+        // The Adjust tab will sync exactSelections based on user selections or its initialization
+      }
 
       // Update refs for next comparison
       prevTextOnLightRef.current = textOnLight;
@@ -564,10 +671,9 @@ const GeneratorPage = () => {
       prevWarningHexRef.current = palette.warning.hex;
       prevSuccessHexRef.current = palette.success.hex;
     } catch (err) {
-      console.error('[Stage 3] Reselection effect error:', err);
+      console.error('[Stage 4] Reselection effect error:', err);
     }
   }, [
-    paletteWithVariations,
     palette.primary.hex,
     palette.secondary.hex,
     palette.tertiary.hex,
@@ -577,10 +683,11 @@ const GeneratorPage = () => {
     palette.success.hex,
     textOnLight,
     textOnDark,
+    showDiagnostics,
     resolveTargetY,
-    readBandCandidates,
     adoptClosestSlot,
-  ]); // Note: Does NOT depend on selections or exactSelections to avoid loops
+    paletteWithVariationsBase,
+  ]); // Note: Depends on paletteWithVariationsBase to get fresh candidates when base colors change
 
   // Keep exactSelections (Palette/Export source) in sync with current Adjust selections.
   const syncExactFromSelections = useCallback(() => {
@@ -592,16 +699,22 @@ const GeneratorPage = () => {
         if (!sel) return;
         const hasAnySelection = sel.lighterIndex != null || sel.lightIndex != null || sel.darkY != null || sel.darkerY != null;
         if (!hasAnySelection) return;
-        const entry = (paletteWithVariations as any)[k];
+        // Read from paletteWithVariationsBase (fresh colors) not paletteWithVariations (has old exactSelections)
+        const entry = (paletteWithVariationsBase as any)[k];
         const arr: Array<{ step: string; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
         const addPick = (step: 'lighter' | 'light' | 'dark' | 'darker', indexMaybe?: number, yMaybe?: number) => {
           let hex: string | undefined;
           let indexDisplayed: number | undefined;
-          if (typeof indexMaybe === 'number') {
+
+          // For lighter/light, require index to be set (Adjust tab must initialize first)
+          // For dark/darker, we can use Y since they don't have indices
+          if (step === 'lighter' || step === 'light') {
+            if (typeof indexMaybe !== 'number') return; // Wait for Adjust tab to set index
             const byStep = arr.filter((v) => v.step === step);
             if (byStep[indexMaybe]?.hex) { hex = byStep[indexMaybe].hex; indexDisplayed = indexMaybe; }
-          }
-          if (!hex && typeof yMaybe === 'number') {
+          } else {
+            // For dark/darker, use Y-based search
+            if (typeof yMaybe !== 'number') return;
             const candidates = arr.filter((v) => v.step === step);
             if (candidates.length > 0) {
               const ys = candidates.map((v) => { const { r, g, b } = hexToRgb(v.hex); return luminance(r, g, b); });
@@ -630,9 +743,33 @@ const GeneratorPage = () => {
       })();
       if (!same) setExactSelections(next);
     } catch { }
-  }, [paletteWithVariations, selections, textOnLight, textOnDark, exactSelections]);
+  }, [paletteWithVariationsBase, selections, textOnLight, textOnDark, exactSelections]);
 
-  useEffect(() => { syncExactFromSelections(); }, [paletteWithVariations, selections, textOnLight, textOnDark, syncExactFromSelections]);
+  // Don't run syncExactFromSelections automatically on every state change
+  // Only sync when explicitly needed (user clicks, tab switch, etc.)
+
+  // Sync after Adjust tab has initialized selections (indices are set)
+  // This runs when paletteWithVariationsBase changes OR when selections get indices for the first time
+  const prevHasIndicesRef = useRef(false);
+  useEffect(() => {
+    // Check if selections have been initialized (at least one index is set)
+    const hasIndices = Object.values(selections).some((sel: any) =>
+      sel?.lighterIndex != null || sel?.lightIndex != null
+    );
+    const justInitialized = hasIndices && !prevHasIndicesRef.current;
+
+    if (showDiagnostics && justInitialized) {
+      console.log(`[Sync] Adjust tab just initialized indices`,
+        { selections: JSON.parse(JSON.stringify(selections)) });
+    }
+
+    if (hasIndices) {
+      if (showDiagnostics) console.log(`[Sync] Calling syncExactFromSelections()`);
+      syncExactFromSelections();
+    }
+
+    prevHasIndicesRef.current = hasIndices;
+  }, [paletteWithVariationsBase, selections, showDiagnostics, syncExactFromSelections]); // Trigger on base colors OR selections change
 
   // When switching to Palette tab, ensure sync has occurred (covers user-perceived lag after edits)
   useEffect(() => {
@@ -1618,6 +1755,7 @@ const GeneratorPage = () => {
                     <li>Enter your Theme Name (brief, as it appears in a WordPress tooltip in Palette selection).</li>
                     <li>Enter hex color numbers, or click on the color swatch for HSL adjustment.</li>
                     <li>There is a color wheel, so you can check that colors aren't too close to each other. Generally have colors with a hue difference of at least 30.</li>
+                    <li><strong>Show Diagnostics:</strong> Enable this to see detailed console logging (in your Browser's Console) about color reselection and adjustments. Useful for understanding how the automatic color selection works.</li>
                   </ul>
                   <p>These will all be adjusted for proper text color contrast.</p>
                   <p>Click the "Save colors and settings" button so your choices are there when you restart.</p>

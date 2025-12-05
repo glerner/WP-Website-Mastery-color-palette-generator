@@ -3,7 +3,7 @@ import styles from './LuminanceTestStrips.module.css';
 import { Button } from './Button';
 import { PaletteWithVariations, ColorType, SemanticColorType, SwatchPick } from '../helpers/types';
 import { hexToRgb, rgbToHex, rgbToHslNorm, solveHslLightnessForY, luminance, getContrastRatio, hslNormToRgb } from '../helpers/colorUtils';
-import { NEAR_WHITE_RGB, NEAR_BLACK_RGB, TINT_TARGET_COUNT, SHADE_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, DARKER_MIN_Y, DARKER_MAX_Y, DARK_OVERLAP_MIN_Y, DARK_MAX_Y, Y_TARGET_DECIMALS, Y_DISPLAY_DECIMALS, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, HARD_MIN_SHADE_Y_GAP, TARGET_LUM_LIGHTER, TARGET_LUM_LIGHT, TARGET_LUM_DARK, TARGET_LUM_DARKER, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_TINTS_FROM_WHITE, MIN_DELTA_LUM_SHADES, AAA_MIN, AA_SMALL_MIN, MAX_CONTRAST_TINTS, MAX_CONTRAST_SHADES, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
+import { NEAR_BLACK_RGB, NEAR_WHITE_RGB, TINT_TARGET_COUNT, SHADE_TARGET_COUNT, LIGHT_MIN_Y_BASE, LIGHTER_MAX_Y, LIGHT_MAX_Y_CAP, DARKER_MIN_Y, DARKER_MAX_Y, DARK_OVERLAP_MIN_Y, DARK_MAX_Y, Y_TARGET_DECIMALS, Y_DISPLAY_DECIMALS, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, RECOMMENDED_SHADE_Y_GAP_TOLERANCE, HARD_MIN_SHADE_Y_GAP, TARGET_LUM_LIGHTER, TARGET_LUM_LIGHT, TARGET_LUM_DARK, TARGET_LUM_DARKER, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_TINTS_FROM_WHITE, MIN_DELTA_LUM_SHADES, AAA_MIN, AA_SMALL_MIN, MAX_CONTRAST_TINTS, MAX_CONTRAST_SHADES, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
 
 function hslStringFromRgb(rgb: { r: number; g: number; b: number }, oneDecimal = true): string {
   const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
@@ -416,11 +416,10 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
   const darkerClosest = React.useMemo(() => findClosestIndex(darkerTargets, selectedDarkerY ?? TARGET_LUM_DARKER), [darkerTargets, selectedDarkerY]);
   const darkClosest = React.useMemo(() => findClosestIndex(darkTargets, selectedDarkY ?? TARGET_LUM_DARK), [darkTargets, selectedDarkY]);
 
-  const EPS = 1e-6;
   const darkGap = (selectedDarkerY != null && selectedDarkY != null)
     ? (selectedDarkY - selectedDarkerY)
     : Number.POSITIVE_INFINITY;
-  const tooClose = Number.isFinite(darkGap) && (darkGap + EPS) < RECOMMENDED_SHADE_Y_GAP;
+  const tooClose = Number.isFinite(darkGap) && darkGap < (RECOMMENDED_SHADE_Y_GAP - RECOMMENDED_SHADE_Y_GAP_TOLERANCE);
 
   // Auto-correct defaults to avoid adjacent/too-close selection
   React.useEffect(() => {

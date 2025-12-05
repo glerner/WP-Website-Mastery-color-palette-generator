@@ -117,6 +117,8 @@ export const RECOMMENDED_TINT_Y_GAP = numFromEnv('NEXT_PUBLIC_RECOMMENDED_TINT_Y
 export const HARD_MIN_TINT_Y_GAP = numFromEnv('NEXT_PUBLIC_HARD_MIN_TINT_Y_GAP', 0.08, 0, 1);
 /** Recommended minimum Y-gap between dark and darker. Env: NEXT_PUBLIC_RECOMMENDED_SHADE_Y_GAP */
 export const RECOMMENDED_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_RECOMMENDED_SHADE_Y_GAP', 0.02, 0, 1);
+/** Tolerance for Y-gap comparisons to account for floating-point precision */
+export const RECOMMENDED_SHADE_Y_GAP_TOLERANCE = 0.0005;
 /** Hard minimum Y-gap used only for default placements (never forced). Env: NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP */
 export const HARD_MIN_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP', 0.015, 0, 1);
 

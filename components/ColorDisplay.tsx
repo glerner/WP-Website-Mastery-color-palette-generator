@@ -3,7 +3,7 @@ import { Badge } from './Badge';
 import { Skeleton } from './Skeleton';
 import { PaletteWithVariations } from '../helpers/types';
 import { ensureAAAContrast } from '../helpers/ensureAAAContrast';
-import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_BLACK_RGB, NEAR_WHITE_RGB, AAA_MIN, AA_SMALL_MIN, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP } from '../helpers/config';
+import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_BLACK_RGB, NEAR_WHITE_RGB, AAA_MIN, AA_SMALL_MIN, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, RECOMMENDED_SHADE_Y_GAP_TOLERANCE } from '../helpers/config';
 import { hexToRgb, getContrastRatio, luminance } from '../helpers/colorUtils';
 import styles from './ColorDisplay.module.css';
 
@@ -143,7 +143,7 @@ const ColorCard = ({ color, name, onVariationClick, textOnLight, textOnDark }: {
             {...(onVariationClick ? { onClick: () => onVariationClick(variation.step as any) } : {})}
           />
         ))}
-        {gaps.shadeGap != null && gaps.shadeGap < Math.round(RECOMMENDED_SHADE_Y_GAP * 1000) / 1000 && (
+        {gaps.shadeGap != null && gaps.shadeGap < (RECOMMENDED_SHADE_Y_GAP - RECOMMENDED_SHADE_Y_GAP_TOLERANCE) && (
           <div style={{
             margin: '4px 0',
             padding: '6px 8px',
