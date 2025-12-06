@@ -1,12 +1,12 @@
 @layer base {
   .toaster {
     --viewport-padding: var(--spacing-4);
-    --toast-width: 360px;
+    --toast-width: 500px;
     --toast-border-radius: var(--radius);
     --toast-font-family: var(--font-family-base);
     --toast-animation-duration: var(--animation-duration-normal);
   }
-  
+
   .toast {
     display: flex;
     align-items: flex-start;
@@ -22,16 +22,16 @@
     animation: slideIn var(--toast-animation-duration) cubic-bezier(0.16, 1, 0.3, 1);
     transition: transform 0.2s ease, opacity 0.2s ease;
   }
-  
+
   .toast:focus {
     outline: none;
     box-shadow: var(--shadow-focus);
   }
-  
+
   .toast:hover {
     transform: translateY(-2px);
   }
-  
+
   .content {
     flex: 1;
     display: flex;
@@ -39,20 +39,20 @@
     gap: var(--spacing-1);
     min-width: 0;
   }
-  
+
   .title {
     font-weight: 600;
     font-size: var(--cf-text-m);
     color: var(--card-foreground);
     line-height: 1.4;
   }
-  
+
   .description {
     font-size: var(--cf-text-s);
     color: var(--muted-foreground);
     line-height: 1.4;
   }
-  
+
   .icon {
     display: flex;
     align-items: center;
@@ -62,7 +62,7 @@
     height: 1.5rem;
     color: var(--primary);
   }
-  
+
   .actionButton {
     padding: var(--spacing-2) var(--spacing-3);
     background-color: var(--primary);
@@ -76,8 +76,8 @@
     margin-left: var(--spacing-2);
     white-space: nowrap;
   }
-  
-    .actionButton:hover {
+
+  .actionButton:hover {
     background-color: color-mix(in srgb, var(--primary) 90%, black);
   }
 
@@ -89,7 +89,7 @@
   .actionButton:active {
     background-color: color-mix(in srgb, var(--primary) 80%, black);
   }
-  
+
   .cancelButton {
     padding: var(--spacing-2) var(--spacing-3);
     background-color: var(--muted);
@@ -102,8 +102,8 @@
     transition: background-color var(--animation-duration-fast) ease;
     white-space: nowrap;
   }
-  
-    .cancelButton:hover {
+
+  .cancelButton:hover {
     background-color: color-mix(in srgb, var(--muted) 80%, white);
   }
 
@@ -115,7 +115,7 @@
   .cancelButton:active {
     background-color: color-mix(in srgb, var(--muted) 75%, white);
   }
-  
+
   .closeButton {
     position: absolute;
     top: var(--spacing-2);
@@ -131,27 +131,27 @@
     border: none;
     cursor: pointer;
     opacity: 0.7;
-    transition: opacity var(--animation-duration-fast) ease, 
-                background-color var(--animation-duration-fast) ease;
+    transition: opacity var(--animation-duration-fast) ease,
+      background-color var(--animation-duration-fast) ease;
   }
-  
+
   .closeButton:hover {
     opacity: 1;
     background-color: var(--muted);
   }
-  
+
   .closeButton:focus-visible {
     outline: none;
     box-shadow: var(--shadow-focus);
     opacity: 1;
   }
-  
+
   /* Dark mode adjustments */
   :global(.dark) .toast {
     border-color: var(--border);
   }
-  
-    :global(.dark) .actionButton:hover {
+
+  :global(.dark) .actionButton:hover {
     background-color: color-mix(in srgb, var(--primary) 90%, white);
   }
 
@@ -166,12 +166,13 @@
   :global(.dark) .cancelButton:active {
     background-color: color-mix(in srgb, var(--muted) 70%, black);
   }
-  
+
   @keyframes slideIn {
     from {
       transform: translateX(calc(100% + var(--viewport-padding)));
       opacity: 0;
     }
+
     to {
       transform: translateX(0);
       opacity: 1;

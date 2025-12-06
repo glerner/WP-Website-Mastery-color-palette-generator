@@ -79,9 +79,9 @@ function showPopup(message: string, severity: 'ok' | 'warn' | 'error' = 'ok', mi
     host.appendChild(el);
     document.body.appendChild(host);
     setTimeout(() => {
-      try { host.remove(); } catch {}
+      try { host.remove(); } catch { }
     }, Math.max(0, minMs));
-  } catch {}
+  } catch { }
 }
 
 // Verify key pairs against AAA (7.0)
@@ -103,7 +103,12 @@ export type Palette = {
   notice?: { hex: string };
 };
 
-export function applyPaletteToCSSVariables(p: Palette) {
+export function applyPaletteToCSSVariables(p: Palette, variations?: {
+  accentDark?: string;
+  errorLight?: string;
+  warningLight?: string;
+  successLight?: string;
+}) {
   const root = document.documentElement.style;
   // Core brand
   root.setProperty('--cf-primary', p.primary.hex);
@@ -119,6 +124,33 @@ export function applyPaletteToCSSVariables(p: Palette) {
   root.setProperty('--error', p.error.hex);
   root.setProperty('--success', p.success.hex);
   if (p.notice?.hex) root.setProperty('--notice', p.notice.hex);
+
+  // Interactive elements (buttons, links) use accent-dark
+  if (variations?.accentDark) {
+    root.setProperty('--accent', variations.accentDark);
+    root.setProperty('--cf-accent', variations.accentDark);
+    root.setProperty('--accent-foreground', '#FFFFFF'); // Accent-dark is dark, so use white text
+  } else {
+    // Fallback to accent base if no variation provided
+    root.setProperty('--accent', p.accent.hex);
+    root.setProperty('--accent-foreground', '#FFFFFF');
+  }
+
+  // Status message backgrounds use lighter variations
+  if (variations?.errorLight) {
+    root.setProperty('--error-bg', variations.errorLight);
+    root.setProperty('--error-fg', '#000000');
+  }
+  if (variations?.warningLight) {
+    root.setProperty('--warning-bg', variations.warningLight);
+    root.setProperty('--notice-bg', variations.warningLight);
+    root.setProperty('--warning-fg', '#000000');
+    root.setProperty('--notice-fg', '#000000');
+  }
+  if (variations?.successLight) {
+    root.setProperty('--success-bg', variations.successLight);
+    root.setProperty('--success-fg', '#000000');
+  }
 }
 
 // Export Core Foundation tokens (current values) into a downloadable CSS file

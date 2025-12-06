@@ -2,8 +2,9 @@ export type ColorType = 'primary' | 'secondary' | 'tertiary' | 'accent';
 export type SemanticColorType = 'error' | 'warning' | 'success';
 
 export interface Color {
-  name: string;
+  name: string; // Display label (e.g., "Primary Lighter", "lighter")
   hex: string;
+  step?: 'lighter' | 'light' | 'dark' | 'darker'; // Band identifier for filtering/logic
 }
 
 export interface Palette {

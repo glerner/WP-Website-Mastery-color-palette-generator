@@ -67,10 +67,22 @@
   font-size: var(--cf-text-m);
 }
 
+/* Warning style for actual warnings (uses current palette variables) */
 .warningInline {
   background: var(--warning-bg, #fff7ed);
   color: var(--warning-fg, #9a3412);
   border: 1px solid var(--warning-border, #fdba74);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-size: var(--cf-text-s);
+  margin-bottom: var(--spacing-2);
+}
+
+/* Notice style for informational messages - uses current palette variables */
+.noticeInline {
+  background: var(--notice-bg, var(--warning-bg, #fff7ed));
+  color: var(--notice-fg, var(--warning-fg, #9a3412));
+  border: 1px solid var(--notice-border, var(--warning-border, #fdba74));
   border-radius: var(--radius-md);
   padding: 8px 10px;
   font-size: var(--cf-text-s);

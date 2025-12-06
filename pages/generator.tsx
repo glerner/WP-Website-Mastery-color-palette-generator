@@ -20,10 +20,11 @@ import { PreviewSection } from '../components/PreviewSection';
 import LightDarkPreview from '../components/LightDarkPreview';
 import { generateThemeJson } from '../helpers/themeJson';
 import { generateCssClasses, generateFilenameSuffix } from '../helpers/cssGenerator';
-import { Palette, ColorType, SemanticColorType, PaletteWithVariations, SwatchPick } from '../helpers/types';
+import { Palette, ColorType, SemanticColorType, PaletteWithVariations, SwatchPick, Color } from '../helpers/types';
 import { generateShades, hexToRgb, rgbToHslNorm, hslNormToRgb, rgbToHex, solveHslLightnessForY, getContrastRatio, matchBandFromPrimaryByS, luminance } from '../helpers/colorUtils';
 import { NEAR_BLACK_RGB, TINT_TARGET_COUNT, LIGHTER_MIN_Y, LIGHTER_MAX_Y, LIGHT_MIN_Y_BASE, LIGHT_MAX_Y_CAP, MIN_DELTA_LUM_TINTS, Y_TARGET_DECIMALS, AAA_MIN, MAX_CONTRAST_TINTS, RECOMMENDED_TINT_Y_GAP, TARGET_LUM_DARK, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
 import { LuminanceTestStrips } from '../components/LuminanceTestStrips';
+import { generateRibbonForBand, validateRibbons, type RibbonColor } from '../helpers/generateRibbons';
 import IndexPage from './_index';
 
 // Validate SwatchPick before storing/using it (module scope)
@@ -162,7 +163,10 @@ const initialPalette: Palette = {
 };
 
 const GeneratorPage = () => {
-  const [palette, setPalette] = useState<Palette>(initialPalette);
+  const [palette, setPalette] = useState<Palette>(() => {
+    // Ensure palette is always fully initialized with all 7 colors
+    return { ...initialPalette };
+  });
   const [selections, setSelections] = useState<
     Partial<Record<ColorType | SemanticColorType, {
       lighterIndex?: number;
@@ -173,18 +177,9 @@ const GeneratorPage = () => {
       darkY?: number
     }>>
   >(() => {
-    // Initialize with default indices for all colors
-    // These match the Adjust tab's default selections
-    const families: (ColorType | SemanticColorType)[] = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'];
-    const defaults: any = {};
-    families.forEach(k => {
-      defaults[k] = {
-        lighterIndex: 0,  // First (darkest) of lighter ribbon
-        lightIndex: 0,    // First (darkest) of light ribbon
-        // darkerY and darkY will be set by Adjust tab's auto-initialization
-      };
-    });
-    return defaults;
+    // Initialize empty - let Adjust tab's RowTints/RowShades components set defaults
+    // (They pick middle for first band, gap-respecting for second band)
+    return {};
   });
   // Exact picks captured from Adjust (used to override Palette/Export)
   // Type matches spec: Partial<Record<ColorType|SemanticColorType, { lighter?: SwatchPick; light?: SwatchPick; dark?: SwatchPick; darker?: SwatchPick }>>
@@ -316,21 +311,121 @@ const GeneratorPage = () => {
   const prevErrorHexRef = useRef<string | undefined>(undefined);
   const prevWarningHexRef = useRef<string | undefined>(undefined);
   const prevSuccessHexRef = useRef<string | undefined>(undefined);
+  const lastShownValidationErrorRef = useRef<string>('');
 
+  // Generate ribbons ONCE - this is the single source of truth for color variations
+  const ribbons = useMemo(() => {
+    console.log('[Ribbons] Generating ribbons from palette:', palette);
+    const families = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const;
+    const result: Record<string, Record<string, RibbonColor[]>> = {};
 
-  // Build base variations without exactSelections overrides (for reselection candidates)
+    families.forEach(colorKey => {
+      const color = palette[colorKey];
+      if (!color || !color.hex) {
+        // Skip if color not initialized yet
+        console.error(`[Ribbons] ERROR: ${colorKey} is undefined or missing hex!`, { color, palette });
+        result[colorKey] = {
+          lighter: [],
+          light: [],
+          dark: [],
+          darker: [],
+        };
+        return;
+      }
+
+      const baseHex = color.hex;
+      result[colorKey] = {
+        lighter: generateRibbonForBand(baseHex, 'lighter', textOnLight, textOnDark),
+        light: generateRibbonForBand(baseHex, 'light', textOnLight, textOnDark),
+        dark: generateRibbonForBand(baseHex, 'dark', textOnLight, textOnDark),
+        darker: generateRibbonForBand(baseHex, 'darker', textOnLight, textOnDark),
+      };
+    });
+
+    return result;
+  }, [palette, textOnLight, textOnDark]);
+
+  // Validate ribbons and memoize result - only recalculates when ribbons change
+  const ribbonValidation = useMemo(() => {
+    const validation = validateRibbons(ribbons);
+    // Only log errors once when validation changes
+    if (!validation.valid) {
+      console.error('[Ribbons] Invalid text colors:', validation.errors);
+    }
+    return validation;
+  }, [ribbons]);
+
+  // Show toast errors if text colors are invalid (only once per unique error)
+  useEffect(() => {
+    if (!ribbonValidation.valid) {
+      // Only show toast if diagnostics enabled AND not on Manual tab (Manual tab has banner)
+      // AND if we haven't already shown this exact error
+      const errorKey = `${textOnLight}-${textOnDark}`;
+      if (showDiagnostics && activeTab !== 'manual' && lastShownValidationErrorRef.current !== errorKey) {
+        lastShownValidationErrorRef.current = errorKey;
+        toast.error(
+          ribbonValidation.summary || 'Text color configuration is invalid',
+          { duration: 15000 }
+        );
+      }
+    } else {
+      // Reset when valid so next invalid state will show
+      lastShownValidationErrorRef.current = '';
+    }
+  }, [ribbonValidation, showDiagnostics, activeTab, textOnLight, textOnDark]);
+
+  // Build base variations from ribbons (single source of truth)
   const paletteWithVariationsBase = useMemo<PaletteWithVariations>(() => {
     try {
       // Apply semantic defaults to ensure error/warning/success exist with valid hexes
       const withSem = generateSemanticColors(palette as any) as any;
-      // Construct a true PaletteWithVariations by generating per-family bands
+
+      // Band definitions (defined once, not per color)
+      const BANDS: Array<{ step: 'lighter' | 'light' | 'dark' | 'darker'; label: string }> = [
+        { step: 'lighter', label: 'Lighter' },
+        { step: 'light', label: 'Light' },
+        { step: 'dark', label: 'Dark' },
+        { step: 'darker', label: 'Darker' },
+      ];
+
+      // Convert ribbons to variations format
       const build = (key: keyof PaletteWithVariations) => {
         const entry = withSem[key] as { name: string; hex: string };
-        const variations = Array.isArray((withSem as any)[key]?.variations)
-          ? (withSem as any)[key].variations
-          : generateShades(entry.hex, key as string);
+        const colorRibbons = ribbons[key];
+        const userSelections = (exactSelections as any)?.[key];
+
+        // Convert RibbonColor[] to Color[] format
+        const variations: Color[] = [];
+
+        if (colorRibbons) {
+          BANDS.forEach(({ step, label }) => {
+            const ribbonColors = colorRibbons[step];
+            if (!ribbonColors || ribbonColors.length === 0) return;
+
+            // Use the user's exact selection if available
+            const userPick = userSelections?.[step];
+            let selectedHex: string;
+
+            if (userPick?.hex) {
+              // User has made a selection - use it directly
+              selectedHex = userPick.hex;
+            } else {
+              // No user selection - default to last (darkest) ribbon
+              const lastRibbon = ribbonColors[ribbonColors.length - 1];
+              selectedHex = lastRibbon ? lastRibbon.hex : '#000000';
+            }
+
+            variations.push({
+              name: `${entry.name} ${label}`,
+              hex: selectedHex,
+              step: step,
+            });
+          });
+        }
+
         return { ...entry, variations };
       };
+
       return {
         primary: build('primary'),
         secondary: build('secondary'),
@@ -340,7 +435,8 @@ const GeneratorPage = () => {
         warning: build('warning'),
         success: build('success'),
       };
-    } catch {
+    } catch (err) {
+      console.error('[paletteWithVariationsBase] Error building from ribbons:', err);
       // Safe fallback: mirror current palette with empty variations to avoid crashes
       const fb: any = {};
       (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
@@ -348,7 +444,7 @@ const GeneratorPage = () => {
       });
       return fb as PaletteWithVariations;
     }
-  }, [palette]);
+  }, [palette, ribbons, exactSelections]);
 
   // Build variations with exactSelections overrides applied (for display in Palette tab)
   const paletteWithVariations = useMemo<PaletteWithVariations>(() => {
@@ -363,7 +459,7 @@ const GeneratorPage = () => {
         const arr: any[] = Array.isArray((out as any)[key]?.variations) ? (out as any)[key].variations : [];
         const setHex = (step: 'lighter' | 'light' | 'dark' | 'darker', hex?: string) => {
           if (!hex) return;
-          const v = arr.find((x) => x && (x.step === step || x.name === step));
+          const v = arr.find((x) => x && x.step === step);
           if (v) v.hex = hex;
         };
         setHex('lighter', picks.lighter?.hex);
@@ -572,15 +668,45 @@ const GeneratorPage = () => {
             const candidates = readBandCandidates(k, band);
 
             if (candidates.length === 0) {
+              // No valid colors found - text colors likely don't provide AAA contrast
+              // Only log detailed diagnostics if showDiagnostics is enabled
               if (showDiagnostics) {
+                const isTintBand = band === 'lighter' || band === 'light';
+                const problematicText = isTintBand ? textOnLight : textOnDark;
+                const textType = isTintBand ? 'text-on-light' : 'text-on-dark';
+
                 if (!hasLogs) {
                   console.log(`\n${k.toUpperCase()} (base: ${baseHex}):`);
                   hasLogs = true;
                 }
-                console.warn(`  ${band}: No candidates; textOnLight=${textOnLight}, textOnDark=${textOnDark}`);
+
+                // Calculate actual contrast for diagnostic purposes
+                const textRgb = hexToRgb(problematicText);
+                const textY = luminance(textRgb.r, textRgb.g, textRgb.b);
+
+                // Sample a few Y values in the band range to show what contrast we're getting
+                const sampleYs = isTintBand
+                  ? [0.30, 0.50, 0.70, 0.90, 0.95] // LIGHT_MIN_Y_BASE to LIGHTER_MAX_Y
+                  : [0.02, 0.05, 0.08, 0.12, 0.20]; // DARKER_MIN_Y to DARK_MAX_Y
+
+                const contrastSamples = sampleYs.map(targetY => {
+                  const rgb = solveHslLightnessForY(hexToRgb(baseHex), targetY);
+                  const contrast = getContrastRatio(rgb, textRgb);
+                  return `Y=${targetY.toFixed(2)}→${contrast.toFixed(2)}:1`;
+                }).join(', ');
+
+                console.error(
+                  `  ❌ ${band}: NO CANDIDATES FOUND\n` +
+                  `     Base color: ${baseHex}\n` +
+                  `     ${textType}: ${problematicText} (Y=${textY.toFixed(3)})\n` +
+                  `     Problem: No colors in ${band} band achieve AAA contrast (≥7.05:1) AND ≤18:1\n` +
+                  `     Sample contrasts in ${band} range: ${contrastSamples}\n` +
+                  `     Solution: ${isTintBand ? 'Use a darker text-on-light (closer to black, e.g., #1a1a1a)' : 'Use a lighter text-on-dark (closer to white, e.g., #fafafa)'}`
+                );
               }
-              // Throw error for empty candidates
-              throw new Error(`No candidates for ${k}-${band}. Base: ${baseHex}, textOnLight: ${textOnLight}, textOnDark: ${textOnDark}`);
+
+              // Skip this band - can't reselect without valid candidates
+              return;
             }
 
             if (!targetInfo) {
@@ -699,28 +825,38 @@ const GeneratorPage = () => {
         if (!sel) return;
         const hasAnySelection = sel.lighterIndex != null || sel.lightIndex != null || sel.darkY != null || sel.darkerY != null;
         if (!hasAnySelection) return;
-        // Read from paletteWithVariationsBase (fresh colors) not paletteWithVariations (has old exactSelections)
-        const entry = (paletteWithVariationsBase as any)[k];
-        const arr: Array<{ step: string; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+        // Read from ribbons (the actual source of truth), not paletteWithVariationsBase
+        const colorRibbons = (ribbons as any)[k];
+        if (!colorRibbons) return;
+
         const addPick = (step: 'lighter' | 'light' | 'dark' | 'darker', indexMaybe?: number, yMaybe?: number) => {
           let hex: string | undefined;
           let indexDisplayed: number | undefined;
 
-          // For lighter/light, require index to be set (Adjust tab must initialize first)
-          // For dark/darker, we can use Y since they don't have indices
+          const ribbonColors = colorRibbons[step];
+          if (!ribbonColors || ribbonColors.length === 0) return;
+
+          // For lighter/light, use index directly from ribbons array
           if (step === 'lighter' || step === 'light') {
             if (typeof indexMaybe !== 'number') return; // Wait for Adjust tab to set index
-            const byStep = arr.filter((v) => v.step === step);
-            if (byStep[indexMaybe]?.hex) { hex = byStep[indexMaybe].hex; indexDisplayed = indexMaybe; }
+            // Clamp index to valid range to handle stale/invalid selections
+            const clampedIndex = Math.max(0, Math.min(indexMaybe, ribbonColors.length - 1));
+            const ribbon = ribbonColors[clampedIndex];
+            if (ribbon?.hex) {
+              hex = ribbon.hex;
+              indexDisplayed = clampedIndex;
+            }
           } else {
-            // For dark/darker, use Y-based search
+            // For dark/darker, find ribbon closest to target Y
             if (typeof yMaybe !== 'number') return;
-            const candidates = arr.filter((v) => v.step === step);
-            if (candidates.length > 0) {
-              const ys = candidates.map((v) => { const { r, g, b } = hexToRgb(v.hex); return luminance(r, g, b); });
-              let best = 0, dBest = Infinity;
-              ys.forEach((yy, i) => { const d = Math.abs(yy - yMaybe); if (d < dBest) { dBest = d; best = i; } });
-              if (best >= 0 && best < candidates.length && candidates[best]?.hex) { hex = candidates[best]!.hex; indexDisplayed = best; }
+            let best = 0, dBest = Infinity;
+            ribbonColors.forEach((ribbon: any, i: number) => {
+              const d = Math.abs(ribbon.y - yMaybe);
+              if (d < dBest) { dBest = d; best = i; }
+            });
+            if (ribbonColors[best]?.hex) {
+              hex = ribbonColors[best].hex;
+              indexDisplayed = best;
             }
           }
           if (!hex) return;
@@ -743,7 +879,7 @@ const GeneratorPage = () => {
       })();
       if (!same) setExactSelections(next);
     } catch { }
-  }, [paletteWithVariationsBase, selections, textOnLight, textOnDark, exactSelections]);
+  }, [ribbons, selections, textOnLight, textOnDark, exactSelections]);
 
   // Don't run syncExactFromSelections automatically on every state change
   // Only sync when explicitly needed (user clicks, tab switch, etc.)
@@ -769,7 +905,7 @@ const GeneratorPage = () => {
     }
 
     prevHasIndicesRef.current = hasIndices;
-  }, [paletteWithVariationsBase, selections, showDiagnostics, syncExactFromSelections]); // Trigger on base colors OR selections change
+  }, [ribbons, selections, showDiagnostics, syncExactFromSelections]); // Trigger on ribbons OR selections change
 
   // When switching to Palette tab, ensure sync has occurred (covers user-perceived lag after edits)
   useEffect(() => {
@@ -781,9 +917,19 @@ const GeneratorPage = () => {
 
   // Synchronize Adjust highlights (selections) from exactSelections so the initially highlighted
   // swatches match what Palette/Export are using.
+  // DISABLED: This was setting indices to 0 before RowTints could initialize properly
+  // Let RowTints/RowShades control initialization, then syncExactFromSelections will populate exactSelections
   useEffect(() => {
     try {
-      if (!exactSelections || Object.keys(exactSelections).length === 0) return;
+      // Skip this sync - it was causing index 0 to be set before RowTints initialization
+      console.log('[syncSelectionsFromExact] DISABLED - letting RowTints/RowShades initialize first');
+      return;
+
+      if (!exactSelections || Object.keys(exactSelections).length === 0) {
+        console.log('[syncSelectionsFromExact] Skipping: exactSelections empty');
+        return;
+      }
+      console.log('[syncSelectionsFromExact] Running with exactSelections:', exactSelections);
       const next: typeof selections = { ...(selections as any) } as any;
       (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
         const entry = (paletteWithVariations as any)[k];
@@ -799,8 +945,18 @@ const GeneratorPage = () => {
           const list = byStep(step);
           const idx = list.findIndex(v => (v.hex || '').toLowerCase() === pick.toLowerCase());
           if (idx >= 0) {
-            if (step === 'lighter' && cur.lighterIndex == null) cur.lighterIndex = idx;
-            if (step === 'light' && cur.lightIndex == null) cur.lightIndex = idx;
+            if (step === 'lighter' && cur.lighterIndex == null) {
+              console.log(`[syncSelectionsFromExact] ${k}.lighterIndex = ${idx} (was null)`);
+              cur.lighterIndex = idx;
+            } else if (step === 'lighter') {
+              console.log(`[syncSelectionsFromExact] ${k}.lighterIndex already set to ${cur.lighterIndex}, skipping`);
+            }
+            if (step === 'light' && cur.lightIndex == null) {
+              console.log(`[syncSelectionsFromExact] ${k}.lightIndex = ${idx} (was null)`);
+              cur.lightIndex = idx;
+            } else if (step === 'light') {
+              console.log(`[syncSelectionsFromExact] ${k}.lightIndex already set to ${cur.lightIndex}, skipping`);
+            }
           }
         });
         // Shades: set Y by luminance of exact hex if not already set
@@ -822,8 +978,12 @@ const GeneratorPage = () => {
 
   // Stage 2: Ensure invariant [I1] - all exactSelections[k][b] are populated after first render
   // This guarantees that every color key and band has an exact selection for Target Y Resolution
+  // DISABLED: Let Adjust tab's RowTints/RowShades components handle initialization instead
   useEffect(() => {
     try {
+      // Skip Stage 2 - Adjust tab components will initialize via onSelectTint/onSelectShade
+      return;
+
       if (!paletteWithVariations) return;
       const families = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const);
       const bands = (['lighter', 'light', 'dark', 'darker'] as const);
@@ -838,23 +998,24 @@ const GeneratorPage = () => {
 
       if (!needsInit) return; // All bands already populated
 
-      // Populate missing bands with middle slot from each ribbon
+      // Populate missing bands with middle slot from each ribbon (use ribbons, not paletteWithVariations)
       const next: typeof exactSelections = { ...(exactSelections as any) } as any;
       families.forEach((k) => {
-        const entry = (paletteWithVariations as any)[k];
-        const arr: Array<{ step: string; hex: string }> = Array.isArray(entry?.variations) ? entry.variations : [];
+        const colorRibbons = (ribbons as any)[k];
+        if (!colorRibbons) return;
 
         bands.forEach((step) => {
           // Skip if already exists
           if ((next as any)?.[k]?.[step]) return;
 
-          const candidates = arr.filter((v) => v.step === step);
-          if (candidates.length === 0) return; // No candidates available (will be handled by error in Stage 6)
+          const ribbonColors = colorRibbons[step];
+          if (!ribbonColors || ribbonColors.length === 0) return; // No candidates available
 
           // Pick middle slot as default
-          const midIdx = Math.floor(candidates.length / 2);
-          const hex = candidates[midIdx]?.hex;
-          if (!hex) return;
+          const midIdx = Math.floor(ribbonColors.length / 2);
+          const ribbon = ribbonColors[midIdx];
+          if (!ribbon?.hex) return;
+          const hex = ribbon.hex;
 
           const { r, g, b } = hexToRgb(hex);
           const { h, s, l } = rgbToHslNorm(r, g, b);
@@ -1270,9 +1431,14 @@ const GeneratorPage = () => {
         error: { hex: isHex(mv.error) ? mv.error : palette.error.hex || def.error.hex },
         success: { hex: isHex(mv.success) ? mv.success : palette.success.hex || def.success.hex },
         notice: { hex: isHex(mv.warning) ? mv.warning : palette.warning.hex || def.warning.hex },
-      } as any);
+      } as any, {
+        accentDark: exactSelections?.accent?.dark?.hex,
+        errorLight: exactSelections?.error?.light?.hex,
+        warningLight: exactSelections?.warning?.light?.hex,
+        successLight: exactSelections?.success?.light?.hex,
+      });
     } catch { }
-  }, [palette]);
+  }, [palette, exactSelections]);
 
   // Load/save semantic band selection
   useEffect(() => {
@@ -1563,13 +1729,13 @@ const GeneratorPage = () => {
       manualForm.setValues(nextValues as any);
       setPalette((prev) => ({
         ...prev,
-        primary: { ...prev.primary, hex: (nextValues as any).primary || prev.primary.hex },
-        secondary: { ...prev.secondary, hex: (nextValues as any).secondary || prev.secondary.hex },
-        tertiary: { ...prev.tertiary, hex: (nextValues as any).tertiary || prev.tertiary.hex },
-        accent: { ...prev.accent, hex: (nextValues as any).accent || prev.accent.hex },
-        error: (nextValues as any).error ? { ...prev.error, hex: (nextValues as any).error } : prev.error,
-        warning: (nextValues as any).warning ? { ...prev.warning, hex: (nextValues as any).warning } : prev.warning,
-        success: (nextValues as any).success ? { ...prev.success, hex: (nextValues as any).success } : prev.success,
+        primary: { ...prev.primary, hex: (nextValues as any).primary || prev.primary?.hex || initialPalette.primary.hex },
+        secondary: { ...prev.secondary, hex: (nextValues as any).secondary || prev.secondary?.hex || initialPalette.secondary.hex },
+        tertiary: { ...prev.tertiary, hex: (nextValues as any).tertiary || prev.tertiary?.hex || initialPalette.tertiary.hex },
+        accent: { ...prev.accent, hex: (nextValues as any).accent || prev.accent?.hex || initialPalette.accent.hex },
+        error: { ...(prev.error || initialPalette.error), hex: (nextValues as any).error || prev.error?.hex || initialPalette.error.hex },
+        warning: { ...(prev.warning || initialPalette.warning), hex: (nextValues as any).warning || prev.warning?.hex || initialPalette.warning.hex },
+        success: { ...(prev.success || initialPalette.success), hex: (nextValues as any).success || prev.success?.hex || initialPalette.success.hex },
       }));
       if ((nextValues as any).textOnDark) setTextOnDark((nextValues as any).textOnDark);
       if ((nextValues as any).textOnLight) setTextOnLight((nextValues as any).textOnLight);
@@ -1714,6 +1880,14 @@ const GeneratorPage = () => {
             <Tabs
               value={activeTab}
               onValueChange={(v) => {
+                // Block tab switching if text colors are invalid (except staying on manual tab)
+                if (!ribbonValidation.valid && v !== 'manual' && activeTab === 'manual') {
+                  toast.error(
+                    ribbonValidation.summary || 'Text colors invalid. Fix text-on-light and text-on-dark before switching tabs.',
+                    { duration: 10000 }
+                  );
+                  return; // Block the tab change
+                }
                 setActiveTab(v as any);
               }}
               className={styles.tabs}
@@ -1904,6 +2078,73 @@ const GeneratorPage = () => {
               </TabsContent>
               {/* Palette Tab (desktop) */}
               <TabsContent value="palette" className={styles.tabContent}>
+                {/* Header with save buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap', gap: 'var(--spacing-2)' }}>
+                  <h2 className={`${styles.sectionTitle} cf-font-600`} style={{ margin: 0 }}>Color Palette</h2>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', flexWrap: 'wrap' }}>
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        try {
+                          localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
+                          localStorage.setItem('gl_palette_exact_selections', JSON.stringify(exactSelections));
+                          toast.success('Palette selections saved');
+                        } catch (e) {
+                          toast.error('Failed to save selections');
+                        }
+                      }}
+                    >
+                      Save Palette Selections
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          // Save all manual colors and settings (same as Manual tab)
+                          const toSave = {
+                            primary: manualForm.values.primary,
+                            secondary: manualForm.values.secondary,
+                            tertiary: manualForm.values.tertiary,
+                            accent: manualForm.values.accent,
+                            error: manualForm.values.error,
+                            warning: manualForm.values.warning,
+                            success: manualForm.values.success,
+                          };
+                          localStorage.setItem('gl_palette_manual_colors', JSON.stringify(toSave));
+                          localStorage.setItem('gl_theme_name', manualForm.values.themeName || '');
+                          localStorage.setItem('gl_theme_text_on_dark_hex', manualForm.values.textOnDark || '');
+                          localStorage.setItem('gl_theme_text_on_light_hex', manualForm.values.textOnLight || '');
+                          localStorage.setItem('gl_theme_semantic_error_hex', manualForm.values.error || '');
+                          localStorage.setItem('gl_theme_semantic_warning_hex', manualForm.values.warning || '');
+                          localStorage.setItem('gl_theme_semantic_success_hex', manualForm.values.success || '');
+                          localStorage.setItem('gl_palette_exact_selections', JSON.stringify(exactSelections));
+                          localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
+                          savedManualJsonRef.current = JSON.stringify({ ...manualForm.values });
+                          applyPaletteToCSSVariables({
+                            primary: { hex: manualForm.values.primary },
+                            secondary: { hex: manualForm.values.secondary },
+                            tertiary: { hex: manualForm.values.tertiary },
+                            accent: { hex: manualForm.values.accent },
+                            error: { hex: manualForm.values.error || palette.error.hex },
+                            success: { hex: manualForm.values.success || palette.success.hex },
+                            notice: { hex: manualForm.values.warning || palette.warning.hex },
+                          } as any, {
+                            accentDark: exactSelections?.accent?.dark?.hex,
+                            errorLight: exactSelections?.error?.light?.hex,
+                            warningLight: exactSelections?.warning?.light?.hex,
+                            successLight: exactSelections?.success?.light?.hex,
+                          });
+                          exportCoreFoundationCSSFromCurrent();
+                          toast.success('All colors and settings saved');
+                        } catch (e) {
+                          toast.error('Failed to save');
+                        }
+                      }}
+                    >
+                      Save All Colors & Settings
+                    </Button>
+                  </div>
+                </div>
                 <div className={styles.previewContent}>
                   <ColorDisplay
                     palette={paletteWithVariations}
@@ -1922,6 +2163,24 @@ const GeneratorPage = () => {
               {/* Manual Tab */}
               <TabsContent value="manual" className={styles.tabContent}>
                 <h2 className={styles.sectionTitle}>Manual Settings for your Palette</h2>
+                {(() => {
+                  if (!ribbonValidation.valid) {
+                    return (
+                      <div style={{
+                        background: 'var(--error-bg, #fee)',
+                        color: 'var(--error-fg, #c00)',
+                        border: '2px solid var(--error, #c00)',
+                        borderRadius: 'var(--radius)',
+                        padding: 'var(--spacing-3)',
+                        marginBottom: 'var(--spacing-3)',
+                        fontWeight: 600
+                      }}>
+                        ⚠️ {ribbonValidation.summary || 'Text colors invalid'} — Tab switching disabled until fixed.
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <Form {...manualForm}>
                   <div className={styles.manualGrid}>
                     {/* Left column: explanatory content and actions */}
@@ -2105,7 +2364,7 @@ const GeneratorPage = () => {
                         <hr
                           className={styles.tertiaryDivider}
                           style={{
-                            borderTopColor: paletteWithVariations.tertiary.variations.find((v: any) => v.step === 'dark')!.hex,
+                            borderTopColor: paletteWithVariations.tertiary?.variations?.find((v: any) => v.step === 'dark')?.hex || palette.tertiary?.hex || '#059669',
                           }}
                         />
                         <input
@@ -2166,7 +2425,12 @@ const GeneratorPage = () => {
                                   error: { hex: manualForm.values.error || palette.error.hex },
                                   success: { hex: manualForm.values.success || palette.success.hex },
                                   notice: { hex: manualForm.values.warning || palette.warning.hex },
-                                } as any);
+                                } as any, {
+                                  accentDark: exactSelections?.accent?.dark?.hex,
+                                  errorLight: exactSelections?.error?.light?.hex,
+                                  warningLight: exactSelections?.warning?.light?.hex,
+                                  successLight: exactSelections?.success?.light?.hex,
+                                });
                               } catch { }
                               // Export current Core Foundation tokens as CSS
                               try { exportCoreFoundationCSSFromCurrent(); } catch { }
@@ -2214,7 +2478,12 @@ const GeneratorPage = () => {
                                 error: { hex: initialPalette.error.hex },
                                 success: { hex: initialPalette.success.hex },
                                 notice: { hex: initialPalette.warning.hex },
-                              } as any);
+                              } as any, {
+                                accentDark: exactSelections?.accent?.dark?.hex,
+                                errorLight: exactSelections?.error?.light?.hex,
+                                warningLight: exactSelections?.warning?.light?.hex,
+                                successLight: exactSelections?.success?.light?.hex,
+                              });
                             } catch { }
                             toast.success('Reset to defaults');
                           }}
@@ -2559,7 +2828,8 @@ const GeneratorPage = () => {
                     }
                     manualForm.setValues(nextVals);
                   }}
-                  onSelectTintIndex={(colorKey, kind, index) =>
+                  onSelectTintIndex={(colorKey, kind, index) => {
+                    console.log(`[onSelectTintIndex] ${colorKey}.${kind} = ${index}`);
                     setSelections((prev) => ({
                       ...prev,
                       [colorKey]: {
@@ -2567,8 +2837,8 @@ const GeneratorPage = () => {
                         ...(kind === 'lighter' ? { lighterIndex: index } : {}),
                         ...(kind === 'light' ? { lightIndex: index } : {}),
                       },
-                    }))
-                  }
+                    }));
+                  }}
                   onSelectShadeY={(colorKey, kind, y) =>
                     setSelections((prev) => ({
                       ...prev,
@@ -2582,6 +2852,7 @@ const GeneratorPage = () => {
                   // New exact-pick handlers (used to override Palette/Export)
                   onSelectTint={(colorKey, kind, pick) => {
                     if (!isValidSwatchPick(pick)) { console.error('Rejected invalid SwatchPick (tint)', { colorKey, kind, pick }); return; }
+                    console.log(`[onSelectTint] ${colorKey}.${kind}: hex=${pick.hex}, indexDisplayed=${pick.indexDisplayed}`);
                     setExactSelections((prev) => ({
                       ...prev,
                       [colorKey]: { ...(prev[colorKey] || {}), [kind]: pick },
@@ -2732,7 +3003,7 @@ const GeneratorPage = () => {
                                 const order = ['dark', 'darker', 'light', 'lighter'];
                                 const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
                                 adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
-                                adjusted.forEach((v: any) => pushItem(v.step || v.name || 'step', v.hex));
+                                adjusted.forEach((v: any) => pushItem(v.step || 'unknown', v.hex));
                               }
                             }
                             const toHsl = (hex: string) => {
@@ -2818,7 +3089,7 @@ const GeneratorPage = () => {
                                 const order = ['dark', 'darker', 'light', 'lighter'];
                                 const adjusted = entry.variations.filter((v: any) => v.step !== 'base');
                                 adjusted.sort((a: any, b: any) => order.indexOf(a.step) - order.indexOf(b.step));
-                                adjusted.forEach((v: any) => add(v.step || v.name || 'step', v.hex));
+                                adjusted.forEach((v: any) => add(v.step || 'unknown', v.hex));
                               }
                             }
                           });

@@ -220,7 +220,6 @@ const LoadingSkeleton = () => (
 export const ColorDisplay = ({ palette, isLoading, onVariationClick, semanticBandSelection, textOnLight, textOnDark }: ColorDisplayProps) => {
   return (
     <section className={styles.section}>
-      <h2 className={`${styles.sectionTitle} cf-font-600`}>Color Palette</h2>
       <div className={styles.paletteGrid}>
         {isLoading ? (
           <>

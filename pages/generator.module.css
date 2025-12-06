@@ -619,9 +619,10 @@
   border-radius: var(--radius-sm, 6px);
   font-size: var(--cf-text-s);
   line-height: 1.2;
-  background: var(--notice-bg, var(--warning-bg, #fff7ed));
-  color: var(--notice-fg, var(--warning-fg, #9a3412));
-  border: 1px solid var(--notice-border, var(--warning-border, #fdba74));
+  /* Use safe fallback colors (black on light tan) when text colors are invalid */
+  background: #f5f1ed;
+  color: #1a1a1a;
+  border: 1px solid #d4c5b0;
 }
 
 /* High-contrast metadata text (Manual tab readouts: HSL, Y) */
@@ -631,7 +632,7 @@
 }
 
 /* Add left margin when a metaLabel follows another metaLabel */
-.metaLabel + .metaLabel {
+.metaLabel+.metaLabel {
   margin-left: 8px;
 }
 

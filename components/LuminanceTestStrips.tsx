@@ -5,6 +5,9 @@ import { PaletteWithVariations, ColorType, SemanticColorType, SwatchPick } from 
 import { hexToRgb, rgbToHex, rgbToHslNorm, solveHslLightnessForY, luminance, getContrastRatio, hslNormToRgb } from '../helpers/colorUtils';
 import { NEAR_BLACK_RGB, NEAR_WHITE_RGB, TINT_TARGET_COUNT, SHADE_TARGET_COUNT, LIGHT_MIN_Y_BASE, LIGHTER_MAX_Y, LIGHT_MAX_Y_CAP, DARKER_MIN_Y, DARKER_MAX_Y, DARK_OVERLAP_MIN_Y, DARK_MAX_Y, Y_TARGET_DECIMALS, Y_DISPLAY_DECIMALS, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, RECOMMENDED_SHADE_Y_GAP_TOLERANCE, HARD_MIN_SHADE_Y_GAP, TARGET_LUM_LIGHTER, TARGET_LUM_LIGHT, TARGET_LUM_DARK, TARGET_LUM_DARKER, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_TINTS_FROM_WHITE, MIN_DELTA_LUM_SHADES, AAA_MIN, AA_SMALL_MIN, MAX_CONTRAST_TINTS, MAX_CONTRAST_SHADES, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
 
+// Sentinel value for "not found" - explicit constant makes debugging clearer than -1
+const INDEX_NOT_FOUND = -1;
+
 function hslStringFromRgb(rgb: { r: number; g: number; b: number }, oneDecimal = true): string {
   const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
   const H = oneDecimal ? h.toFixed(1) : Math.round(h).toString();
@@ -80,7 +83,7 @@ type RowProps = {
   anchorId?: string;
 };
 
-function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, onGoPalette, anchorId }: RowProps) {
+function RowTints({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, onGoPalette, anchorId }: RowProps) {
   const baseRgb = hexToRgb(baseHex);
   // Prefer live text-on-light token if provided; fall back to near-black
   const blackLike = textOnLightRgb ?? NEAR_BLACK_RGB;
@@ -92,12 +95,13 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
       .map(({ y }) => y);
   }, [baseRgb, blackLike.r, blackLike.g, blackLike.b]);
 
-  // Unified AAA-valid list across LIGHT_MIN_Y_BASE..LIGHTER_MAX_Y; sample evenly when >= target count; then split
+  // Unified AAA-valid list across LIGHT_MIN_Y_BASE..practical max; sample evenly when >= target count; then split
   const { lighterTargetsFiltered, lightTargetsFiltered } = React.useMemo(() => {
     const step = 0.005;
     const raw: number[] = [];
     const minY = Math.max(0, LIGHT_MIN_Y_BASE);
-    const maxY = Math.min(1, LIGHTER_MAX_Y);
+    // Use practical threshold: 1.0 (white) - MIN_DELTA_LUM_TINTS_FROM_WHITE
+    const maxY = Math.min(1, 1.0 - MIN_DELTA_LUM_TINTS_FROM_WHITE);
     for (let y = minY; y <= maxY + 1e-9; y += step) raw.push(parseFloat(y.toFixed(Y_TARGET_DECIMALS)));
     const aaa = filterForBlackTextAAA(raw).sort((a, b) => a - b);
     let unified: number[] = [];
@@ -160,21 +164,88 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
   // Initialize defaults from picker lists: middle lighter, then a light that respects recommended gap when possible
   React.useEffect(() => {
     if (!lighterTargetsFiltered.length || !lightTargetsFiltered.length) return;
+    console.log(`[RowTints Init] ${colorKey}: lighterTargetsFiltered.length=${lighterTargetsFiltered.length}, selectedLighterIndex=${selectedLighterIndex}, selectedLightIndex=${selectedLightIndex}`);
+
     // Initialize lighter index to middle if unset
     if (selectedLighterIndex == null) {
       const mid = Math.floor(lighterTargetsFiltered.length / 2);
+      console.log(`[RowTints Init] ${colorKey}: Setting lighter to middle index ${mid} (of ${lighterTargetsFiltered.length})`);
       onSelect(colorKey, 'lighter', mid);
+      // Also initialize exactSelections
+      if (onSelectTint) {
+        const targetY = lighterTargetsFiltered[mid];
+        if (targetY != null) {
+          const rgb = solveHslLightnessForY(baseRgb, targetY);
+          const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+          const y = luminance(rgb.r, rgb.g, rgb.b);
+          const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+          const cLight = textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : getContrastRatio(rgb, blackLike);
+          const cDark = textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : getContrastRatio(rgb, blackLike);
+          console.log(`[RowTints Init] ${colorKey}: Calling onSelectTint for lighter with hex=${hex}, indexDisplayed=${mid}`);
+          onSelectTint(colorKey, 'lighter', {
+            colorKey,
+            step: 'lighter',
+            indexDisplayed: mid,
+            hex,
+            hsl: { h, s, l },
+            y,
+            contrastVsTextOnLight: cLight,
+            contrastVsTextOnDark: cDark,
+            textToneUsed: 'dark',
+          });
+        }
+      }
+    } else {
+      console.log(`[RowTints Init] ${colorKey}: Skipping lighter init (already set to ${selectedLighterIndex})`);
     }
+
     // Initialize light index to satisfy gap relative to lighter when possible
     if (selectedLightIndex == null) {
       const baseY = lighterTargetsFiltered[selectedLighterIndex ?? Math.floor(lighterTargetsFiltered.length / 2)];
       if (baseY != null) {
-        const idx = lightTargetsFiltered.findIndex(L => (baseY - L) >= RECOMMENDED_TINT_Y_GAP);
+        // Search from LIGHTEST (end of array) to find brightest light that maintains gap
+        // This gives better visual hierarchy: lighter→light goes bright→slightly-less-bright
+        let idx = INDEX_NOT_FOUND;
+        for (let i = lightTargetsFiltered.length - 1; i >= 0; i--) {
+          const lightY = lightTargetsFiltered[i];
+          if (lightY != null && (baseY - lightY) >= RECOMMENDED_TINT_Y_GAP) {
+            idx = i;
+            break;
+          }
+        }
         const fallback = Math.max(0, lightTargetsFiltered.length - 1);
-        onSelect(colorKey, 'light', idx >= 0 ? idx : fallback);
+        const finalIdx = (idx !== INDEX_NOT_FOUND) ? idx : fallback;
+        console.log(`[RowTints Init] ${colorKey}: Setting light to index ${finalIdx} (found=${idx >= 0}, fallback=${fallback}, of ${lightTargetsFiltered.length}, searchedFromLightest=true)`);
+        onSelect(colorKey, 'light', finalIdx);
+        // Also initialize exactSelections
+        if (onSelectTint) {
+          const targetY = lightTargetsFiltered[finalIdx];
+          if (targetY != null) {
+            const rgb = solveHslLightnessForY(baseRgb, targetY);
+            const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+            const y = luminance(rgb.r, rgb.g, rgb.b);
+            const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+            const cLight = textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : getContrastRatio(rgb, blackLike);
+            const cDark = textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : getContrastRatio(rgb, blackLike);
+            console.log(`[RowTints Init] ${colorKey}: Calling onSelectTint for light with hex=${hex}, indexDisplayed=${finalIdx}`);
+            onSelectTint(colorKey, 'light', {
+              colorKey,
+              step: 'light',
+              indexDisplayed: finalIdx,
+              hex,
+              hsl: { h, s, l },
+              y,
+              contrastVsTextOnLight: cLight,
+              contrastVsTextOnDark: cDark,
+              textToneUsed: 'dark',
+            });
+          }
+        }
       }
+    } else {
+      console.log(`[RowTints Init] ${colorKey}: Skipping light init (already set to ${selectedLightIndex})`);
     }
-  }, [lighterTargetsFiltered, lightTargetsFiltered, selectedLighterIndex, selectedLightIndex, onSelect, colorKey]);
+  }, [lighterTargetsFiltered, lightTargetsFiltered, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, colorKey, baseRgb, blackLike, textOnLightRgb, textOnDarkRgb]);
 
   return (
     <div>
@@ -266,7 +337,7 @@ function Row({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex
         )}
       </div>
       {tooClose && (
-        <div className={styles.warningInline}>
+        <div className={styles.noticeInline}>
           {(() => {
             const yL = lighterYSelected != null ? parseFloat(lighterYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
             const yLt = lightYSelected != null ? parseFloat(lightYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
@@ -448,144 +519,138 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
     }
   }, [selectedDarkerY, selectedDarkY, darkerTargets, darkTargets, tooClose, onSelect, colorKey]);
 
+  // Band definitions in display order
+  const SHADE_BANDS: Array<{
+    step: 'dark' | 'darker';
+    label: string;
+    targets: number[];
+    selectedY: number | undefined;
+    closestIndex: number;
+    gapLabel: string;
+    gapCalc: () => string;
+    minGap: number;
+  }> = [
+      {
+        step: 'dark',
+        label: 'dark',
+        targets: darkTargets,
+        selectedY: selectedDarkY,
+        closestIndex: darkClosest,
+        gapLabel: 'darker→dark',
+        gapCalc: () => {
+          if (selectedDarkerY == null || selectedDarkY == null) return '-';
+          return (parseFloat(selectedDarkY.toFixed(Y_DISPLAY_DECIMALS)) - parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS))).toFixed(3);
+        },
+        minGap: RECOMMENDED_SHADE_Y_GAP,
+      },
+      {
+        step: 'darker',
+        label: 'darker',
+        targets: darkerTargets,
+        selectedY: selectedDarkerY,
+        closestIndex: darkerClosest,
+        gapLabel: 'black→darker',
+        gapCalc: () => {
+          if (selectedDarkerY == null) return '-';
+          return (parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS)) - 0).toFixed(3);
+        },
+        minGap: HARD_MIN_SHADE_Y_GAP,
+      },
+    ];
+
   return (
     <div>
-      <div id={anchorId} className={`${styles.rowTitle} cf-font-600`}>
-        {name}-darker: Y-gap (black→darker): {(() => {
-          if (selectedDarkerY == null) return '-';
-          const yDk = parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS));
-          return (yDk - 0).toFixed(3);
-        })()} (min: {HARD_MIN_SHADE_Y_GAP.toFixed(3)})
-      </div>
-      <div className={styles.stripGrid}>
-        {darkerTargets.map((targetY, i) => {
-          const rgb = solveHslLightnessForY(baseRgb, targetY);
-          const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
-          const y = luminance(rgb.r, rgb.g, rgb.b);
-          const contrast = getContrastRatio(rgb, whiteLike);
-          const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
-          const isSelected = i === darkerClosest;
-          return (
-            <div
-              key={`${name}-darker-${i}-${targetY}`}
-              className={`${styles.swatch} ${isSelected ? styles.selected : ''}`}
-              onClick={() => {
-                onSelect(colorKey, 'darker', targetY);
-                try {
-                  const cLight = textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast;
-                  const cDark = textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast;
-                  const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
-                  const pick: SwatchPick = {
-                    colorKey,
-                    step: 'darker',
-                    indexDisplayed: i,
-                    hex,
-                    hsl: { h, s, l },
-                    y,
-                    contrastVsTextOnLight: cLight,
-                    contrastVsTextOnDark: cDark,
-                    textToneUsed: 'light',
-                  };
-                  onSelectShade && onSelectShade(colorKey, 'darker', pick);
-                } catch { }
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  onSelect(colorKey, 'darker', targetY); onSelectShade && onSelectShade(colorKey, 'darker', {
-                    colorKey, step: 'darker', indexDisplayed: i, hex, hsl: (() => { const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b); return { h, s, l }; })(), y,
-                    contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
-                    contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
-                    textToneUsed: 'light',
-                  });
-                }
-              }}
-            >
-              {renderPickerSwatchContent({ hex, hsl: hslStringFromRgb(rgb, true), y, level, contrast, textColor: '#fff' })}
+      {SHADE_BANDS.map((band, bandIdx) => (
+        <React.Fragment key={band.step}>
+          {bandIdx === 0 && (
+            <div id={anchorId} className={`${styles.rowTitle} cf-font-600`}>
+              {name}-{band.label}: Y-gap ({band.gapLabel}): {band.gapCalc()} (min: {band.minGap.toFixed(3)})
             </div>
-          );
-        })}
-      </div>
-      {typeof totalShades === 'number' && totalShades < 6 && (
-        <div className={styles.warningInline}>
-          {(() => {
-            const n = totalShades;
-            return `Only ${n} AAA-compliant dark shades available for this color. Consider lightening the "Text on Dark" color, or for this color try increasing saturation or slightly adjusting hue to widen the dark range.`;
-          })()}
-        </div>
-      )}
-      <div className={`${styles.rowTitle} cf-font-600`}>
-        {name}-dark: Y-gap (darker→dark): {(() => {
-          if (selectedDarkerY == null || selectedDarkY == null) return '-';
-          const yDkr = parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS));
-          const yDrk = parseFloat(selectedDarkY.toFixed(Y_DISPLAY_DECIMALS));
-          return (yDrk - yDkr).toFixed(3);
-        })()} (min: {RECOMMENDED_SHADE_Y_GAP.toFixed(3)})
-      </div>
-      {tooClose && (
-        <div className={styles.warningInline}>
-          {(() => {
-            const yDkr = selectedDarkerY != null ? parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
-            const yDrk = selectedDarkY != null ? parseFloat(selectedDarkY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
-            const diff = (yDkr != null && yDrk != null) ? (yDrk - yDkr) : undefined;
-            return `Selected darker (Y ${yDkr?.toFixed(3) ?? '-'}) and dark (Y ${yDrk?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_SHADE_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-'}). Palette will preserve your selections.`;
-          })()}
-        </div>
-      )}
-      <div className={styles.stripGrid}>
-        {darkTargets.map((targetY, i) => {
-          const rgb = solveHslLightnessForY(baseRgb, targetY);
-          const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
-          const y = luminance(rgb.r, rgb.g, rgb.b);
-          const contrast = getContrastRatio(rgb, whiteLike);
-          const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
-          const isSelected = i === darkClosest;
-          return (
-            <div
-              key={`${name}-dark-${i}-${targetY}`}
-              className={`${styles.swatch} ${isSelected ? styles.selected : ''}`}
-              onClick={() => {
-                onSelect(colorKey, 'dark', targetY);
-                try {
-                  const cLight = textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast;
-                  const cDark = textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast;
-                  const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
-                  const pick: SwatchPick = {
-                    colorKey,
-                    step: 'dark',
-                    indexDisplayed: i,
-                    hex,
-                    hsl: { h, s, l },
-                    y,
-                    contrastVsTextOnLight: cLight,
-                    contrastVsTextOnDark: cDark,
-                    textToneUsed: 'light',
-                  };
-                  onSelectShade && onSelectShade(colorKey, 'dark', pick);
-                } catch { }
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  onSelect(colorKey, 'dark', targetY); onSelectShade && onSelectShade(colorKey, 'dark', {
-                    colorKey, step: 'dark', indexDisplayed: i, hex, hsl: (() => { const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b); return { h, s, l }; })(), y,
-                    contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
-                    contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
-                    textToneUsed: 'light',
-                  });
-                }
-              }}
-            >
-              {renderPickerSwatchContent({ hex, hsl: hslStringFromRgb(rgb, true), y, level, contrast, textColor: '#fff' })}
+          )}
+          {bandIdx === 0 && tooClose && (
+            <div className={styles.noticeInline}>
+              {(() => {
+                const yDkr = selectedDarkerY != null ? parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
+                const yDrk = selectedDarkY != null ? parseFloat(selectedDarkY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
+                const diff = (yDkr != null && yDrk != null) ? (yDrk - yDkr) : undefined;
+                return `Selected darker (Y ${yDkr?.toFixed(3) ?? '-'}) and dark (Y ${yDrk?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_SHADE_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-'}). Palette will preserve your selections, which may reduce perceptual separation.`;
+              })()}
             </div>
-          );
-        })}
-      </div>
-      {darkTargets.length === 0 && (
-        <div className={styles.warningInline}>No AAA-compliant dark options found for {name} in the configured range.</div>
-      )}
+          )}
+          {bandIdx !== 0 && (
+            <div className={`${styles.rowTitle} cf-font-600`}>
+              {name}-{band.label}: Y-gap ({band.gapLabel}): {band.gapCalc()} (min: {band.minGap.toFixed(3)})
+            </div>
+          )}
+          <div className={styles.stripGrid}>
+            {band.targets.map((targetY, i) => {
+              const rgb = solveHslLightnessForY(baseRgb, targetY);
+              const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+              const y = luminance(rgb.r, rgb.g, rgb.b);
+              const contrast = getContrastRatio(rgb, whiteLike);
+              const level = contrast >= AAA_MIN ? 'AAA' : contrast >= AA_SMALL_MIN ? 'AA' : 'FAIL';
+              const isSelected = i === band.closestIndex;
+              return (
+                <div
+                  key={`${name}-${band.step}-${i}-${targetY}`}
+                  className={`${styles.swatch} ${isSelected ? styles.selected : ''}`}
+                  onClick={() => {
+                    onSelect(colorKey, band.step, targetY);
+                    try {
+                      const cLight = textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast;
+                      const cDark = textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast;
+                      const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                      const pick: SwatchPick = {
+                        colorKey,
+                        step: band.step,
+                        indexDisplayed: i,
+                        hex,
+                        hsl: { h, s, l },
+                        y,
+                        contrastVsTextOnLight: cLight,
+                        contrastVsTextOnDark: cDark,
+                        textToneUsed: 'light',
+                      };
+                      onSelectShade && onSelectShade(colorKey, band.step, pick);
+                    } catch { }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      onSelect(colorKey, band.step, targetY);
+                      onSelectShade && onSelectShade(colorKey, band.step, {
+                        colorKey,
+                        step: band.step,
+                        indexDisplayed: i,
+                        hex,
+                        hsl: (() => { const { h, s, l } = rgbToHslNorm(rgb.r, rgb.g, rgb.b); return { h, s, l }; })(),
+                        y,
+                        contrastVsTextOnLight: textOnLightRgb ? getContrastRatio(rgb, textOnLightRgb) : contrast,
+                        contrastVsTextOnDark: textOnDarkRgb ? getContrastRatio(rgb, textOnDarkRgb) : contrast,
+                        textToneUsed: 'light',
+                      });
+                    }
+                  }}
+                >
+                  {renderPickerSwatchContent({ hex, hsl: hslStringFromRgb(rgb, true), y, level, contrast, textColor: '#fff' })}
+                </div>
+              );
+            })}
+          </div>
+          {bandIdx === 0 && band.targets.length === 0 && (
+            <div className={styles.warningInline}>No AAA-compliant dark options found for {name} in the configured range.</div>
+          )}
+          {bandIdx === 1 && typeof totalShades === 'number' && totalShades < 6 && (
+            <div className={styles.warningInline}>
+              {(() => {
+                const n = totalShades;
+                return `Only ${n} AAA-compliant dark shades available for this color. Consider lightening the "Text on Dark" color, or for this color try increasing saturation or slightly adjusting hue to widen the dark range.`;
+              })()}
+            </div>
+          )}
+        </React.Fragment>
+      ))}
     </div>
   );
 }
@@ -793,18 +858,18 @@ export function LuminanceTestStrips({
         <div className={styles.sectionNote}>Each group: tint choices and shade choices (all have at least AAA contrast with black or white text). "Y values" are the luminance.</div>
       </div>
       {adjustedNotice && adjustedLight && textOnLightRgb && (
-        <div className={styles.warningInline}>
+        <div className={styles.noticeInline}>
           Text-on-light was out of recommended range. Adjusted from {originalTextOnLightRef.current || textOnLight} to {rgbToHex(textOnLightRgb.r, textOnLightRgb.g, textOnLightRgb.b)} to ensure at least 3 visibly-distinct tints available for each main color.
         </div>
       )}
       {adjustedNotice && adjustedDark && textOnDarkRgb && (
-        <div className={styles.warningInline}>
+        <div className={styles.noticeInline}>
           Text-on-dark was out of recommended range. Adjusted from {originalTextOnDarkRef.current || textOnDark} to {rgbToHex(textOnDarkRgb.r, textOnDarkRgb.g, textOnDarkRgb.b)} to ensure at least 3 visibly-distinct shades available for each main color.
         </div>
       )}
 
       <div className={styles.rows}>
-        <Row
+        <RowTints
           name="Primary"
           baseHex={palette.primary.hex}
           colorKey="primary"
@@ -830,7 +895,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-primary-shades`}
           onGoPalette={onGoPalette}
         />
-        <Row
+        <RowTints
           name="Secondary"
           baseHex={palette.secondary.hex}
           colorKey="secondary"
@@ -856,7 +921,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-secondary-shades`}
           onGoPalette={onGoPalette}
         />
-        <Row
+        <RowTints
           name="Tertiary"
           baseHex={palette.tertiary.hex}
           colorKey="tertiary"
@@ -882,7 +947,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-tertiary-shades`}
           onGoPalette={onGoPalette}
         />
-        <Row
+        <RowTints
           name="Accent"
           baseHex={palette.accent.hex}
           colorKey="accent"
@@ -908,7 +973,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-accent-shades`}
           onGoPalette={onGoPalette}
         />
-        <Row
+        <RowTints
           name="Error"
           baseHex={palette.error.hex}
           colorKey="error"
@@ -934,7 +999,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-error-shades`}
           onGoPalette={onGoPalette}
         />
-        <Row
+        <RowTints
           name="Notice"
           baseHex={palette.warning.hex}
           colorKey="warning"
@@ -960,7 +1025,7 @@ export function LuminanceTestStrips({
           anchorId={`${anchorPrefix}luminance-warning-shades`}
           onGoPalette={onGoPalette}
         />
-        <Row
+        <RowTints
           name="Success"
           baseHex={palette.success.hex}
           colorKey="success"

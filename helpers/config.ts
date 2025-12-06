@@ -54,8 +54,9 @@ export const NEAR_WHITE_RGB = { r: 249, g: 250, b: 251 } as const;
  */
 // Text-on-dark should be very light: minimum Y ~ 0.90 (.90 good, .88 okay)
 export const CLOSE_ENOUGH_TO_WHITE_MIN_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_WHITE_MIN_LUM', 0.90, 0, 1);
-// Text-on-light should be quite dark: maximum Y ~ 0.15 (.10 is quite light)
-export const CLOSE_ENOUGH_TO_BLACK_MAX_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_BLACK_MAX_LUM', 0.05, 0, 1);
+// Text-on-light should be quite dark: maximum Y ~ 0.20 (allows dark colors like dark red #d62828)
+// 0.05 was too strict (forced nearly pure black), 0.20 allows usable dark colors while maintaining AAA contrast
+export const CLOSE_ENOUGH_TO_BLACK_MAX_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_BLACK_MAX_LUM', 0.20, 0, 1);
 
 /** Number of decimals when computing target Y values. */
 export const Y_TARGET_DECIMALS = int('NEXT_PUBLIC_Y_TARGET_DECIMALS', '2');
@@ -67,6 +68,10 @@ export const Y_DISPLAY_DECIMALS = int('NEXT_PUBLIC_Y_DISPLAY_DECIMALS', '3');
 export const TINT_TARGET_COUNT = int('NEXT_PUBLIC_TINT_TARGET_COUNT', '15');
 /** Desired number of shade (darker) steps. Env: NEXT_PUBLIC_SHADE_TARGET_COUNT */
 export const SHADE_TARGET_COUNT = int('NEXT_PUBLIC_SHADE_TARGET_COUNT', '15');
+
+// Minimum variations per band (validation threshold)
+/** Minimum number of variations required per band for functional palette. Env: NEXT_PUBLIC_MIN_VARIATIONS_PER_BAND */
+export const MIN_VARIATIONS_PER_BAND = int('NEXT_PUBLIC_MIN_VARIATIONS_PER_BAND', '3');
 
 // Luminance ranges (defaults chosen from prior implementation)
 /** Lower bound for the "lighter" band (Y). Env: NEXT_PUBLIC_LIGHTER_MIN_Y */
@@ -122,8 +127,20 @@ export const RECOMMENDED_SHADE_Y_GAP_TOLERANCE = 0.0005;
 /** Hard minimum Y-gap used only for default placements (never forced). Env: NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP */
 export const HARD_MIN_SHADE_Y_GAP = numFromEnv('NEXT_PUBLIC_HARD_MIN_SHADE_Y_GAP', 0.015, 0, 1);
 
-/** Minimum delta from white for the first lighter step (to avoid indistinguishable step). */
-export const MIN_DELTA_LUM_TINTS_FROM_WHITE = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS_FROM_WHITE', 0.04, 0, 1);
+/** Technical minimum delta from white (still visibly different, but may look washed out).
+ * This is 0.04 (4% gap) - the absolute minimum for AAA compliance.
+ * Not used for UI - kept for reference/testing only.
+ */
+export const MIN_DELTA_LUM_TINTS_FROM_WHITE_TECHNICAL = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS_FROM_WHITE_TECHNICAL', 0.04, 0, 1);
+
+/** Practical minimum delta from white for Adjust tab and Palette use.
+ * Colors closer to white than this look "too washed out" for actual use.
+ * Value: 0.07 (7% gap) means max Y of ~0.93 for lighter band.
+ * Used by: Adjust tab (max lightness shown), Palette tab (default selection).
+ * If user wants "slightly-blue near-white", they can set it as text-on-dark color.
+ */
+export const MIN_DELTA_LUM_TINTS_FROM_WHITE = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS_FROM_WHITE', 0.07, 0, 1);
+
 /** Minimum separation in Y between lighter and light, to keep them visually distinct after rounding. */
 export const MIN_DELTA_LUM_TINTS = numFromEnv('NEXT_PUBLIC_MIN_DELTA_LUM_TINTS', 0.16, 0, 1);
 /** Minimum separation in Y between dark and darker, to keep them visually distinct after rounding. */

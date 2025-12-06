@@ -24,7 +24,7 @@
   .button:focus-visible {
     box-shadow:
       0 0 0 2px var(--background),
-      0 0 0 4px var(--primary);
+      0 0 0 4px var(--accent);
     outline: none;
   }
 
@@ -93,22 +93,22 @@
     height: 1.5rem;
   }
 
-  /* Primary - White text on solid brand color (high contrast) */
+  /* Primary - White text on solid accent color (interactive, high contrast) */
   .primary {
-    background-color: var(--primary);
-    color: var(--primary-foreground);
-    border-color: var(--primary);
-    --spinner-color: var(--primary-foreground);
+    background-color: var(--accent);
+    color: var(--accent-foreground, #FFFFFF);
+    border-color: var(--accent);
+    --spinner-color: var(--accent-foreground, #FFFFFF);
   }
 
   .primary:hover {
-    background-color: color-mix(in srgb, var(--primary), black 10%);
-    border-color: color-mix(in srgb, var(--primary), black 10%);
+    background-color: color-mix(in srgb, var(--accent), black 10%);
+    border-color: color-mix(in srgb, var(--accent), black 10%);
   }
 
   .primary:active {
-    background-color: color-mix(in srgb, var(--primary), black 15%);
-    border-color: color-mix(in srgb, var(--primary), black 15%);
+    background-color: color-mix(in srgb, var(--accent), black 15%);
+    border-color: color-mix(in srgb, var(--accent), black 15%);
   }
 
   /* Secondary - Secondary color text on very light secondary tint background */
@@ -151,41 +151,41 @@
       0 0 0 4px var(--error);
   }
 
-  /* Outline - Brand color text with brand color border, no background */
+  /* Outline - Accent color text with accent color border, no background */
   .outline {
     background-color: transparent;
-    border-color: var(--primary);
-    color: var(--primary);
-    --spinner-color: var(--primary);
+    border-color: var(--accent);
+    color: var(--accent);
+    --spinner-color: var(--accent);
   }
 
   .outline:hover {
-    background-color: color-mix(in srgb, var(--primary), white 95%);
-    border-color: color-mix(in srgb, var(--primary), black 10%);
-    color: color-mix(in srgb, var(--primary), black 10%);
+    background-color: color-mix(in srgb, var(--accent), white 95%);
+    border-color: color-mix(in srgb, var(--accent), black 10%);
+    color: color-mix(in srgb, var(--accent), black 10%);
   }
 
   .outline:active {
-    background-color: color-mix(in srgb, var(--primary), white 90%);
-    border-color: color-mix(in srgb, var(--primary), black 15%);
-    color: color-mix(in srgb, var(--primary), black 15%);
+    background-color: color-mix(in srgb, var(--accent), white 90%);
+    border-color: color-mix(in srgb, var(--accent), black 15%);
+    color: color-mix(in srgb, var(--accent), black 15%);
   }
 
-  /* Ghost - Brand color text only, minimal styling until interaction */
+  /* Ghost - Accent color text only, minimal styling until interaction */
   .ghost {
     background-color: transparent;
     border-color: transparent;
-    --spinner-color: var(--primary);
+    --spinner-color: var(--accent);
   }
 
   .ghost:hover {
-    background-color: color-mix(in srgb, var(--primary), white 95%);
-    color: color-mix(in srgb, var(--primary), black 10%);
+    background-color: color-mix(in srgb, var(--accent), white 95%);
+    color: color-mix(in srgb, var(--accent), black 10%);
   }
 
   .ghost:active {
-    background-color: color-mix(in srgb, var(--primary), white 90%);
-    color: color-mix(in srgb, var(--primary), black 15%);
+    background-color: color-mix(in srgb, var(--accent), white 90%);
+    color: color-mix(in srgb, var(--accent), black 15%);
   }
 
   /* Optional modifier: allow button labels to wrap on multiple lines */
@@ -197,37 +197,39 @@
     min-width: 0;
     /* allow multi-line height while keeping touch target */
     height: auto !important;
-    min-height: 2.5rem; /* matches .md height; ensures minimum target */
+    min-height: 2.5rem;
+    /* matches .md height; ensures minimum target */
   }
 
-  /* Link - Brand color text, underline on hover */
+  /* Link - Accent color text, underline on hover */
   .link {
     background-color: transparent;
-    color: var(--primary);
+    color: var(--accent);
     height: auto;
     padding: 0;
     text-decoration: none;
     border: none;
     border-radius: 0;
-    min-height: 2.75rem; /* Ensure touch target height */
+    min-height: 2.75rem;
+    /* Ensure touch target height */
     display: inline-flex;
     align-items: center;
-    --spinner-color: var(--primary);
+    --spinner-color: var(--accent);
   }
 
   .link:hover {
     text-decoration: underline;
-    color: color-mix(in srgb, var(--primary), black 10%);
+    color: color-mix(in srgb, var(--accent), black 10%);
     background-color: transparent;
   }
 
   .link:active {
-    color: color-mix(in srgb, var(--primary), black 15%);
+    color: color-mix(in srgb, var(--accent), black 15%);
     background-color: transparent;
   }
 
   .link:focus-visible {
-    box-shadow: 0 0 0 2px var(--primary);
+    box-shadow: 0 0 0 2px var(--accent);
     outline: none;
     border-radius: 0.25rem;
   }
@@ -245,7 +247,7 @@
   .dark .ghost:focus-visible {
     box-shadow:
       0 0 0 2px var(--background),
-      0 0 0 4px var(--primary);
+      0 0 0 4px var(--accent);
   }
 
   .dark .destructive:focus-visible {
@@ -255,6 +257,6 @@
   }
 
   .dark .link:focus-visible {
-    box-shadow: 0 0 0 2px var(--primary);
+    box-shadow: 0 0 0 2px var(--accent);
   }
 }

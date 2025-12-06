@@ -49,6 +49,7 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 export const SonnerToaster = ({ className, ...props }: ToasterProps) => {
   return (
     <Sonner
+      position="top-center"
       className={`${styles.toaster} ${className ?? ""}`}
       toastOptions={{
         unstyled: true,
@@ -67,4 +68,3 @@ export const SonnerToaster = ({ className, ...props }: ToasterProps) => {
     />
   );
 };
-

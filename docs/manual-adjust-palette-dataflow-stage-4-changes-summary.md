@@ -1,7 +1,11 @@
-# Stage 4 Changes Summary: Full Reselection Wiring
+# Stage 4 Changes Summary: Full Reselection Wiring ✅ COMPLETED
 
 ## Goal
 Wire the reselection effect to actually update state, implementing [T1] (base color changes) and [T2] (text token changes) triggers with automatic closest-by-Y reselection.
+
+## Status: ✅ COMPLETED
+
+Stage 4 is complete. Data now flows properly from Manual tab → Adjust tab → Palette tab → Export with proper validation and error handling.
 
 ## Changes Made
 
@@ -66,13 +70,18 @@ All console logging from Stage 3 is preserved behind `showDiagnostics` flag:
 - ❌ No state updates
 - ❌ Adjust tab selections don't change
 - ❌ Palette tab doesn't reflect reselection
+- ❌ Poor error handling for invalid text colors
+- ❌ Ribbons could have insufficient colors without clear feedback
 
-### After (Stage 4):
+### After (Stage 4): ✅ COMPLETED
 - ✅ Console logs (when diagnostics enabled)
 - ✅ State updates via `applySelectionAtomically`
 - ✅ Adjust tab selections update automatically
 - ✅ Palette tab reflects new selections
 - ✅ Export includes reselected colors
+- ✅ Comprehensive validation with user-friendly error messages
+- ✅ Inline warnings when bands have insufficient AAA-compliant colors
+- ✅ Proper handling of edge cases (low saturation, extreme text colors)
 
 ## Triggers Implemented
 
@@ -144,13 +153,48 @@ This should never happen in normal operation (Stage 2 ensures candidates exist),
 
 ## Files Modified
 
-- `pages/generator.tsx`:
-  - Modified reselection effect (lines 475-647)
-  - Changed from logging-only to state updates
-  - Added state update logic for all 4 bands
-  - Added error handling for empty candidates
-  - Updated dependencies to include selections/exactSelections
-  - ~70 lines modified, ~40 lines added
+### `pages/generator.tsx`
+- Modified reselection effect with full state updates
+- Added comprehensive validation and error handling
+- Improved selection synchronization
+- Enhanced diagnostic logging
+- Better handling of edge cases
+- ~400+ lines modified/added
+
+### `components/LuminanceTestStrips.tsx`
+- Split `Row` into `RowTints` and `RowShades` for better data handling
+- Added `SwatchPick` interface with complete color information
+- Added `onSelectShade` callback for shade selection
+- Improved error messaging with inline warnings
+- Better handling of insufficient AAA-compliant colors
+- Changed warning styles to `noticeInline` for adjusted text colors
+- ~365 lines modified
+
+### `helpers/config.ts`
+- Increased `CLOSE_ENOUGH_TO_BLACK_MAX_LUM` from 0.05 to 0.20
+  - Allows usable dark colors like dark red (#d62828)
+- Added `MIN_VARIATIONS_PER_BAND` constant (default 3, configurable 1-20)
+- Better validation thresholds
+- ~25 lines modified
+
+### `helpers/themeRuntime.ts`
+- Enhanced CSS variable generation
+- Improved theme.json structure
+- Better light/dark mode support
+- ~38 lines modified
+
+### `components/SonnerToaster.tsx` & `SonnerToaster.module.css`
+- Increased toast width from 360px to 500px for better readability
+- Improved toast positioning (top-center)
+- Better styling for error messages
+
+### `helpers/types.tsx`
+- Added/refined type definitions for selections
+- Better TypeScript support
+
+### `pages/generator.module.css`
+- Added safe hardcoded colors for `contrastHint`
+- Improved styling for validation messages
 
 ## Next Steps (Stage 5)
 
@@ -510,4 +554,12 @@ Tests
 3. **Clear contracts** - Define data flow explicitly
 4. **Decomposition** - Break into testable pieces
 
-**Timeline**: 4-6 weeks to production-ready with tests and proper architecture.
+**Timeline**: 28-40 hours of pair programming to production-ready with tests and proper architecture.
+
+**Estimated Hours (Based on Current Working Pattern)**:
+- Phase 1 (Extract Pure Functions + Tests): 8-12 hours
+- Phase 2 (Fix Single Source of Truth): 4-6 hours
+- Phase 3 (Component Decomposition): 12-16 hours
+- Phase 4 (E2E Tests): 4-6 hours
+
+**Total: 28-40 hours** of active collaboration, where AI writes code and user tests/verifies.
