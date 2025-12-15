@@ -5,6 +5,12 @@
     --toast-border-radius: var(--radius);
     --toast-font-family: var(--font-family-base);
     --toast-animation-duration: var(--animation-duration-normal);
+    z-index: 9999;
+  }
+
+  /* Add gap between stacked toasts */
+  .toaster>*+* {
+    margin-top: var(--spacing-3);
   }
 
   .toast {
@@ -21,6 +27,9 @@
     position: relative;
     animation: slideIn var(--toast-animation-duration) cubic-bezier(0.16, 1, 0.3, 1);
     transition: transform 0.2s ease, opacity 0.2s ease;
+    /* Ensure solid background - no transparency */
+    opacity: 1 !important;
+    backdrop-filter: none;
   }
 
   .toast:focus {
@@ -30,6 +39,12 @@
 
   .toast:hover {
     transform: translateY(-2px);
+  }
+
+  /* Success toast background with contrasting text */
+  .toast[data-type="success"] {
+    background-color: var(--success-light, var(--card));
+    color: var(--text-on-success-light, var(--card-foreground));
   }
 
   .content {

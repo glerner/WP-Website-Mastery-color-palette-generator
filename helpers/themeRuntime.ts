@@ -153,21 +153,26 @@ export function applyPaletteToCSSVariables(p: Palette, variations?: {
   }
 }
 
-// Export Core Foundation tokens (current values) into a downloadable CSS file
-export function exportCoreFoundationCSSFromCurrent(filename = 'gl-core-foundation.generated.css') {
-  const names = [
+// Export Core Framework tokens (current values) into a downloadable CSS file
+export function exportCoreFrameworkCSSFromCurrent(filename = 'wpwm-core-framework-generated.css') {
+  // Base tokens
+  const baseTokens = [
     '--cf-primary', '--cf-secondary', '--cf-tertiary', '--cf-accent',
     '--cf-bg-body', '--cf-bg-surface', '--cf-text-body', '--cf-text-title',
     '--cf-success', '--cf-error', '--cf-notice',
-    // Transparent stepped variants for all brand colors and semantic colors
-    '--cf-primary-10', '--cf-primary-20', '--cf-primary-40', '--cf-primary-60', '--cf-primary-80',
-    '--cf-secondary-10', '--cf-secondary-20', '--cf-secondary-40', '--cf-secondary-60', '--cf-secondary-80',
-    '--cf-tertiary-10', '--cf-tertiary-20', '--cf-tertiary-40', '--cf-tertiary-60', '--cf-tertiary-80',
-    '--cf-accent-10', '--cf-accent-20', '--cf-accent-40', '--cf-accent-60', '--cf-accent-80',
-    '--cf-success-10', '--cf-success-20', '--cf-success-40', '--cf-success-60', '--cf-success-80',
-    '--cf-error-10', '--cf-error-20', '--cf-error-40', '--cf-error-60', '--cf-error-80',
-    '--cf-notice-10', '--cf-notice-20', '--cf-notice-40', '--cf-notice-60', '--cf-notice-80',
   ];
+
+  // Colors that have transparent stepped variants
+  const colors = ['primary', 'secondary', 'tertiary', 'accent', 'success', 'error', 'notice'];
+  const steps = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+
+  // Build complete list of variable names
+  const names = [...baseTokens];
+  for (const color of colors) {
+    for (const step of steps) {
+      names.push(`--cf-${color}-${step}`);
+    }
+  }
   // Build variable declarations once
   const varLines: string[] = [];
   for (const n of names) {

@@ -1,10 +1,9 @@
 <?php
 
-function fse_child_styles()
-{
-    wp_enqueue_style('fse-child-style', get_stylesheet_uri());
+function fse_child_styles() {
+	wp_enqueue_style( 'fse-child-style', get_stylesheet_uri() );
 }
-add_action('wp_enqueue_scripts', 'fse_child_styles');
+add_action( 'wp_enqueue_scripts', 'fse_child_styles' );
 
 /**
  * Ensure the Block Editor sidebar (admin chrome, outside the canvas iframe) can resolve
@@ -15,4 +14,4 @@ add_action('wp_enqueue_scripts', 'fse_child_styles');
  * - Bridges --wp--preset--color--<slug> to your --<slug> alias so both resolve.
  */
 require_once get_stylesheet_directory() . '/inc/fse-editor-chrome-styles.php';
-add_action('enqueue_block_editor_assets', 'fse_enqueue_block_editor_admin_chrome_styles', 20);
+add_action( 'enqueue_block_editor_assets', 'fse_enqueue_block_editor_admin_chrome_styles', 20 );

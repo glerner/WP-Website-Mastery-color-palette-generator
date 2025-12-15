@@ -94,7 +94,8 @@ import { zipSync, strToU8 } from 'fflate';
 import { generateSemanticColors } from '../helpers/generateSemanticColors';
 import { buildWpVariationJson, validateBaseContrast } from '../helpers/themeJson';
 import AZLogo from '../AZ-WP-Website-Consulting-LLC.svg';
-import { applyPaletteToCSSVariables, exportCoreFoundationCSSFromCurrent } from '../helpers/themeRuntime';
+import ThemeVariationDisplayScreenshot from '../assets/images/theme-variation-display-3-permutations.png';
+import { applyPaletteToCSSVariables, exportCoreFrameworkCSSFromCurrent } from '../helpers/themeRuntime';
 import includeEditorChromeStylesPhp from '../inc/fse-editor-chrome-styles.php?raw';
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup';
 
@@ -1432,10 +1433,10 @@ const GeneratorPage = () => {
         success: { hex: isHex(mv.success) ? mv.success : palette.success.hex || def.success.hex },
         notice: { hex: isHex(mv.warning) ? mv.warning : palette.warning.hex || def.warning.hex },
       } as any, {
-        accentDark: exactSelections?.accent?.dark?.hex,
-        errorLight: exactSelections?.error?.light?.hex,
-        warningLight: exactSelections?.warning?.light?.hex,
-        successLight: exactSelections?.success?.light?.hex,
+        ...(exactSelections?.accent?.dark?.hex && { accentDark: exactSelections.accent.dark.hex }),
+        ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
+        ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
+        ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
       });
     } catch { }
   }, [palette, exactSelections]);
@@ -1903,11 +1904,11 @@ const GeneratorPage = () => {
                 <TabsTrigger value="instructions">Instructions</TabsTrigger>
                 <TabsTrigger value="ai">AI</TabsTrigger>
                 <TabsTrigger value="manual">Manual</TabsTrigger>
-                <TabsTrigger value="palette">Palette</TabsTrigger>
                 <TabsTrigger value="adjust">Adjust</TabsTrigger>
+                <TabsTrigger value="palette">Palette</TabsTrigger>
                 <TabsTrigger value="demo">Demo</TabsTrigger>
                 <TabsTrigger value="export">Export</TabsTrigger>
-                <TabsTrigger value="landing">Landing</TabsTrigger>
+                {/* <TabsTrigger value="landing">Landing (unused)</TabsTrigger> */}
               </TabsList>
 
               {/* Instructions Tab (desktop) */}
@@ -1915,31 +1916,76 @@ const GeneratorPage = () => {
                 <div className={styles.instructionsContent}>
                   <h2 className={styles.sectionTitle}>Instructions</h2>
                   <p><strong>This application generates Color Palettes for WordPress.</strong></p>
+                  <p>This tool creates a professional color set for your website and checks contrast so text stays easy to read. It plugs into WordPress “Theme Variations”, so you can switch complete looks in one click.
+                  </p>
                   <ul className="u-list-circle">
-                    <li>It adjusts every color you enter, to ensure proper contrast and readability.</li>
-                    <li>You will have 2 tints and 2 shades of each color, to use on your website.</li>
-                    <li>You will also have colors for notice, error, success that are adjusted for contrast.</li>
-                    <li>The Palette will also have light mode and dark mode, using <em>your colors</em> not colors made up by some algorithm.</li>
-                    <li>Instead of <b>color numbers</b> embedded in your pages (so to change site colors, you would have to edit every Block where you set a color, on every page), you will now have <b>named color variables</b> assigned to blocks where you specify a color. Change the site colors by changing the color palette; easy.</li>
+                    <li>It adjusts every color you enter, to ensure proper contrast and readability. WCAG AAA contrast or better. Only colors meeting WCAG AAA contrast get output.</li>
+                    <li>You will have <b>3 basic colors, and an accent color</b> (primary, secondary, tertiary, accent).</li>
+                    <li>You will have <b>2 tints and 2 shades</b> of each color, to use on your website.</li>
+                    <li>Also, you will have three message colors (notice, error, success), for light mode and dark mode.</li>
+                    <li>The Palette will have light mode and dark mode, using <em>your colors</em> not colors made up by some algorithm. Even if the main theme doesn't have dark mode.</li>
+                    <li>Instead of <b>color numbers</b> embedded in your pages (so to change site colors, you would have to edit every Block where you set a color, on every page), you will now have <b>named color variables</b> assigned to blocks where you specify a color.</li>
+                    <li>Change the site colors by changing the color palette. No editing your pages to change the colors, for blocks that use your color palette.</li>
                   </ul>
-                  <p>Use the <strong>AI</strong> tab (coming soon) or <strong>Manual</strong> tab to set your basic colors.</p>
-                  <p>In the <strong>Manual</strong> tab:</p>
-                  <ul>
-                    <li>Upload your child theme's <code>theme.json</code> file. This is *needed* so your generated theme variations match the version, and so all the colors your theme expects will be available (you can set the color to a new color number; but you shouldn't skip defining it, even if you don't plan to use it).</li>
-                    <li>Enter your Theme Name (brief, as it appears in a WordPress tooltip in Palette selection).</li>
-                    <li>Enter hex color numbers, or click on the color swatch for HSL adjustment.</li>
-                    <li>There is a color wheel, so you can check that colors aren't too close to each other. Generally have colors with a hue difference of at least 30.</li>
+
+                  <h3 className={styles.sectionTitle}>In the Manual tab:</h3>
+                  <ul className="u-list-circle">
+                    <li>Upload your child theme's <code>theme.json</code> file. This is <em>needed</em> so your generated theme variations match the theme's version, and so all the colors your theme expects will be available (you can set the color to a new color number; but you shouldn't skip defining it, even if you don't plan to use it).</li>
+                    <li>Enter your Theme Name (brief, as it appears in a WordPress tooltip in the Site Editor, Palette selection).</li>
+                    <li>Enter hex <b>color numbers</b>, or click on the <b>color swatches</b> for HSL adjustment.</li>
+                    <li>There is a color wheel, so you can check that colors aren't too close to each other. Generally have colors with a hue difference of at least 30, or make the saturation different enough the colors look different.</li>
                     <li><strong>Show Diagnostics:</strong> Enable this to see detailed console logging (in your Browser's Console) about color reselection and adjustments. Useful for understanding how the automatic color selection works.</li>
+                    <li>Click the "Save colors and settings" button so your choices are there when you restart.</li>
                   </ul>
-                  <p>These will all be adjusted for proper text color contrast.</p>
-                  <p>Click the "Save colors and settings" button so your choices are there when you restart.</p>
-                  <p>Open the <strong>Palette</strong> tab to review the current contrast-adjusted colors. Click any swatch to <strong>Adjust</strong> the selected tints and shades, if they don't look "right" or to check which you like best.</p>
-                  <p>In the <strong>Adjust</strong> tab, select your preferred tints and shades from among those that have excellent contrast (and are visibly different). Your selections for each row are saved locally, since you will likely use the same selection even as you change hues.</p>
-                  <p>Use the <strong>Demo</strong> tab to preview components in light/dark schemes.</p>
-                  <p>When satisfied, go to <strong>Export</strong> to download your ZIP file with all your Theme Variations. You can export either <strong>6 variations</strong> (rotate Primary/Secondary/Tertiary; Accent fixed) or <strong>24 variations</strong> (rotate Primary/Secondary/Tertiary/Accent).</p>
-                  <p>The ZIP includes Theme Variation <code>styles/*.json</code> files and a companion CSS utilities file. The Export tab also shows copy‑friendly HEX and HSL lists.</p>
-                  <p>Copy the <code>theme.json</code> files into your child theme's <code>styles</code> folder (create it if there isn't one). They will show as Palettes in your WordPress Site Editor.</p>
-                  <p>You can also copy the CSS files to the styles folder, but WordPress won't use them. When you've chosen which Palette you prefer, copy the corresponding CSS to add to your existing <code>style.css</code> file.</p>
+
+                  <h3 className={styles.sectionTitle}>In the Adjust tab:</h3>
+                  <ul className="u-list-circle">
+                    <li>Select your preferred tints and shades from among those that have excellent contrast (and are visibly different).</li>
+                    <li><b>Click on your preference of color swatches</b> to select it.</li>
+                    <li>Your selections for each row are saved locally, since you will likely use the same selection even as you change hues.</li>
+                  </ul>
+
+                  <h3 className={styles.sectionTitle}>In the Palette tab:</h3>
+                  <ul className="u-list-circle">
+                    <li>Review the current contrast-adjusted colors.</li>
+                    <li>Click any swatch to jump to the <strong>Adjust</strong> tab for that color, if they don't look "right" or to check which you like best.</li>
+                  </ul>
+
+                  <h3 className={styles.sectionTitle}>In the Demo tab:</h3>
+                  <ul className="u-list-circle">
+                    <li>Preview components in light and dark schemes.</li>
+                    <li>See how your colors work together in real webpage elements.</li>
+                  </ul>
+
+                  <h3 className={styles.sectionTitle}>In the Export tab:</h3>
+                  <ul className="u-list-circle">
+                    <li>Download your ZIP file with all your Theme Variations.</li>
+                    <li>You can export either <strong>6 variations</strong> (rotate Primary/Secondary/Tertiary, keeping Accent set) or <strong>24 variations</strong> (rotate Primary/Secondary/Tertiary/Accent).</li>
+                    <li>The ZIP includes Theme Variation <code>styles/*.json</code> files and a companion CSS utilities file.</li>
+                    <li>The Export tab also shows HEX and HSL lists, easy to copy into whatever other places you need the colors. One place could be your company's style guide. Another could be your page builder, if you aren't using the Block Editor.</li>
+                  </ul>
+
+                  <h3 className={styles.sectionTitle}>Install Your Palette</h3>
+                  <ul className="u-list-circle">
+                    <li>Copy the exported files (from the Export tab) to your theme folder <code>wp-content/YOURTHEME/styles/</code> on your hosting location.</li>
+                    <li>Make a <code>styles</code> folder there, if there isn't one.</li>
+                    <li>No manually entering all those colors.</li>
+                    <li>The <code>theme.json</code> files will show as Palettes in your WordPress Site Editor.</li>
+                    <li>You can also copy the CSS files to the styles folder, but WordPress won't use them. When you've chosen which Palette you prefer, copy the corresponding CSS to add to your existing <code>style.css</code> file.</li>
+                  </ul>
+
+                  <h3 className={styles.sectionTitle}>WPWM Theme Variation Display</h3>
+                  <p>Better than the Site Editor's "Browse Styles", see the <a href="https://github.com/glerner/wpwm-theme-variation-display" target="_blank" rel="noopener noreferrer">WPWM Theme Variation Display plugin on GitHub</a>.</p>
+                  <ul className="u-list-circle">
+                    <li>Shows all the colors, with sample text.</li>
+                    <li>Lets you "slide show" through your theme variations.</li>
+                    <li>Makes it easy to compare and choose your favorite palette.</li>
+                  </ul>
+                  <img
+                    src={ThemeVariationDisplayScreenshot}
+                    alt="WPWM Theme Variation Display showing color palettes"
+                    style={{ maxWidth: '100%', width: '100%', height: 'auto', display: 'block', margin: 'var(--cf-space-m) 0', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
+                  />
                   <img
                     src={AZLogo}
                     alt="AZ WP Website Consulting LLC"
@@ -2129,12 +2175,11 @@ const GeneratorPage = () => {
                             success: { hex: manualForm.values.success || palette.success.hex },
                             notice: { hex: manualForm.values.warning || palette.warning.hex },
                           } as any, {
-                            accentDark: exactSelections?.accent?.dark?.hex,
-                            errorLight: exactSelections?.error?.light?.hex,
-                            warningLight: exactSelections?.warning?.light?.hex,
-                            successLight: exactSelections?.success?.light?.hex,
+                            ...(exactSelections?.accent?.dark?.hex && { accentDark: exactSelections.accent.dark.hex }),
+                            ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
+                            ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
+                            ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
                           });
-                          exportCoreFoundationCSSFromCurrent();
                           toast.success('All colors and settings saved');
                         } catch (e) {
                           toast.error('Failed to save');
@@ -2426,14 +2471,12 @@ const GeneratorPage = () => {
                                   success: { hex: manualForm.values.success || palette.success.hex },
                                   notice: { hex: manualForm.values.warning || palette.warning.hex },
                                 } as any, {
-                                  accentDark: exactSelections?.accent?.dark?.hex,
-                                  errorLight: exactSelections?.error?.light?.hex,
-                                  warningLight: exactSelections?.warning?.light?.hex,
-                                  successLight: exactSelections?.success?.light?.hex,
+                                  ...(exactSelections?.accent?.dark?.hex && { accentDark: exactSelections.accent.dark.hex }),
+                                  ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
+                                  ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
+                                  ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
                                 });
                               } catch { }
-                              // Export current Core Foundation tokens as CSS
-                              try { exportCoreFoundationCSSFromCurrent(); } catch { }
                               toast.success('Theme name, colors, and settings saved');
                             } catch { }
                           }}
@@ -2479,29 +2522,16 @@ const GeneratorPage = () => {
                                 success: { hex: initialPalette.success.hex },
                                 notice: { hex: initialPalette.warning.hex },
                               } as any, {
-                                accentDark: exactSelections?.accent?.dark?.hex,
-                                errorLight: exactSelections?.error?.light?.hex,
-                                warningLight: exactSelections?.warning?.light?.hex,
-                                successLight: exactSelections?.success?.light?.hex,
+                                ...(exactSelections?.accent?.dark?.hex && { accentDark: exactSelections.accent.dark.hex }),
+                                ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
+                                ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
+                                ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
                               });
                             } catch { }
                             toast.success('Reset to defaults');
                           }}
                         >
                           Reset to defaults
-                        </Button>
-                      </div>
-                      <hr
-                        className={styles.tertiaryDivider}
-                        style={{
-                          borderTopColor: demoStepHex(paletteWithVariations, 'tertiary', 'dark'),
-                        }}
-                      />
-                      {/* Match semantic colors to Primary (desktop Manual tab) */}
-                      <div style={{ display: 'block', marginTop: 'var(--cf-space-2xs)', marginBottom: 'var(--cf-space-2xs)' }}>
-                        <p>Optional: Adjust the saturation and brightness (luminance) of the Error, Notice, and Success colors, to match Primary-dark (for Error and Success) or Primary-light (for Notice). See the Palette page for the "adjusted for contrast" versions.</p>
-                        <Button variant="outline" onClick={handleMatchSemanticsToPrimary} wrap>
-                          Match Error/Notice/Success to Primary
                         </Button>
                       </div>
                       <hr
@@ -2813,6 +2843,7 @@ const GeneratorPage = () => {
                   palette={paletteWithVariations}
                   selections={selections}
                   anchorPrefix="d-"
+                  showDiagnostics={showDiagnostics}
                   onTokensAutoAdjusted={(update) => {
                     // Persist adjusted tokens into form, state, and localStorage
                     const nextVals = { ...manualForm.values } as any;
@@ -2909,7 +2940,7 @@ const GeneratorPage = () => {
                         const filename = `${prefix}-${darkHexSuffix}.zip`;
                         return (
                           <>
-                            <ul style={{ margin: 0, paddingLeft: '1.2em', lineHeight: 1.5 }}>
+                            <ul className="u-list-circle">
                               <li><strong>Theme Name:</strong> {themeName || 'Theme'}</li>
                               <li><strong>Schema & Version:</strong> {String(effectiveSchema)}, {String(effectiveVersion)}</li>
                               <li><strong>Suggested file name:</strong> {filename}</li>

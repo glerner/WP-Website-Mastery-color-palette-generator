@@ -102,31 +102,47 @@ pre code {
 
   /* Status palette from Export panel (explicit, AAA-verified). No color-mix. */
   /* Success */
-  --success: #7E007E;           /* success-dark */
-  --success-bg: #FF47FF;        /* success-light */
-  --success-border: #7E007E;    /* success-dark */
-  --success-fg: #1B2227;        /* text-on-light */
+  --success: #7E007E;
+  /* success-dark */
+  --success-bg: #FF47FF;
+  /* success-light */
+  --success-border: #7E007E;
+  /* success-dark */
+  --success-fg: #1B2227;
+  /* text-on-light */
   --success-foreground: #1B2227;
 
   /* Error */
-  --error: #8B0D26;             /* error-dark */
-  --error-bg: #F2738D;          /* error-light */
-  --error-border: #8B0D26;      /* error-dark */
-  --error-fg: #1B2227;          /* text-on-light */
+  --error: #8B0D26;
+  /* error-dark */
+  --error-bg: #F2738D;
+  /* error-light */
+  --error-border: #8B0D26;
+  /* error-dark */
+  --error-fg: #1B2227;
+  /* text-on-light */
   --error-foreground: #1B2227;
 
   /* Warning */
-  --warning: #004E4E;           /* warning-dark */
-  --warning-bg: #00ADAD;        /* warning-light */
-  --warning-border: #004E4E;    /* warning-dark */
-  --warning-fg: #1B2227;        /* text-on-light */
+  --warning: #004E4E;
+  /* warning-dark */
+  --warning-bg: #00ADAD;
+  /* warning-light */
+  --warning-border: #004E4E;
+  /* warning-dark */
+  --warning-fg: #1B2227;
+  /* text-on-light */
   --warning-foreground: #1B2227;
 
   /* Notice (formerly info) */
-  --notice: #004E4E;           /* notice-dark (was warning-dark) */
-  --notice-bg: #00ADAD;        /* notice-light (was warning-light) */
-  --notice-border: #004E4E;    /* notice-dark */
-  --notice-fg: #1B2227;        /* text-on-light */
+  --notice: #004E4E;
+  /* notice-dark (was warning-dark) */
+  --notice-bg: #00ADAD;
+  /* notice-light (was warning-light) */
+  --notice-border: #004E4E;
+  /* notice-dark */
+  --notice-fg: #1B2227;
+  /* text-on-light */
   --notice-foreground: #1B2227;
 
   /* Alias info* to notice* for now (no color-mix) */
@@ -147,9 +163,10 @@ pre code {
   --border: hsl(220 15% 90%);
 
   /* Font Families */
-  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --font-family-heading: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --font-family-monospace: 'JetBrains Mono', 'Fira Code', 'ui-monospace', 'SFMono-Regular', Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-family-base: system-ui, "Noto Sans", "Liberation Sans", Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "Segoe UI", sans-serif;
+  --font-family-heading: system-ui, "Noto Sans", "Liberation Sans", Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "Segoe UI", sans-serif;
+  --font-family-monospace: "JetBrains Mono", "Fira Code", "ui-monospace", "SFMono-Regular", "Liberation Mono", "DejaVu Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+  --font-family-serif: "Liberation Serif", "Source Serif Pro", "Iowan Old Style", "Apple Garamond", "Baskerville", "Droid Serif", "Times New Roman", serif;
   --font-family-cursive: 'cursive';
 
   /* Border Radius and Box Shadows */
@@ -183,12 +200,6 @@ pre code {
   Use these utilities to avoid ad-hoc inline styles and ensure
   consistent list presentation where desired.
 */
-/* Circular bullets utility: apply only where explicitly added */
-.u-list-circle li {
-  list-style: circle;
-  margin-left: 1em;
-}
-
 /* Ensure app takes full viewport height and prevent outer page scroll */
 html,
 body,
@@ -213,17 +224,43 @@ p {
 ul,
 ol {
   margin: 0 0 1em 0;
-  padding-left: 0; /* control indent via li margin */
+  padding-left: 0;
+  /* control indent via li margin */
 }
+
 ul li,
 ol li {
   text-indent: 0;
-  margin-left: 1em;
-  padding-left: 0.1em;
+  margin-left: 1.25em;
+  margin-bottom: 0.5em;
+  padding: var(--spacing-2) var(--spacing-2);
   list-style-position: outside;
 }
-ul li { list-style: circle; }
-ol li { list-style: decimal; }
+
+/* Circular bullets */
+ul li,
+.u-list-circle li {
+  list-style: circle;
+  /* circle is unfilled, disc is filled */
+}
+
+/* Decimal numbers */
+ol li {
+  list-style: decimal;
+}
+
+
+
+/* Alternating background colors for list items */
+ul li:nth-child(odd),
+ol li:nth-child(odd) {
+  background-color: var(--muted);
+}
+
+ul li:nth-child(even),
+ol li:nth-child(even) {
+  background-color: var(--card);
+}
 
 /* Inputs and interactive controls default to body size */
 button,
@@ -232,6 +269,26 @@ select,
 textarea {
   font: inherit;
   font-size: var(--cf-text-s);
+}
+
+/* Link styles */
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration-thickness: 2px;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .dark {
@@ -259,31 +316,47 @@ textarea {
 
   /* Status palette (dark) explicit from Export panel. No color-mix. */
   /* Success */
-  --success: #FF47FF;           /* success-light (base in dark scheme) */
-  --success-bg: #7E007E;        /* success-dark */
-  --success-border: #FF47FF;    /* success-light */
-  --success-fg: #FFFFF0;        /* text-on-dark */
+  --success: #FF47FF;
+  /* success-light (base in dark scheme) */
+  --success-bg: #7E007E;
+  /* success-dark */
+  --success-border: #FF47FF;
+  /* success-light */
+  --success-fg: #FFFFF0;
+  /* text-on-dark */
   --success-foreground: #FFFFF0;
 
   /* Error */
-  --error: #F2738D;             /* error-light */
-  --error-bg: #8B0D26;          /* error-dark */
-  --error-border: #F2738D;      /* error-light */
-  --error-fg: #FFFFF0;          /* text-on-dark */
+  --error: #F2738D;
+  /* error-light */
+  --error-bg: #8B0D26;
+  /* error-dark */
+  --error-border: #F2738D;
+  /* error-light */
+  --error-fg: #FFFFF0;
+  /* text-on-dark */
   --error-foreground: #FFFFF0;
 
   /* Warning */
-  --warning: #00ADAD;           /* warning-light */
-  --warning-bg: #004E4E;        /* warning-dark */
-  --warning-border: #00ADAD;    /* warning-light */
-  --warning-fg: #FFFFF0;        /* text-on-dark */
+  --warning: #00ADAD;
+  /* warning-light */
+  --warning-bg: #004E4E;
+  /* warning-dark */
+  --warning-border: #00ADAD;
+  /* warning-light */
+  --warning-fg: #FFFFF0;
+  /* text-on-dark */
   --warning-foreground: #FFFFF0;
 
   /* Notice in dark scheme */
-  --notice: #00ADAD;           /* notice-light */
-  --notice-bg: #004E4E;        /* notice-dark */
-  --notice-border: #00ADAD;    /* notice-light */
-  --notice-fg: #FFFFF0;        /* text-on-dark */
+  --notice: #00ADAD;
+  /* notice-light */
+  --notice-bg: #004E4E;
+  /* notice-dark */
+  --notice-border: #00ADAD;
+  /* notice-light */
+  --notice-fg: #FFFFF0;
+  /* text-on-dark */
   --notice-foreground: #FFFFF0;
 
   /* Alias info* to notice* in dark */

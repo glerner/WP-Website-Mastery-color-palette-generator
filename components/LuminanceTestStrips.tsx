@@ -73,6 +73,7 @@ type RowProps = {
   name: string;
   baseHex: string;
   colorKey: ColorType | SemanticColorType;
+  showDiagnostics?: boolean | undefined;
   selectedLighterIndex?: number | undefined;
   selectedLightIndex?: number | undefined;
   onSelect: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', index: number) => void;
@@ -83,7 +84,7 @@ type RowProps = {
   anchorId?: string;
 };
 
-function RowTints({ name, baseHex, colorKey, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, onGoPalette, anchorId }: RowProps) {
+function RowTints({ name, baseHex, colorKey, showDiagnostics, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, onGoPalette, anchorId }: RowProps) {
   const baseRgb = hexToRgb(baseHex);
   // Prefer live text-on-light token if provided; fall back to near-black
   const blackLike = textOnLightRgb ?? NEAR_BLACK_RGB;
@@ -250,12 +251,12 @@ function RowTints({ name, baseHex, colorKey, selectedLighterIndex, selectedLight
   return (
     <div>
       <div id={anchorId} className={`${styles.rowTitle} cf-font-600`}>
-        {name}-lighter: Y-gap (white→lighter): {(() => {
-          if (lighterYSelected == null) return '-';
+        {name}-lighter: {showDiagnostics ? (() => {
+          if (lighterYSelected == null) return 'Gap between white→lighter: - (min: ' + MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2) + ')';
           const yL = parseFloat(lighterYSelected.toFixed(Y_DISPLAY_DECIMALS));
           const gap = 1 - yL;
-          return gap.toFixed(3);
-        })()} (min: {MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})
+          return `Gap between white→lighter: ${gap.toFixed(3)} (min: ${MIN_DELTA_LUM_TINTS_FROM_WHITE.toFixed(2)})`;
+        })() : 'Click your favorite to select it'}
       </div>
       <div className={styles.stripGrid}>
         {lighterTargetsFiltered.map((targetY, i) => {
@@ -323,13 +324,13 @@ function RowTints({ name, baseHex, colorKey, selectedLighterIndex, selectedLight
       })()}
 
       <div className={`${styles.rowTitle} cf-font-600`}>
-        {name}-light: Y-gap (lighter→light): {(() => {
-          if (lighterYSelected == null || lightYSelected == null) return '-';
+        {name}-light: {showDiagnostics ? (() => {
+          if (lighterYSelected == null || lightYSelected == null) return 'Gap between lighter→light: - (min: ' + RECOMMENDED_TINT_Y_GAP.toFixed(3) + ')';
           const yL = parseFloat(lighterYSelected.toFixed(Y_DISPLAY_DECIMALS));
           const yLt = parseFloat(lightYSelected.toFixed(Y_DISPLAY_DECIMALS));
           const gap = yL - yLt;
-          return gap.toFixed(3);
-        })()} (min: {RECOMMENDED_TINT_Y_GAP.toFixed(3)})
+          return `Gap between lighter→light: ${gap.toFixed(3)} (min: ${RECOMMENDED_TINT_Y_GAP.toFixed(3)})`;
+        })() : 'Click your favorite to select it'}
         {onGoPalette && (
           <Button size="sm" variant="secondary" style={{ marginLeft: 12 }} onClick={onGoPalette}>
             Return to Palette tab
@@ -342,7 +343,7 @@ function RowTints({ name, baseHex, colorKey, selectedLighterIndex, selectedLight
             const yL = lighterYSelected != null ? parseFloat(lighterYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
             const yLt = lightYSelected != null ? parseFloat(lightYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
             const diff = (yL != null && yLt != null) ? (yL - yLt) : undefined;
-            return `Selected lighter (Y ${yL?.toFixed(3) ?? '-'}) and light (Y ${yLt?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_TINT_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-'}). Palette will preserve your selections, which may reduce perceptual separation.`;
+            return `These colors appear too similar. Pick ones further apart.`;
           })()}
         </div>
       )}
@@ -406,6 +407,7 @@ type RowShadesProps = {
   name: string;
   baseHex: string;
   colorKey: ColorType | SemanticColorType;
+  showDiagnostics?: boolean | undefined;
   selectedDarkerY?: number | undefined; // we will still honor both selections mapping into same 10-strip
   selectedDarkY?: number | undefined;
   onSelect: (colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', y: number) => void;
@@ -416,7 +418,7 @@ type RowShadesProps = {
   anchorId?: string;
 };
 
-function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, onSelect, onSelectShade, textOnLightRgb, textOnDarkRgb, onGoPalette, anchorId }: RowShadesProps) {
+function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, selectedDarkY, onSelect, onSelectShade, textOnLightRgb, textOnDarkRgb, anchorId }: RowShadesProps) {
   const baseRgb = hexToRgb(baseHex);
   // Prefer live text-on-dark token if provided; fall back to near-white
   const whiteLike = textOnDarkRgb ?? NEAR_WHITE_RGB;
@@ -564,7 +566,7 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
         <React.Fragment key={band.step}>
           {bandIdx === 0 && (
             <div id={anchorId} className={`${styles.rowTitle} cf-font-600`}>
-              {name}-{band.label}: Y-gap ({band.gapLabel}): {band.gapCalc()} (min: {band.minGap.toFixed(3)})
+              {name}-{band.label}: {showDiagnostics ? `Gap between ${band.gapLabel}: ${band.gapCalc()} (min: ${band.minGap.toFixed(3)})` : 'Click your favorite to select it'}
             </div>
           )}
           {bandIdx === 0 && tooClose && (
@@ -573,13 +575,13 @@ function RowShades({ name, baseHex, colorKey, selectedDarkerY, selectedDarkY, on
                 const yDkr = selectedDarkerY != null ? parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
                 const yDrk = selectedDarkY != null ? parseFloat(selectedDarkY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
                 const diff = (yDkr != null && yDrk != null) ? (yDrk - yDkr) : undefined;
-                return `Selected darker (Y ${yDkr?.toFixed(3) ?? '-'}) and dark (Y ${yDrk?.toFixed(3) ?? '-'}) are closer than recommended ${RECOMMENDED_SHADE_Y_GAP.toFixed(3)} (difference ${diff != null ? diff.toFixed(3) : '-'}). Palette will preserve your selections, which may reduce perceptual separation.`;
+                return `These colors appear too similar. Pick ones further apart.`;
               })()}
             </div>
           )}
           {bandIdx !== 0 && (
             <div className={`${styles.rowTitle} cf-font-600`}>
-              {name}-{band.label}: Y-gap ({band.gapLabel}): {band.gapCalc()} (min: {band.minGap.toFixed(3)})
+              {name}-{band.label}: {showDiagnostics ? `Gap between ${band.gapLabel}: ${band.gapCalc()} (min: ${band.minGap.toFixed(3)})` : 'Click your favorite to select it'}
             </div>
           )}
           <div className={styles.stripGrid}>
@@ -667,6 +669,7 @@ export function LuminanceTestStrips({
   onGoPalette,
   anchorPrefix = '',
   onTokensAutoAdjusted,
+  showDiagnostics,
 }: {
   palette: PaletteWithVariations;
   selections: Partial<Record<ColorType | SemanticColorType, {
@@ -686,6 +689,7 @@ export function LuminanceTestStrips({
   onGoPalette?: () => void;
   anchorPrefix?: string;
   onTokensAutoAdjusted?: (update: { textOnLight?: string; textOnDark?: string }) => void;
+  showDiagnostics?: boolean;
 }) {
   const textOnLightRgbRaw = React.useMemo(() => (textOnLight ? hexToRgb(textOnLight) : undefined), [textOnLight]);
   const textOnDarkRgbRaw = React.useMemo(() => (textOnDark ? hexToRgb(textOnDark) : undefined), [textOnDark]);
@@ -854,8 +858,8 @@ export function LuminanceTestStrips({
   return (
     <section className={styles.testStripsSection}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Luminance test strips</h2>
-        <div className={styles.sectionNote}>Each group: tint choices and shade choices (all have at least AAA contrast with black or white text). "Y values" are the luminance.</div>
+        <h2 className={styles.sectionTitle}>Select Your Preferred Colors</h2>
+        <div className={styles.sectionNote}>Click your preference for each row of colors. The selected ones have the multi-color border; these will be used in your palette. (All the tints and shades shown have at least AAA contrast with your near-black or near-white text colors.)</div>
       </div>
       {adjustedNotice && adjustedLight && textOnLightRgb && (
         <div className={styles.noticeInline}>
@@ -873,6 +877,7 @@ export function LuminanceTestStrips({
           name="Primary"
           baseHex={palette.primary.hex}
           colorKey="primary"
+          showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.primary?.lighterIndex}
           selectedLightIndex={selections.primary?.lightIndex}
           onSelect={onSelectTintIndex}
@@ -886,6 +891,7 @@ export function LuminanceTestStrips({
           name="Primary"
           baseHex={palette.primary.hex}
           colorKey="primary"
+          showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.primary?.darkerY}
           selectedDarkY={selections.primary?.darkY}
           onSelect={onSelectShadeY}
@@ -899,6 +905,7 @@ export function LuminanceTestStrips({
           name="Secondary"
           baseHex={palette.secondary.hex}
           colorKey="secondary"
+          showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.secondary?.lighterIndex}
           selectedLightIndex={selections.secondary?.lightIndex}
           onSelect={onSelectTintIndex}
@@ -912,6 +919,7 @@ export function LuminanceTestStrips({
           name="Secondary"
           baseHex={palette.secondary.hex}
           colorKey="secondary"
+          showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.secondary?.darkerY}
           selectedDarkY={selections.secondary?.darkY}
           onSelect={onSelectShadeY}
@@ -925,6 +933,7 @@ export function LuminanceTestStrips({
           name="Tertiary"
           baseHex={palette.tertiary.hex}
           colorKey="tertiary"
+          showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.tertiary?.lighterIndex}
           selectedLightIndex={selections.tertiary?.lightIndex}
           onSelect={onSelectTintIndex}
@@ -938,6 +947,7 @@ export function LuminanceTestStrips({
           name="Tertiary"
           baseHex={palette.tertiary.hex}
           colorKey="tertiary"
+          showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.tertiary?.darkerY}
           selectedDarkY={selections.tertiary?.darkY}
           onSelect={onSelectShadeY}
@@ -951,6 +961,7 @@ export function LuminanceTestStrips({
           name="Accent"
           baseHex={palette.accent.hex}
           colorKey="accent"
+          showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.accent?.lighterIndex}
           selectedLightIndex={selections.accent?.lightIndex}
           onSelect={onSelectTintIndex}
@@ -964,6 +975,7 @@ export function LuminanceTestStrips({
           name="Accent"
           baseHex={palette.accent.hex}
           colorKey="accent"
+          showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.accent?.darkerY}
           selectedDarkY={selections.accent?.darkY}
           onSelect={onSelectShadeY}
@@ -977,6 +989,7 @@ export function LuminanceTestStrips({
           name="Error"
           baseHex={palette.error.hex}
           colorKey="error"
+          showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.error?.lighterIndex}
           selectedLightIndex={selections.error?.lightIndex}
           onSelect={onSelectTintIndex}
@@ -990,6 +1003,7 @@ export function LuminanceTestStrips({
           name="Error"
           baseHex={palette.error.hex}
           colorKey="error"
+          showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.error?.darkerY}
           selectedDarkY={selections.error?.darkY}
           onSelect={onSelectShadeY}
@@ -1003,6 +1017,7 @@ export function LuminanceTestStrips({
           name="Notice"
           baseHex={palette.warning.hex}
           colorKey="warning"
+          showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.warning?.lighterIndex}
           selectedLightIndex={selections.warning?.lightIndex}
           onSelect={onSelectTintIndex}
@@ -1016,6 +1031,7 @@ export function LuminanceTestStrips({
           name="Notice"
           baseHex={palette.warning.hex}
           colorKey="warning"
+          showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.warning?.darkerY}
           selectedDarkY={selections.warning?.darkY}
           onSelect={onSelectShadeY}
@@ -1029,6 +1045,7 @@ export function LuminanceTestStrips({
           name="Success"
           baseHex={palette.success.hex}
           colorKey="success"
+          showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.success?.lighterIndex}
           selectedLightIndex={selections.success?.lightIndex}
           onSelect={onSelectTintIndex}
@@ -1042,6 +1059,7 @@ export function LuminanceTestStrips({
           name="Success"
           baseHex={palette.success.hex}
           colorKey="success"
+          showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.success?.darkerY}
           selectedDarkY={selections.success?.darkY}
           onSelect={onSelectShadeY}

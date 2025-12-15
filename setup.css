@@ -1,25 +1,33 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
+
 :root {
   /* Content layers */
-  --z-content-low: 10; /* Minor elevated content */
-  --z-content: 20; /* Standard elevated content */
-  --z-content-high: 30; /* Important content that needs prominence */
+  --z-content-low: 10;
+  /* Minor elevated content */
+  --z-content: 20;
+  /* Standard elevated content */
+  --z-content-high: 30;
+  /* Important content that needs prominence */
 
   /* Navigation layers */
-  --z-nav-low: 100; /* Secondary navigation components */
-  --z-nav: 200; /* Primary navigation bars */
-  --z-nav-sticky: 300; /* Sticky navigation elements */
+  --z-nav-low: 100;
+  /* Secondary navigation components */
+  --z-nav: 200;
+  /* Primary navigation bars */
+  --z-nav-sticky: 300;
+  /* Sticky navigation elements */
 
   /* Overlay layers */
   --z-overlay: 400;
 
-  --z-spotlight: 1000; /* Tutorial spotlights/guided help */
+  --z-spotlight: 1000;
+  /* Tutorial spotlights/guided help */
 
   /* System layers */
-  --z-critical: 2000; /* Critical system notifications */
+  --z-critical: 2000;
+  /* Critical system notifications */
 
   /* spacing */
   --spacing-1: 0.25rem;
@@ -76,9 +84,10 @@
   --border: hsl(220 15% 90%);
 
   /* Font Families */
-  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --font-family-heading: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --font-family-monospace: 'JetBrains Mono', 'Fira Code', 'ui-monospace', 'SFMono-Regular', Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-family-base: system-ui, "Noto Sans", "Liberation Sans", Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "Segoe UI", sans-serif;
+  --font-family-heading: system-ui, "Noto Sans", "Liberation Sans", Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "Segoe UI", sans-serif;
+  --font-family-monospace: "JetBrains Mono", "Fira Code", "ui-monospace", "SFMono-Regular", "Liberation Mono", "DejaVu Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+  --font-family-serif: "Liberation Serif", "Source Serif Pro", "Iowan Old Style", "Apple Garamond", "Baskerville", "Droid Serif", "Times New Roman", serif;
   --font-family-cursive: 'cursive';
 
   /* Border Radius and Box Shadows */
@@ -155,6 +164,7 @@
   --chart-color-4: hsl(40 90% 65%);
   --chart-color-5: hsl(260 60% 70%);
 }
+
 @layer base {
   ul {
     list-style-type: none;
@@ -187,7 +197,8 @@
     text-decoration: none;
   }
 
-  th, td {
-    display: table-cell!important;
+  th,
+  td {
+    display: table-cell !important;
   }
 }

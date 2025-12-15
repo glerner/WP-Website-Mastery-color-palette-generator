@@ -114,7 +114,7 @@
 .swatchColor {
   /* Remove fixed/clamped min-height so content defines height for compact UI */
   /* min-height: clamp(72px, 12vh, 128px); */
-  padding: var(--cf-space-3xs) var(--cf-space-2xs);
+  padding: var(--cf-space-2xs) var(--cf-space-3xs);
   display: flex;
   flex-direction: column;
   gap: var(--cf-space-4xs);
@@ -154,10 +154,12 @@
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
+  border-style: dashed;
+  border-width: medium;
   /* Two gradient bars: top and bottom; does not affect layout */
   background:
-    linear-gradient(90deg, #ffffff, #d90429, #2a9d8f, #277da1, #000000) top left / 100% 4px no-repeat,
-    linear-gradient(90deg, #000000, #277da1, #2a9d8f, #d90429, #ffffff) bottom left / 100% 4px no-repeat;
+    linear-gradient(90deg, #ffffff, #d90429, #2a9d8f, #277da1, #000000) top left / 100% 8px no-repeat,
+    linear-gradient(90deg, #000000, #277da1, #2a9d8f, #d90429, #ffffff) bottom left / 100% 8px no-repeat;
 }
 
 .swatchMeta {

@@ -117,24 +117,23 @@
   color: var(--primary-foreground) !important;
   border-color: var(--primary) !important;
 }
-.buttonGroup > *:first-child:hover {
-  background-color: light-dark(
-    color-mix(in oklab, var(--primary) 88%, white),
-    color-mix(in oklab, var(--primary) 88%, black)
-  ) !important;
+
+.buttonGroup>*:first-child:hover {
+  background-color: light-dark(color-mix(in oklab, var(--primary) 88%, white),
+      color-mix(in oklab, var(--primary) 88%, black)) !important;
   border-color: currentColor !important;
   color: var(--primary-foreground) !important;
 }
-.buttonGroup > *:nth-child(2) {
+
+.buttonGroup>*:nth-child(2) {
   background-color: light-dark(var(--ldp-secondary-light), var(--ldp-secondary-dark)) !important;
   color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
   border-color: light-dark(var(--ldp-secondary-light), var(--ldp-secondary-dark)) !important;
 }
-.buttonGroup > *:nth-child(2):hover {
-  background-color: light-dark(
-    color-mix(in oklab, var(--ldp-secondary-light) 92%, white),
-    color-mix(in oklab, var(--ldp-secondary-dark) 85%, black)
-  ) !important;
+
+.buttonGroup>*:nth-child(2):hover {
+  background-color: light-dark(color-mix(in oklab, var(--ldp-secondary-light) 92%, white),
+      color-mix(in oklab, var(--ldp-secondary-dark) 85%, black)) !important;
   border-color: currentColor !important;
   color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
 }
@@ -149,12 +148,13 @@
 }
 
 /* Badge styles via group descendants */
-.badgeGroup > *:first-child {
+.badgeGroup>*:first-child {
   background-color: var(--accent) !important;
   color: var(--accent-foreground) !important;
   border-color: transparent !important;
 }
-.badgeGroup > *:nth-child(2) {
+
+.badgeGroup>*:nth-child(2) {
   background-color: light-dark(var(--ldp-secondary-lighter), var(--ldp-secondary-darker)) !important;
   color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
   border: 1px solid var(--border) !important;
@@ -176,9 +176,7 @@
   overflow: hidden;
 }
 
-.exampleList li {
-  padding: var(--spacing-3) var(--spacing-4);
-}
+/* .exampleList li padding now comes from global ul li, ol li styles */
 
 .exampleList li:nth-child(odd) {
   background-color: light-dark(var(--ldp-secondary-light), var(--ldp-secondary-dark));

@@ -9,25 +9,25 @@ This tool creates a professional color set for your website and checks contrast 
 - 3 basic colors, and an accent color
 - 2 light tints (-lighter and -light) and 2 dark shades (-darker and -dark) each
 - 3 semantic colors (error, notice/warning, success) light and dark variants
-- Automatically adjusts color contrast.
+- Automatically adjusts color contrast, only colors meeting WCAG AAA contrast get output.
 - You select your preferred tints-shades from those that match WCAG AAA contrast.
 
 ## What you get
 - **Better readability**: Consistent high-contrast text color (text-on-light and text-on-dark) for accessibility; if you use only these text colors, you will have WCAG AAA contrast.
 - **Brand-friendly palette**: Primary, Secondary, Tertiary, Accent, plus helpful colors like Error/Notice/Success.
-- **Ready for WordPress**: We generate CSS style classes your theme can use right away. The styles/<name>-*.json files use CSS variables, and define the colors for WordPress Theme Variations.
+- **Ready for WordPress**: Generates CSS style classes your theme can use right away. The styles/<name>-*.json files use CSS variables, and define the colors for WordPress Theme Variations.
 - **Multiple Theme Variations**: You pick the combination of colors (which one is the site's primary color, which one is the secondary color, etc.) that you prefer, by *previewing* them on your site. Your choice of 6 variations (with the accent color set), or 24 variations (primary, secondary, tertiary and accent can all be seen in each position).
 - **Added Light-Dark Mode**: Add a companion plugin, and your website has a light and dark mode toggle. Both light mode and dark mode use colors from your Palette (not calculated colors like many light-dark plugins assign).
-- **Works with the Block Editor**: and also works in some page builders. With other page builders, you may have to paste the hex color numbers in the builder.
+- **Works with the Block Editor**: and also works in some page builders. With other page builders, you may have to paste the color numbers into the builder.
 
 ### Do you want the main color to be the blue, the green, or the blue-green?
 - Generates all the combinations of the 3 basic colors (primary, secondary, tertiary), plus optionally accent, with the tints and shades.
-- Preview your site with the WordPress Theme Variations (this is built into WordPress), and select your preference.
+- Preview your site with the WordPress Theme Variations (add-on plugin that is better than what is built into WordPress), and select your preference.
 
 ### Future changes to your palette
-- Most themes store color numbers in your page or post. If you change your palette, you will have to update every page element that uses a color from your palette.
-- The Theme Variations this generates, will store a color variable instead of a color number.
-- WordPress block editor (and some page builders) will store color variables instead of hard-coding color numbers (e.g., var(--primary-lighter) instead of #hex).
+- Most themes store **color numbers** in your page or post. If you change your palette, you will have to update every page element that uses a color from your palette.
+- This generates Theme Variations that will store a **color variable**, such as "--primary-light" instead of a color number such as #ffdebb.
+- WordPress block editor (and some page builders) will store these color variables instead of hard-coding color numbers (e.g., var(--primary-lighter) instead of #hex like #ffdebb).
 - Next time you modify your color palette, you won't have to update every page element that uses a color from your palette.
 - (If your plugins and blocks follow your Palette; not all do.)
 
@@ -38,17 +38,18 @@ This tool creates a professional color set for your website and checks contrast 
 
 ## What you need
 - Your theme’s settings file: `theme.json` (from your parent or child theme).
-  - Many themes define their own colors as 'slug' (identifiers). Uploading your file lets this export the Palette colors and define those exact color 'slugs' your theme needs.
+  - Many themes define their own colors as 'slug' (identifiers). Uploading your file lets this export the Palette colors and define those exact color 'slugs' your theme expects.
   - If you can’t upload the actual theme.json file, use the “Twenty Twenty‑Five” option to try a standard setup.
 
 ## How to use it
 1) **Upload** your theme’s `theme.json` (or choose the Twenty Twenty‑Five option).
 2) **Pick your two text colors**: one for light backgrounds (Text on Light), one for dark backgrounds (Text on Dark).
 3) **Adjust your brand colors**: Primary, Secondary, Tertiary, Accent. The tool keeps contrast high for readability.
-4) **Fine Tune the Tints and Shades**: Pick from among the tints and shade that have excellent color contrast. Consider the gap between white and lighter, between lighter and light, between dark and darker, and between darker and black. Since you will likely use similar selections for similar colors, the index of the selection is saved for you.
-4) **Export**: You’ll get a folder with multiple Theme Variation files and one utilities CSS.
+4) **Fine Tune the Tints and Shades**: Pick from among the tints and shade that have excellent color contrast. Consider the gap between white and lighter, between lighter and light, between dark and darker, and between darker and black. Since you will likely use similar selections for similar colors, the index of each selection is saved for you.
+4) **Export**: You’ll get a folder with multiple Theme Variation files and one utilities CSS. The utilities CSS file has classes for you to paste into your existing style.css file.
 5) **Dark mode**: Your pages will use the colors you picked for your palette; if you specified "Primary Light" for an element in light mode, then your dark mode will have "Primary Dark"; if you specified an element uses "Secondary Darker" in light mode, then your dark mode will show "Secondary Lighter".
 6) **Future Palettes**: You can use this tool to generate new palettes for your website. All the elements on your page where you picked a background or text color using this Palette Generator, will use the colors from your new palette, automatically. Instead of colors being hard-coded to a color number, they are now set to use a color variable; this means that if you change a color in your palette, all the elements on your page will use the new color. (Note: that is *if* the element follows your palette; not all plugins and blocks do.)
+7) **CSS Classes** Since not all blocks follow your Palette colors, you can add CSS classes to blocks. Most blocks have an Advanced section in the block settings, where you put the class. The classes to use are easy to remember, for example 'bg-primary-lighter' sets the background color to Primary Lighter (and also sets the text color to Text On Light).
 
 ## Install on WordPress
 1) Unzip the exported file. Copy all files in the exported `styles/` folder into:
@@ -71,6 +72,27 @@ This tool creates a professional color set for your website and checks contrast 
      --your-button-text: var(--text-on-dark);
    }
    ```
+
+## Using Generated Palettes in WordPress Site Editor
+
+### Recommended Approach
+Use WordPress's built-in color picker in the Site Editor instead of CSS utility classes.
+
+**Why?**
+- The Site Editor automatically resolves palette colors from the active variation
+- CSS utility classes (`.bg-primary-light`, etc.) require `style.css` to be loaded
+- The Site Editor iframe may not load `style.css` until after a hard refresh
+
+### Best Practice
+1. Apply variations using the [Theme Variation Display plugin](https://github.com/glerner/wpwm-theme-variation-display)
+2. In Site Editor, use **Design > Colors > Background/Text** to select colors
+3. WordPress will use `var(--wp--preset--color--primary-light)` which resolves correctly from the active variation
+
+### Alternative: CSS Utility Classes
+If you prefer using CSS classes in templates:
+- Classes like `.bg-primary-light` work on the frontend
+- In Site Editor, you may need to hard refresh (Ctrl+Shift+R) after applying a variation
+- Or use **Advanced > Additional CSS Classes** and refresh the editor
 
 ## Page Builders
 

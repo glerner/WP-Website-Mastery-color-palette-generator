@@ -50,6 +50,7 @@ export const SonnerToaster = ({ className, ...props }: ToasterProps) => {
   return (
     <Sonner
       position="top-center"
+      gap={12}
       className={`${styles.toaster} ${className ?? ""}`}
       toastOptions={{
         unstyled: true,
