@@ -12,6 +12,8 @@ import {
 	MAX_CONTRAST_TINTS,
 	MAX_CONTRAST_SHADES,
 	MIN_VARIATIONS_PER_BAND,
+	CLOSE_ENOUGH_TO_BLACK_MAX_LUM,
+	CLOSE_ENOUGH_TO_WHITE_MIN_LUM,
 } from './config';
 
 /**
@@ -223,7 +225,7 @@ export function validateRibbons(ribbons: Record<string, Record<string, RibbonCol
 	};
 
 	if (insufficientCount > 0) {
-		result.summary = `Text colors invalid: ${insufficientCount} bands have too few colors. Click the color swatch to open HSL editor, then decrease L (lightness) for text-on-light or increase L for text-on-dark.`;
+		result.summary = `The text colors aren’t right yet: Text on Light isn’t dark enough or Text on Dark isn’t light enough. As a result, some palette colors can’t generate at least ${MIN_VARIATIONS_PER_BAND} AAA-contrast tints/shades. Click the Text on Light / Text on Dark swatch to open the HSL editor, then decrease L for Text on Light or increase L for Text on Dark.`;
 	}
 
 	return result;

@@ -179,7 +179,7 @@
 
 /* Meta text used to display HSL/Y next to labels; avoid muted; ensure excellent contrast */
 .formMeta {
-  margin-left: 8px;
+  /* margin-left: 8px; */
   font-size: var(--cf-text-s);
   color: light-dark(var(--foreground, #111111), var(--foreground, #FFFFFF));
 }
@@ -200,6 +200,30 @@
   font-size: var(--cf-text-xl);
   color: var(--foreground);
   margin: 0 0 var(--cf-space-m);
+}
+
+img {
+  max-width: 800px;
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--cf-space-m) 0;
+}
+
+.instructionsImage {
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.instructionsLogo {
+  max-width: 8em;
+}
+
+.startingColorHint {
+  font-size: var(--cf-text-xs);
+  color: var(--foreground);
+  margin: 4px 0 0 0;
+  line-height: 1.4;
 }
 
 .submitButton {
@@ -270,7 +294,8 @@
   /* Pointer label radius (outside the ring) */
   --marker-label-radius: calc(var(--wheel-size) / 2 + 0px);
   position: relative;
-  flex: 0 0 auto; /* prevent shrinking/squishing */
+  flex: 0 0 auto;
+  /* prevent shrinking/squishing */
   width: var(--wheel-size);
   height: var(--wheel-size);
   border-radius: 50%;
@@ -279,13 +304,11 @@
      Overlay a radial gradient that fades to white at the center to emulate lower saturation toward the center. */
   background:
     radial-gradient(circle at center,
-      rgba(255,255,255,0.95) 0%,
-      rgba(255,255,255,0.0) 60%
-    ),
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.0) 60%),
     conic-gradient(from 90deg,
-      red, magenta, blue, cyan, lime, yellow, red
-    );
-  box-shadow: inset 0 0 0 10px rgba(255,255,255,0.7), 0 0 0 1px var(--border);
+      red, magenta, blue, cyan, lime, yellow, red);
+  box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.7), 0 0 0 1px var(--border);
   /* Provide outer breathing room equal to radius so labels and ticks don't clip;
      add a little extra horizontal room to the sides. */
   margin: var(--wheel-radius) calc(var(--wheel-radius) + 20px);
@@ -343,7 +366,8 @@
   color: var(--foreground);
   transform-origin: center center;
   pointer-events: none;
-  z-index: 2; /* sits above wheel; marker labels will sit above this */
+  z-index: 2;
+  /* sits above wheel; marker labels will sit above this */
 }
 
 /* Pointer-style labels for each semantic marker */
@@ -354,15 +378,14 @@
   font-size: var(--cf-text-s);
   line-height: 1;
   color: var(--foreground);
-  transform-origin: left center; /* anchor left edge at the radial point so text grows outward */
+  transform-origin: left center;
+  /* anchor left edge at the radial point so text grows outward */
   pointer-events: none;
   z-index: 3;
   white-space: nowrap;
   /* Ensure text remains readable atop degree labels and wheel in both schemes */
-  background: light-dark(
-    color-mix(in lab, var(--background) 92%, transparent),
-    color-mix(in lab, var(--background) 85%, transparent)
-  );
+  background: light-dark(color-mix(in lab, var(--background) 92%, transparent),
+      color-mix(in lab, var(--background) 85%, transparent));
   padding: 2px 4px;
   border-radius: 4px;
   box-shadow: 0 0 0 1px var(--border);

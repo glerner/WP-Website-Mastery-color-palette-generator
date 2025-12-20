@@ -95,7 +95,13 @@ import { generateSemanticColors } from '../helpers/generateSemanticColors';
 import { buildWpVariationJson, validateBaseContrast } from '../helpers/themeJson';
 import AZLogo from '../AZ-WP-Website-Consulting-LLC.svg';
 import ThemeVariationDisplayScreenshot from '../assets/images/theme-variation-display-3-permutations.png';
+import ColorPaletteGeneratorLightDemo from '../assets/images/color-palette-generator-light-dark-demo-light.png';
+import ColorPaletteGeneratorDarkDemo from '../assets/images/color-palette-generator-light-dark-demo-dark.png';
+import ColorPaletteGeneratorPaletteTabDemo from '../assets/images/color-palette-generator-palette-tab.png';
+import ColorPaletteGeneratorAdjustTabFirstColor from '../assets/images/color-palette-generator-adjust-tab-first-color.png';
+import ColorPaletteGeneratorStartingColors from '../assets/images/color-palette-generator-starting-colors.png';
 import { applyPaletteToCSSVariables, exportCoreFrameworkCSSFromCurrent } from '../helpers/themeRuntime';
+
 import includeEditorChromeStylesPhp from '../inc/fse-editor-chrome-styles.php?raw';
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup';
 
@@ -1884,7 +1890,7 @@ const GeneratorPage = () => {
                 // Block tab switching if text colors are invalid (except staying on manual tab)
                 if (!ribbonValidation.valid && v !== 'manual' && activeTab === 'manual') {
                   toast.error(
-                    ribbonValidation.summary || 'Text colors invalid. Fix text-on-light and text-on-dark before switching tabs.',
+                    ribbonValidation.summary || 'The text colors aren\'t right yet. Fix Text on Light / Text on Dark before switching tabs.',
                     { duration: 10000 }
                   );
                   return; // Block the tab change
@@ -1902,12 +1908,12 @@ const GeneratorPage = () => {
                 }}
               >
                 <TabsTrigger value="instructions">Instructions</TabsTrigger>
-                <TabsTrigger value="ai">AI</TabsTrigger>
-                <TabsTrigger value="manual">Manual</TabsTrigger>
-                <TabsTrigger value="adjust">Adjust</TabsTrigger>
-                <TabsTrigger value="palette">Palette</TabsTrigger>
-                <TabsTrigger value="demo">Demo</TabsTrigger>
-                <TabsTrigger value="export">Export</TabsTrigger>
+                <TabsTrigger value="ai">AI (coming soon)</TabsTrigger>
+                <TabsTrigger value="manual">1. Starting Colors</TabsTrigger>
+                <TabsTrigger value="adjust">2. Adjust</TabsTrigger>
+                <TabsTrigger value="palette">3. View Palette</TabsTrigger>
+                <TabsTrigger value="demo">4. Demo Palette</TabsTrigger>
+                <TabsTrigger value="export">5. Export</TabsTrigger>
                 {/* <TabsTrigger value="landing">Landing (unused)</TabsTrigger> */}
               </TabsList>
 
@@ -1921,47 +1927,81 @@ const GeneratorPage = () => {
                   <ul className="u-list-circle">
                     <li>It adjusts every color you enter, to ensure proper contrast and readability. WCAG AAA contrast or better. Only colors meeting WCAG AAA contrast get output.</li>
                     <li>You will have <b>3 basic colors, and an accent color</b> (primary, secondary, tertiary, accent).</li>
-                    <li>You will have <b>2 tints and 2 shades</b> of each color, to use on your website.</li>
+                    <li>You will have <b>2 tints and 2 shades</b> of each color, to use on your website. (lighter, light, dark, darker)</li>
                     <li>Also, you will have three message colors (notice, error, success), for light mode and dark mode.</li>
                     <li>The Palette will have light mode and dark mode, using <em>your colors</em> not colors made up by some algorithm. Even if the main theme doesn't have dark mode.</li>
-                    <li>Instead of <b>color numbers</b> embedded in your pages (so to change site colors, you would have to edit every Block where you set a color, on every page), you will now have <b>named color variables</b> assigned to blocks where you specify a color.</li>
+                    <li>You will now have <b>named color variables</b> assigned to blocks. Change the <em>values</em> of color variables, in one place, to change your site colors; very little work. Most themes use <b>color numbers</b> embedded in your pages; to change site colors, you would have to edit every Block on every page where you set a color; a <em>lot</em> of work. (Most, but not all, blocks will use your color palette.)</li>
                     <li>Change the site colors by changing the color palette. No editing your pages to change the colors, for blocks that use your color palette.</li>
                   </ul>
 
-                  <h3 className={styles.sectionTitle}>In the Manual tab:</h3>
+                  <h3 className={styles.sectionTitle}>Checklist:</h3>
+                  <ul className="u-list-circle">
+                    <li>1. Set your Starting Colors</li>
+                    <li>2. Adjust tints and shades</li>
+                    <li>3. View Palette selections</li>
+                    <li>4. Demo Palette (check light mode and dark mode)</li>
+                    <li>5. Export, and copy to WordPress</li>
+                  </ul>
+
+                  <h3 className={styles.sectionTitle}>In the Starting Colors tab:</h3>
                   <ul className="u-list-circle">
                     <li>Upload your child theme's <code>theme.json</code> file. This is <em>needed</em> so your generated theme variations match the theme's version, and so all the colors your theme expects will be available (you can set the color to a new color number; but you shouldn't skip defining it, even if you don't plan to use it).</li>
                     <li>Enter your Theme Name (brief, as it appears in a WordPress tooltip in the Site Editor, Palette selection).</li>
                     <li>Enter hex <b>color numbers</b>, or click on the <b>color swatches</b> for HSL adjustment.</li>
                     <li>There is a color wheel, so you can check that colors aren't too close to each other. Generally have colors with a hue difference of at least 30, or make the saturation different enough the colors look different.</li>
+                    <li><strong>Text on Light / Text on Dark:</strong> These do not need to be pure black or pure white. They can have a slight hue. What matters most is luminance: Text on Light should be <strong>Near Black (low Y)</strong> and Text on Dark should be <strong>Near White (high Y)</strong>. If they are not dark/light enough, some colors won’t be able to generate AAA-contrast tints/shades. Warm, neutral, and cool text colors are provided, or enter your own.</li>
                     <li><strong>Show Diagnostics:</strong> Enable this to see detailed console logging (in your Browser's Console) about color reselection and adjustments. Useful for understanding how the automatic color selection works.</li>
                     <li>Click the "Save colors and settings" button so your choices are there when you restart.</li>
                   </ul>
-
+                  <img
+                    src={ColorPaletteGeneratorStartingColors}
+                    alt="Color Palette Generator Starting Colors"
+                    className={styles.instructionsImage}
+                  />
                   <h3 className={styles.sectionTitle}>In the Adjust tab:</h3>
                   <ul className="u-list-circle">
                     <li>Select your preferred tints and shades from among those that have excellent contrast (and are visibly different).</li>
                     <li><b>Click on your preference of color swatches</b> to select it.</li>
-                    <li>Your selections for each row are saved locally, since you will likely use the same selection even as you change hues.</li>
+                    <li>Your selections for each row are saved locally, since you will tend to use about the same selection even as you change hues.</li>
                   </ul>
+                  <img
+                    src={ColorPaletteGeneratorAdjustTabFirstColor}
+                    alt="Color Palette Generator Adjust Tab (First Color)"
+                    className={styles.instructionsImage}
+                  />
 
-                  <h3 className={styles.sectionTitle}>In the Palette tab:</h3>
+                  <h3 className={styles.sectionTitle}>In the View Palette tab:</h3>
                   <ul className="u-list-circle">
                     <li>Review the current contrast-adjusted colors.</li>
-                    <li>Click any swatch to jump to the <strong>Adjust</strong> tab for that color, if they don't look "right" or to check which you like best.</li>
+                    <li>Click any swatch to jump to the <strong>Adjust</strong> tab for that color, if they don't look right, or to check which you like best.</li>
                   </ul>
+                  <img
+                    src={ColorPaletteGeneratorPaletteTabDemo}
+                    alt="Color Palette Generator Palette Tab"
+                    className={styles.instructionsImage}
+                  />
 
-                  <h3 className={styles.sectionTitle}>In the Demo tab:</h3>
+                  <h3 className={styles.sectionTitle}>In the Demo Palette tab:</h3>
                   <ul className="u-list-circle">
                     <li>Preview components in light and dark schemes.</li>
                     <li>See how your colors work together in real webpage elements.</li>
                   </ul>
+                  <img
+                    src={ColorPaletteGeneratorLightDemo}
+                    alt="Demo color palette in Light mode"
+                    className={styles.instructionsImage}
+                  />
+                  <img
+                    src={ColorPaletteGeneratorDarkDemo}
+                    alt="Demo color palette in Dark mode"
+                    className={styles.instructionsImage}
+                  />
 
                   <h3 className={styles.sectionTitle}>In the Export tab:</h3>
                   <ul className="u-list-circle">
                     <li>Download your ZIP file with all your Theme Variations.</li>
-                    <li>You can export either <strong>6 variations</strong> (rotate Primary/Secondary/Tertiary, keeping Accent set) or <strong>24 variations</strong> (rotate Primary/Secondary/Tertiary/Accent).</li>
-                    <li>The ZIP includes Theme Variation <code>styles/*.json</code> files and a companion CSS utilities file.</li>
+                    <li>You can export either <strong>6 variations</strong> (rotate Primary/Secondary/Tertiary, keeping Accent set) or <strong>24 variations</strong> (rotate Primary/Secondary/Tertiary/Accent). The variations are named for the order of the colors you selected; p, s, t, a for Primary, Secondary, Tertiary, Accent.</li>
+                    <li>The ZIP includes Theme Variation <code>styles/*.json</code> files and a companion CSS utilities file. </li>
                     <li>The Export tab also shows HEX and HSL lists, easy to copy into whatever other places you need the colors. One place could be your company's style guide. Another could be your page builder, if you aren't using the Block Editor.</li>
                   </ul>
 
@@ -1971,7 +2011,7 @@ const GeneratorPage = () => {
                     <li>Make a <code>styles</code> folder there, if there isn't one.</li>
                     <li>No manually entering all those colors.</li>
                     <li>The <code>theme.json</code> files will show as Palettes in your WordPress Site Editor.</li>
-                    <li>You can also copy the CSS files to the styles folder, but WordPress won't use them. When you've chosen which Palette you prefer, copy the corresponding CSS to add to your existing <code>style.css</code> file.</li>
+                    <li>You can also copy the CSS file to the styles folder, but WordPress won't use it. Copy the CSS you want to add to your existing <code>style.css</code> file. There are CSS classes defined, that use your color variables, including ones that WordPress uses. When you pick a color off the WordPress color palette picker, it will use your color variables.</li>
                   </ul>
 
                   <h3 className={styles.sectionTitle}>WPWM Theme Variation Display</h3>
@@ -1984,16 +2024,14 @@ const GeneratorPage = () => {
                   <img
                     src={ThemeVariationDisplayScreenshot}
                     alt="WPWM Theme Variation Display showing color palettes"
-                    style={{ maxWidth: '100%', width: '100%', height: 'auto', display: 'block', margin: 'var(--cf-space-m) 0', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
+                    className={styles.instructionsImage}
                   />
                   <img
                     src={AZLogo}
                     alt="AZ WP Website Consulting LLC"
-                    style={{ maxWidth: '8em', width: '100%', height: 'auto', display: 'block', margin: 'var(--cf-space-l) 0 var(--cf-space-xs) 0' }}
+                    className={styles.instructionsLogo}
                   />
-                  <p style={{ color: textOnLight, fontSize: 'var(--cf-text-s)', margin: 0 }}>
-                    Copyright © 2025 AZ WP Website Consulting LLC.
-                  </p>
+                  <p>Copyright © 2025 AZ WP Website Consulting LLC.</p>
                 </div>
               </TabsContent>
 
@@ -2194,6 +2232,7 @@ const GeneratorPage = () => {
                   <ColorDisplay
                     palette={paletteWithVariations}
                     isLoading={false}
+                    showDiagnostics={showDiagnostics}
                     semanticBandSelection={semanticBandSelection}
                     textOnLight={textOnLight}
                     textOnDark={textOnDark}
@@ -2207,14 +2246,14 @@ const GeneratorPage = () => {
               </TabsContent>
               {/* Manual Tab */}
               <TabsContent value="manual" className={styles.tabContent}>
-                <h2 className={styles.sectionTitle}>Manual Settings for your Palette</h2>
+                <h2 className={styles.sectionTitle}>Starting Colors</h2>
                 {(() => {
                   if (!ribbonValidation.valid) {
                     return (
                       <div style={{
-                        background: 'var(--error-bg, #fee)',
-                        color: 'var(--error-fg, #c00)',
-                        border: '2px solid var(--error, #c00)',
+                        background: '#9f1239',
+                        color: '#ffffff',
+                        border: '2px solid #9f1239',
                         borderRadius: 'var(--radius)',
                         padding: 'var(--spacing-3)',
                         marginBottom: 'var(--spacing-3)',
@@ -2392,7 +2431,7 @@ const GeneratorPage = () => {
                                                   className={styles.copyCodeButton}
                                                 >{(c as any).value}</button>
                                                 {c.badge && (
-                                                  <span style={{ fontSize: 'var(--cf-text-xs)', opacity: 0.8 }}>{c.badge}</span>
+                                                  <span style={{ fontSize: 'var(--cf-text-xs)' }}>{c.badge}</span>
                                                 )}
                                               </div>
                                             </div>
@@ -2634,20 +2673,26 @@ const GeneratorPage = () => {
                                   const { h, s, l } = rgbToHslNorm(r, g, b);
                                   const Y = luminance(r, g, b);
                                   const ok = Y <= CLOSE_ENOUGH_TO_BLACK_MAX_LUM;
+                                  const stillMissingTintOptions =
+                                    !ribbonValidation.valid &&
+                                    ribbonValidation.errors.some((e) =>
+                                      e.includes('-lighter:') || e.includes('-light:')
+                                    );
+                                  const needsDarkerTextOnLight = !ok || stillMissingTintOptions;
                                   return (
                                     <div>
                                       <FormLabel>
                                         Text on Light (near black)
-                                        <span className={styles.formMeta}>
-                                          HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
-                                        </span>
                                       </FormLabel>
-                                      <span className={styles.metaLabel}>
-                                        Y={Y.toFixed(3)}
-                                      </span>
-                                      {!ok && (
+                                      <div className={styles.formMeta}>
+                                        HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                      </div>
+                                      <div className={styles.metaLabel}>
+                                        Y= {Y.toFixed(3)}
+                                      </div>
+                                      {needsDarkerTextOnLight && (
                                         <div className={styles.contrastHint}>
-                                          Consider a darker color for readability (Y ≤ {CLOSE_ENOUGH_TO_BLACK_MAX_LUM}).
+                                          Not enough AAA tints. Make Text on Light darker.
                                         </div>
                                       )}
                                       {/* Suggestions */}
@@ -2660,7 +2705,25 @@ const GeneratorPage = () => {
                                             manualForm.setValues({ ...manualForm.values, textOnLight: hex });
                                             setTextOnLight(hex);
                                           }}
-                                        >Almost black</Button>
+                                        >Neutral black</Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#111827';
+                                            manualForm.setValues({ ...manualForm.values, textOnLight: hex });
+                                            setTextOnLight(hex);
+                                          }}
+                                        >Cool (ink)</Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#1F1A17';
+                                            manualForm.setValues({ ...manualForm.values, textOnLight: hex });
+                                            setTextOnLight(hex);
+                                          }}
+                                        >Warm (espresso)</Button>
                                         <Button
                                           variant="outline"
                                           size="sm"
@@ -2669,7 +2732,7 @@ const GeneratorPage = () => {
                                             manualForm.setValues({ ...manualForm.values, textOnLight: hex });
                                             setTextOnLight(hex);
                                           }}
-                                        >Neutral</Button>
+                                        >Neutral gray</Button>
                                       </div>
                                     </div>
                                   );
@@ -2695,20 +2758,26 @@ const GeneratorPage = () => {
                                   const { h, s, l } = rgbToHslNorm(r, g, b);
                                   const Y = luminance(r, g, b);
                                   const ok = Y >= CLOSE_ENOUGH_TO_WHITE_MIN_LUM;
+                                  const stillMissingShadeOptions =
+                                    !ribbonValidation.valid &&
+                                    ribbonValidation.errors.some((e) =>
+                                      e.includes('-darker:') || e.includes('-dark:')
+                                    );
+                                  const needsLighterTextOnDark = !ok || stillMissingShadeOptions;
                                   return (
                                     <div>
                                       <FormLabel>
                                         Text on Dark (near white)
-                                        <span className={styles.formMeta}>
-                                          HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
-                                        </span>
-                                        <span className={styles.formMeta}>
-                                          Y={Y.toFixed(Y_TARGET_DECIMALS)}
-                                        </span>
                                       </FormLabel>
-                                      {!ok && (
+                                      <div className={styles.formMeta}>
+                                        HSL({Math.round(h)}, {Math.round(s * 100)}%, {Math.round(l * 100)}%)
+                                      </div>
+                                      <div className={styles.metaLabel}>
+                                        Y= {Y.toFixed(Y_TARGET_DECIMALS)}
+                                      </div>
+                                      {needsLighterTextOnDark && (
                                         <div className={styles.contrastHint}>
-                                          Consider a lighter color for readability (Y ≥ {CLOSE_ENOUGH_TO_WHITE_MIN_LUM}).
+                                          Not enough AAA shades. Make Text on Dark lighter.
                                         </div>
                                       )}
                                       {/* Suggestions */}
@@ -2717,20 +2786,38 @@ const GeneratorPage = () => {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => {
-                                            const hex = '#F9FAFB';
+                                            const hex = '#FFFFFF';
                                             manualForm.setValues({ ...manualForm.values, textOnDark: hex });
                                             setTextOnDark(hex);
                                           }}
-                                        >Almost white</Button>
+                                        >Neutral white</Button>
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => {
-                                            const hex = '#F8F7F7';
+                                            const hex = '#F3F4F6';
                                             manualForm.setValues({ ...manualForm.values, textOnDark: hex });
                                             setTextOnDark(hex);
                                           }}
-                                        >Off-white</Button>
+                                        >Cool (gray)</Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#FAF7F2';
+                                            manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                                            setTextOnDark(hex);
+                                          }}
+                                        >Warm (cream)</Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const hex = '#F9FAFB';
+                                            manualForm.setValues({ ...manualForm.values, textOnDark: hex });
+                                            setTextOnDark(hex);
+                                          }}
+                                        >Neutral off-white</Button>
                                       </div>
                                     </div>
                                   );

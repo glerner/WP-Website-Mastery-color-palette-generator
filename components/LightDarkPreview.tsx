@@ -152,6 +152,8 @@ export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOn
       <h3 id="ldp-title" className={styles.sectionTitle}>Demo: light-dark() preview</h3>
       <div className={styles.sectionSubtitle}>
         Toggle to see how CSS <code>light-dark()</code> resolves.
+        <br />
+        Auto follows your browser’s preferred color scheme (typically your OS setting) when supported.
       </div>
 
       <div className={styles.previewControls} role="group" aria-label="Demo color scheme">

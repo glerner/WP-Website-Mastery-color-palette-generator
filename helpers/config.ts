@@ -54,9 +54,9 @@ export const NEAR_WHITE_RGB = { r: 249, g: 250, b: 251 } as const;
  */
 // Text-on-dark should be very light: minimum Y ~ 0.90 (.90 good, .88 okay)
 export const CLOSE_ENOUGH_TO_WHITE_MIN_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_WHITE_MIN_LUM', 0.90, 0, 1);
-// Text-on-light should be quite dark: maximum Y ~ 0.20 (allows dark colors like dark red #d62828)
-// 0.05 was too strict (forced nearly pure black), 0.20 allows usable dark colors while maintaining AAA contrast
-export const CLOSE_ENOUGH_TO_BLACK_MAX_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_BLACK_MAX_LUM', 0.20, 0, 1);
+// Text-on-light should be quite dark: maximum Y ~ 0.16
+// 0.05 was too strict (forced nearly pure black). 0.20 allows many mid-dark colors that often reduce the available AAA-valid tint range.
+export const CLOSE_ENOUGH_TO_BLACK_MAX_LUM = numFromEnv('NEXT_PUBLIC_CLOSE_TO_BLACK_MAX_LUM', 0.16, 0, 1);
 
 /** Number of decimals when computing target Y values. */
 export const Y_TARGET_DECIMALS = int('NEXT_PUBLIC_Y_TARGET_DECIMALS', '2');
