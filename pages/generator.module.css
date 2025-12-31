@@ -276,13 +276,56 @@ img {
   --wheel-label-max: max(22ch, 180px);
   /* Leave room at the left for the longest label extending beyond the wheel center */
   /* wheel radius + estimated max label width */
-  padding-left: calc((var(--wheel-size) / 2) + var(--wheel-label-max));
-  padding-right: calc((var(--wheel-size) / 2) + var(--wheel-label-max));
+  padding-left: 0;
+  padding-right: 0;
   position: relative;
   /* Avoid clipping on narrow screens; allow horizontal scroll if needed */
   overflow-x: auto;
   /* Reserve space for labels without changing the circle's aspect */
   min-height: calc(var(--wheel-size) + 72px);
+}
+
+.colorWheelStage {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--wheel-container-size);
+  height: var(--wheel-container-size);
+}
+
+.wheelLeadersSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+  overflow: visible;
+}
+
+.wheelLeaderLine {
+  stroke: color-mix(in lab, var(--foreground) 55%, transparent);
+  stroke-width: 2;
+}
+
+.wheelLabels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.wheelMarkerLabelAbs {
+  position: absolute;
+  font-size: var(--cf-text-s);
+  line-height: 1;
+  color: var(--foreground);
+  pointer-events: none;
+  white-space: nowrap;
+  background: light-dark(color-mix(in lab, var(--background) 92%, transparent),
+      color-mix(in lab, var(--background) 85%, transparent));
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--border);
 }
 
 .colorWheel {
@@ -293,7 +336,11 @@ img {
   --wheel-radius: calc(var(--wheel-size) / 2 - var(--marker-size));
   /* Pointer label radius (outside the ring) */
   --marker-label-radius: calc(var(--wheel-size) / 2 + 0px);
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
   flex: 0 0 auto;
   /* prevent shrinking/squishing */
   width: var(--wheel-size);
@@ -311,7 +358,7 @@ img {
   box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.7), 0 0 0 1px var(--border);
   /* Provide outer breathing room equal to radius so labels and ticks don't clip;
      add a little extra horizontal room to the sides. */
-  margin: var(--wheel-radius) calc(var(--wheel-radius) + 20px);
+  margin: 0;
   /* Tick placement */
   --tick-radius: calc(var(--wheel-size) / 2 - 6px);
   /* Move labels slightly outside the wheel to fit 3-digit values */

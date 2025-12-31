@@ -233,7 +233,11 @@ const GeneratorPage = () => {
   const [semanticBandSelection, setSemanticBandSelection] = useState<SemanticBandSelection>(SEMANTIC_BAND_DEFAULTS);
   const [themeConfig, setThemeConfig] = useState<any | undefined>(undefined);
   const dirInputRef = useRef<HTMLInputElement | null>(null);
+  const themeJsonInputRef = useRef<HTMLInputElement | null>(null);
+  const styleCssInputRef = useRef<HTMLInputElement | null>(null);
   const wheelRowRef = useRef<HTMLDivElement | null>(null);
+  const wheelRef = useRef<HTMLDivElement | null>(null);
+  const [wheelSizePx, setWheelSizePx] = useState<number>(200);
   const [showWheelHint, setShowWheelHint] = useState<boolean>(false);
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
   const [diagnostics, setDiagnostics] = useState<{
@@ -287,6 +291,27 @@ const GeneratorPage = () => {
       if (ro) try { ro.disconnect(); } catch { }
     };
   }, [wheelRowRef]);
+
+  // Track actual wheel size for accurate marker/label positioning
+  useEffect(() => {
+    const el = wheelRef.current;
+    if (!el) return;
+    const update = () => {
+      try {
+        const rect = el.getBoundingClientRect();
+        const size = Math.min(rect.width, rect.height);
+        if (size > 0) setWheelSizePx(size);
+      } catch { }
+    };
+    update();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      if (ro) try { ro.disconnect(); } catch { }
+    };
+  }, []);
 
   // Ensure the folder picker input has proper directory attributes across browsers
   useEffect(() => {
@@ -1573,6 +1598,31 @@ const GeneratorPage = () => {
     } catch { }
   }, []);
 
+  // Two-step import: after user picks theme.json, prompt for style.css
+  // Note: We can't auto-trigger the second file picker because browsers require user activation.
+  // Instead, show a persistent toast with a button to pick style.css.
+  const [showStyleCssPrompt, setShowStyleCssPrompt] = useState(false);
+  const handleImportThemeJsonPicked = useCallback(async (file: File | undefined) => {
+    try {
+      if (!file) return;
+      setDiagnostics((d) => ({ ...d, method: 'legacy', rawStartingPath: file.name, themeJsonRel: file.name }));
+      await handleImportThemeJson(file, file.name);
+      setImportDetails((prev) => ({ ...(prev || {}), file: file.name }));
+      // Show prompt for style.css (user must click button due to browser security)
+      setShowStyleCssPrompt(true);
+      toast.info('theme.json loaded. Click "Select style.css" to load theme name.');
+    } catch { }
+  }, [handleImportThemeJson]);
+
+  const handleImportStyleCssPicked = useCallback(async (file: File | undefined) => {
+    try {
+      if (!file) return;
+      setDiagnostics((d) => ({ ...d, styleCssRelTried: file.name, styleCssFound: true }));
+      await handleImportStyleCss(file);
+      setShowStyleCssPrompt(false);
+    } catch { }
+  }, [handleImportStyleCss]);
+
   // Import both theme.json and style.css from a selected theme directory
   const handleImportThemeDir = useCallback(async (files: FileList | null) => {
     try {
@@ -1619,12 +1669,12 @@ const GeneratorPage = () => {
     } catch { }
   }, [handleImportThemeJson, handleImportStyleCss]);
 
-  // Prefer File System Access API for folder-pick to avoid selecting many files; fallback to hidden input
+  // Prefer File System Access API for folder-pick to avoid selecting many files; fallback to two-step file picks
   const handlePickThemeFolder = useCallback(async () => {
     try {
       const navAny: any = typeof window !== 'undefined' ? (window as any) : undefined;
       const fsPicker = navAny?.showDirectoryPicker;
-      if (!fsPicker) { dirInputRef.current?.click(); return; }
+      if (!fsPicker) { themeJsonInputRef.current?.click(); return; }
       const dirHandle: any = await fsPicker.call(navAny, { id: 'wp-theme-folder', mode: 'read' });
       if (!dirHandle) return;
       setDiagnostics((d) => ({ ...d, method: 'picker' }));
@@ -1649,8 +1699,8 @@ const GeneratorPage = () => {
         } catch { }
       }
     } catch {
-      // Fall back to legacy input if picker not available or user cancels
-      dirInputRef.current?.click();
+      // Fall back to two-step file picks if picker not available or user cancels
+      themeJsonInputRef.current?.click();
     }
   }, [handleImportThemeJson, handleImportStyleCss]);
 
@@ -2278,6 +2328,16 @@ const GeneratorPage = () => {
                           </p>
                           <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', flexWrap: 'wrap' }}>
                             <Button variant="outline" wrap onClick={handlePickThemeFolder} style={{ marginTop: 'var(--spacing-2)' }}>Import theme folder</Button>
+                            {showStyleCssPrompt && (
+                              <Button
+                                variant="outline"
+                                wrap
+                                onClick={() => styleCssInputRef.current?.click()}
+                                style={{ marginTop: 'var(--spacing-2)', background: 'var(--accent)', color: 'var(--accent-foreground)' }}
+                              >
+                                Select style.css
+                              </Button>
+                            )}
                             <Button variant="outline" wrap onClick={() => setShowDiagnostics(v => !v)} style={{ marginTop: 'var(--spacing-2)' }}>
                               {showDiagnostics ? 'Hide diagnostics' : 'Show diagnostics'}
                             </Button>
@@ -2463,6 +2523,30 @@ const GeneratorPage = () => {
                             e.currentTarget.value = '';
                           }}
                         />
+                        <input
+                          ref={themeJsonInputRef}
+                          type="file"
+                          accept=".json"
+                          style={{ display: 'none' }}
+                          onChange={async (e) => {
+                            const input = e.currentTarget;
+                            const f = e.target.files?.[0];
+                            if (f) await handleImportThemeJsonPicked(f);
+                            if (input) input.value = '';
+                          }}
+                        />
+                        <input
+                          ref={styleCssInputRef}
+                          type="file"
+                          accept=".css"
+                          style={{ display: 'none' }}
+                          onChange={async (e) => {
+                            const input = e.currentTarget;
+                            const f = e.target.files?.[0];
+                            if (f) await handleImportStyleCssPicked(f);
+                            if (input) input.value = '';
+                          }}
+                        />
                       </div>
 
                       {/* Theme Name block */}
@@ -2580,67 +2664,299 @@ const GeneratorPage = () => {
                         }}
                       />
                       {/* Color Wheel (non-interactive) */}
-                      <div className={styles.wheelRow} ref={wheelRowRef}>
-                        <div className={styles.colorWheel}>
-                          {/* ticks at 0/90/180/270 */}
-                          {([0, 90, 180, 270] as number[]).map((deg) => (
-                            <span
-                              key={`tick-${deg}`}
-                              className={`${styles.wheelTick} ${([90, 270].includes(deg) ? styles.wheelTickVertical : '')}`}
-                              style={{ transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(--tick-radius)) rotate(-${(360 - deg) % 360}deg)` }}
-                            />
-                          ))}
-                          {/* Labels every 45° (0..315). Keep text horizontal; add extra radius for 90/270. */}
-                          {([0, 45, 90, 135, 180, 225, 270, 315] as number[]).map((deg) => (
-                            <span
-                              key={`tick-label-${deg}`}
-                              className={styles.wheelTickLabel}
-                              style={{
-                                transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(${[90, 270].includes(deg) ? '--tick-label-radius-vertical' : '--tick-label-radius'})) rotate(0deg)`
-                              }}
-                            >
-                              {deg}
-                            </span>
-                          ))}
+                      <div
+                        className={styles.wheelRow}
+                        ref={wheelRowRef}
+                        style={{
+                          ['--wheel-container-size' as any]: `${Math.max(2 * 205, wheelSizePx)}px`,
+                        }}
+                      >
+                        <div className={styles.colorWheelStage}>
+                          {/* Leader lines SVG overlay */}
+                          <svg
+                            className={styles.wheelLeadersSvg}
+                            aria-hidden="true"
+                            viewBox={`0 0 ${Math.max(2 * 205, wheelSizePx)} ${Math.max(2 * 205, wheelSizePx)}`}
+                            preserveAspectRatio="none"
+                          >
+                            {(() => {
+                              const MARKER_SIZE_PX = 18;
+                              const LABEL_CONTAINER_RADIUS_PX = 205;
+                              const LABEL_TEXT_RADIUS_PX = 170;
+                              const LABEL_EDGE_PADDING_PX = 10;
+                              const LABEL_MIN_SPACING_PX = 22;
+                              const VERTICAL_ZONE_HUE_DEG = 20;
 
-                          {/* markers positioned via inline transforms */}
-                          {(['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[]).map((key) => {
-                            const hex = manualForm.values[key] || (palette as any)[key]?.hex;
-                            const rgb = hexToRgb(hex);
-                            const { h } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
-                            const angle = (360 - h) % 360;
-                            return (
+                              const normalizeHue = (h: number) => ((h % 360) + 360) % 360;
+                              const isHueNear = (h: number, center: number, tol: number) => {
+                                const hh = normalizeHue(h);
+                                const cc = normalizeHue(center);
+                                const d = Math.abs(hh - cc);
+                                return Math.min(d, 360 - d) <= tol;
+                              };
+
+                              const containerSize = Math.max(2 * LABEL_CONTAINER_RADIUS_PX, wheelSizePx);
+                              const cx = containerSize / 2;
+                              const cy = containerSize / 2;
+                              const wheelRadius = Math.max(0, wheelSizePx / 2 - MARKER_SIZE_PX);
+
+                              type WheelPoint = {
+                                key: ColorType | SemanticColorType;
+                                name: string;
+                                hex: string;
+                                h: number;
+                                s: number;
+                                angleDeg: number;
+                                dotX: number;
+                                dotY: number;
+                                side: 'left' | 'right' | 'top' | 'bottom';
+                                labelX: number;
+                                labelY: number;
+                              };
+
+                              const points: WheelPoint[] = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[])
+                                .map((key) => {
+                                  const hex = manualForm.values[key] || (palette as any)[key]?.hex;
+                                  const rgb = hexToRgb(hex);
+                                  const { h, s } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                                  const angleDeg = (360 - h) % 360;
+                                  const angleRad = (angleDeg * Math.PI) / 180;
+                                  const r = wheelRadius * Math.max(0, Math.min(1, s));
+                                  const dx = Math.cos(angleRad) * r;
+                                  const dy = Math.sin(angleRad) * r;
+                                  const dotX = cx + dx;
+                                  const dotY = cy + dy;
+                                  const name = (palette as any)[key]?.name || String(key);
+                                  const side: 'left' | 'right' | 'top' | 'bottom' =
+                                    isHueNear(h, 270, VERTICAL_ZONE_HUE_DEG) ? 'bottom'
+                                      : isHueNear(h, 90, VERTICAL_ZONE_HUE_DEG) ? 'top'
+                                        : (Math.cos(angleRad) >= 0 ? 'right' : 'left');
+                                  const labelX =
+                                    side === 'right' ? cx + LABEL_TEXT_RADIUS_PX
+                                      : side === 'left' ? cx - LABEL_TEXT_RADIUS_PX
+                                        : dotX;
+                                  const labelY =
+                                    side === 'top' ? cy - LABEL_TEXT_RADIUS_PX
+                                      : side === 'bottom' ? cy + LABEL_TEXT_RADIUS_PX
+                                        : dotY;
+                                  return { key, name, hex, h, s, angleDeg, dotX, dotY, side, labelX, labelY };
+                                });
+
+                              // Resolve overlapping labels
+                              const resolveSideY = (side: 'left' | 'right') => {
+                                const arr = points.filter((p) => p.side === side).sort((a, b) => a.labelY - b.labelY);
+                                let lastY = -Infinity;
+                                for (const p of arr) {
+                                  let y = p.labelY;
+                                  if (y < lastY + LABEL_MIN_SPACING_PX) y = lastY + LABEL_MIN_SPACING_PX;
+                                  y = Math.max(LABEL_EDGE_PADDING_PX, Math.min(containerSize - LABEL_EDGE_PADDING_PX, y));
+                                  p.labelY = y;
+                                  lastY = y;
+                                }
+                              };
+                              const resolveSideX = (side: 'top' | 'bottom') => {
+                                const arr = points.filter((p) => p.side === side).sort((a, b) => a.labelX - b.labelX);
+                                let lastX = -Infinity;
+                                for (const p of arr) {
+                                  let x = p.labelX;
+                                  if (x < lastX + LABEL_MIN_SPACING_PX) x = lastX + LABEL_MIN_SPACING_PX;
+                                  x = Math.max(LABEL_EDGE_PADDING_PX, Math.min(containerSize - LABEL_EDGE_PADDING_PX, x));
+                                  p.labelX = x;
+                                  lastX = x;
+                                }
+                              };
+                              resolveSideY('left');
+                              resolveSideY('right');
+                              resolveSideX('top');
+                              resolveSideX('bottom');
+
+                              return (
+                                <>
+                                  {points.map((p) => {
+                                    const x2 =
+                                      p.side === 'right' ? p.labelX - 6
+                                        : p.side === 'left' ? p.labelX + 6
+                                          : p.labelX;
+                                    const y2 =
+                                      p.side === 'bottom' ? p.labelY - 6
+                                        : p.side === 'top' ? p.labelY + 6
+                                          : p.labelY;
+                                    return (
+                                      <line
+                                        key={`leader-${p.key}`}
+                                        className={styles.wheelLeaderLine}
+                                        x1={p.dotX}
+                                        y1={p.dotY}
+                                        x2={x2}
+                                        y2={y2}
+                                      />
+                                    );
+                                  })}
+                                </>
+                              );
+                            })()}
+                          </svg>
+
+                          {/* Labels layer */}
+                          <div className={styles.wheelLabels}>
+                            {(() => {
+                              const MARKER_SIZE_PX = 18;
+                              const LABEL_CONTAINER_RADIUS_PX = 205;
+                              const LABEL_TEXT_RADIUS_PX = 170;
+                              const LABEL_EDGE_PADDING_PX = 10;
+                              const LABEL_MIN_SPACING_PX = 22;
+                              const VERTICAL_ZONE_HUE_DEG = 20;
+
+                              const normalizeHue = (h: number) => ((h % 360) + 360) % 360;
+                              const isHueNear = (h: number, center: number, tol: number) => {
+                                const hh = normalizeHue(h);
+                                const cc = normalizeHue(center);
+                                const d = Math.abs(hh - cc);
+                                return Math.min(d, 360 - d) <= tol;
+                              };
+
+                              const containerSize = Math.max(2 * LABEL_CONTAINER_RADIUS_PX, wheelSizePx);
+                              const cx = containerSize / 2;
+                              const cy = containerSize / 2;
+                              const wheelRadius = Math.max(0, wheelSizePx / 2 - MARKER_SIZE_PX);
+
+                              type WheelPoint = {
+                                key: ColorType | SemanticColorType;
+                                name: string;
+                                h: number;
+                                s: number;
+                                angleDeg: number;
+                                dotX: number;
+                                dotY: number;
+                                side: 'left' | 'right' | 'top' | 'bottom';
+                                labelX: number;
+                                labelY: number;
+                              };
+
+                              const points: WheelPoint[] = (['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[])
+                                .map((key) => {
+                                  const hex = manualForm.values[key] || (palette as any)[key]?.hex;
+                                  const rgb = hexToRgb(hex);
+                                  const { h, s } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                                  const angleDeg = (360 - h) % 360;
+                                  const angleRad = (angleDeg * Math.PI) / 180;
+                                  const r = wheelRadius * Math.max(0, Math.min(1, s));
+                                  const dx = Math.cos(angleRad) * r;
+                                  const dy = Math.sin(angleRad) * r;
+                                  const dotX = cx + dx;
+                                  const dotY = cy + dy;
+                                  const name = (palette as any)[key]?.name || String(key);
+                                  const side: 'left' | 'right' | 'top' | 'bottom' =
+                                    isHueNear(h, 270, VERTICAL_ZONE_HUE_DEG) ? 'bottom'
+                                      : isHueNear(h, 90, VERTICAL_ZONE_HUE_DEG) ? 'top'
+                                        : (Math.cos(angleRad) >= 0 ? 'right' : 'left');
+                                  const labelX =
+                                    side === 'right' ? cx + LABEL_TEXT_RADIUS_PX
+                                      : side === 'left' ? cx - LABEL_TEXT_RADIUS_PX
+                                        : dotX;
+                                  const labelY =
+                                    side === 'top' ? cy - LABEL_TEXT_RADIUS_PX
+                                      : side === 'bottom' ? cy + LABEL_TEXT_RADIUS_PX
+                                        : dotY;
+                                  return { key, name, h, s, angleDeg, dotX, dotY, side, labelX, labelY };
+                                });
+
+                              // Resolve overlapping labels
+                              const resolveSideY = (side: 'left' | 'right') => {
+                                const arr = points.filter((p) => p.side === side).sort((a, b) => a.labelY - b.labelY);
+                                let lastY = -Infinity;
+                                for (const p of arr) {
+                                  let y = p.labelY;
+                                  if (y < lastY + LABEL_MIN_SPACING_PX) y = lastY + LABEL_MIN_SPACING_PX;
+                                  y = Math.max(LABEL_EDGE_PADDING_PX, Math.min(containerSize - LABEL_EDGE_PADDING_PX, y));
+                                  p.labelY = y;
+                                  lastY = y;
+                                }
+                              };
+                              const resolveSideX = (side: 'top' | 'bottom') => {
+                                const arr = points.filter((p) => p.side === side).sort((a, b) => a.labelX - b.labelX);
+                                let lastX = -Infinity;
+                                for (const p of arr) {
+                                  let x = p.labelX;
+                                  if (x < lastX + LABEL_MIN_SPACING_PX) x = lastX + LABEL_MIN_SPACING_PX;
+                                  x = Math.max(LABEL_EDGE_PADDING_PX, Math.min(containerSize - LABEL_EDGE_PADDING_PX, x));
+                                  p.labelX = x;
+                                  lastX = x;
+                                }
+                              };
+                              resolveSideY('left');
+                              resolveSideY('right');
+                              resolveSideX('top');
+                              resolveSideX('bottom');
+
+                              return points.map((p) => {
+                                const transform =
+                                  p.side === 'right' ? `translate(0, -50%)`
+                                    : p.side === 'left' ? `translate(-100%, -50%)`
+                                      : p.side === 'top' ? `translate(-50%, -100%)`
+                                        : `translate(-50%, 0)`;
+                                return (
+                                  <span
+                                    key={`label-${p.key}`}
+                                    className={styles.wheelMarkerLabelAbs}
+                                    style={{
+                                      left: p.labelX,
+                                      top: p.labelY,
+                                      transform,
+                                    }}
+                                  >
+                                    {p.name}
+                                  </span>
+                                );
+                              });
+                            })()}
+                          </div>
+
+                          {/* The actual color wheel */}
+                          <div className={styles.colorWheel} ref={wheelRef}>
+                            {/* ticks at 0/90/180/270 */}
+                            {([0, 90, 180, 270] as number[]).map((deg) => (
                               <span
-                                key={`marker-${key}`}
-                                className={styles.wheelMarker}
-                                title={`${(palette as any)[key]?.name}`}
-                                style={{
-                                  background: `hsl(${Math.round(h)}, 50%, 50%)`,
-                                  transform: `translate(-50%, -50%) rotate(${angle}deg) translate(var(--wheel-radius)) rotate(-${angle}deg)`,
-                                }}
+                                key={`tick-${deg}`}
+                                className={`${styles.wheelTick} ${([90, 270].includes(deg) ? styles.wheelTickVertical : '')}`}
+                                style={{ transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(--tick-radius)) rotate(-${(360 - deg) % 360}deg)` }}
                               />
-                            );
-                          })}
-
-                          {/* pointer-style labels for markers (like degree labels) */}
-                          {(['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[]).map((key) => {
-                            const hex = manualForm.values[key] || (palette as any)[key]?.hex;
-                            const rgb = hexToRgb(hex);
-                            const { h } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
-                            const angle = (360 - h) % 360;
-                            const name = (palette as any)[key]?.name || String(key);
-                            return (
+                            ))}
+                            {/* Labels every 45° (0..315). Keep text horizontal; add extra radius for 90/270. */}
+                            {([0, 45, 90, 135, 180, 225, 270, 315] as number[]).map((deg) => (
                               <span
-                                key={`marker-label-${key}`}
-                                className={styles.wheelMarkerLabel}
-                                style={{ transform: `translate(0, -50%) rotate(${angle}deg) translate(var(--marker-label-radius)) rotate(0deg)` }}
+                                key={`tick-label-${deg}`}
+                                className={styles.wheelTickLabel}
+                                style={{
+                                  transform: `translate(-50%, -50%) rotate(${(360 - deg) % 360}deg) translate(var(${[90, 270].includes(deg) ? '--tick-label-radius-vertical' : '--tick-label-radius'})) rotate(0deg)`
+                                }}
                               >
-                                {name}
+                                {deg}
                               </span>
-                            );
-                          })}
+                            ))}
+
+                            {/* markers positioned by hue (angle) and saturation (radius) */}
+                            {(['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as (ColorType | SemanticColorType)[]).map((key) => {
+                              const hex = manualForm.values[key] || (palette as any)[key]?.hex;
+                              const rgb = hexToRgb(hex);
+                              const { h, s } = rgbToHslNorm(rgb.r, rgb.g, rgb.b);
+                              const angle = (360 - h) % 360;
+                              const wheelRadius = Math.max(0, wheelSizePx / 2 - 18);
+                              const r = wheelRadius * Math.max(0, Math.min(1, s));
+                              return (
+                                <span
+                                  key={`marker-${key}`}
+                                  className={styles.wheelMarker}
+                                  title={`${(palette as any)[key]?.name}`}
+                                  style={{
+                                    background: `hsl(${Math.round(h)}, 50%, 50%)`,
+                                    transform: `translate(-50%, -50%) rotate(${angle}deg) translate(${r}px) rotate(-${angle}deg)`,
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
                         </div>
-                        {/* Legend grid removed in favor of pointer-style labels */}
                       </div>
                       {/* Save button moved above, next to Theme Name */}
 
