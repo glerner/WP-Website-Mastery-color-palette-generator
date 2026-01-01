@@ -3,6 +3,7 @@ import styles from './LuminanceTestStrips.module.css';
 import { Button } from './Button';
 import { PaletteWithVariations, ColorType, SemanticColorType, SwatchPick } from '../helpers/types';
 import { hexToRgb, rgbToHex, rgbToHslNorm, solveHslLightnessForY, luminance, getContrastRatio, hslNormToRgb } from '../helpers/colorUtils';
+import { chooseForeground } from '../helpers/themeRuntime';
 import { NEAR_BLACK_RGB, NEAR_WHITE_RGB, TINT_TARGET_COUNT, SHADE_TARGET_COUNT, LIGHT_MIN_Y_BASE, LIGHTER_MAX_Y, LIGHT_MAX_Y_CAP, DARKER_MIN_Y, DARKER_MAX_Y, DARK_OVERLAP_MIN_Y, DARK_MAX_Y, Y_TARGET_DECIMALS, Y_DISPLAY_DECIMALS, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, RECOMMENDED_SHADE_Y_GAP_TOLERANCE, HARD_MIN_SHADE_Y_GAP, TARGET_LUM_LIGHTER, TARGET_LUM_LIGHT, TARGET_LUM_DARK, TARGET_LUM_DARKER, MIN_DELTA_LUM_TINTS, MIN_DELTA_LUM_TINTS_FROM_WHITE, MIN_DELTA_LUM_SHADES, AAA_MIN, AA_SMALL_MIN, MAX_CONTRAST_TINTS, MAX_CONTRAST_SHADES, CLOSE_ENOUGH_TO_WHITE_MIN_LUM, CLOSE_ENOUGH_TO_BLACK_MAX_LUM } from '../helpers/config';
 
 // Sentinel value for "not found" - explicit constant makes debugging clearer than -1
@@ -80,11 +81,14 @@ type RowProps = {
   onSelectTint?: ((colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', pick: SwatchPick) => void) | undefined;
   textOnLightRgb?: { r: number; g: number; b: number } | undefined;
   textOnDarkRgb?: { r: number; g: number; b: number } | undefined;
+  textOnLight?: string | undefined;
+  textOnDark?: string | undefined;
+  noticeBgHex?: string | undefined;
   onGoPalette?: (() => void) | undefined;
   anchorId?: string;
 };
 
-function RowTints({ name, baseHex, colorKey, showDiagnostics, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, onGoPalette, anchorId }: RowProps) {
+function RowTints({ name, baseHex, colorKey, showDiagnostics, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark, noticeBgHex, onGoPalette, anchorId }: RowProps) {
   const baseRgb = hexToRgb(baseHex);
   // Prefer live text-on-light token if provided; fall back to near-black
   const blackLike = textOnLightRgb ?? NEAR_BLACK_RGB;
@@ -339,12 +343,7 @@ function RowTints({ name, baseHex, colorKey, showDiagnostics, selectedLighterInd
       </div>
       {tooClose && (
         <div className={styles.noticeInline}>
-          {(() => {
-            const yL = lighterYSelected != null ? parseFloat(lighterYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
-            const yLt = lightYSelected != null ? parseFloat(lightYSelected.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
-            const diff = (yL != null && yLt != null) ? (yL - yLt) : undefined;
-            return `These colors appear too similar. Pick ones further apart.`;
-          })()}
+          These colors appear too similar. Pick ones further apart.
         </div>
       )}
       <div className={styles.stripGrid}>
@@ -414,11 +413,14 @@ type RowShadesProps = {
   onSelectShade?: ((colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', pick: SwatchPick) => void) | undefined;
   textOnLightRgb?: { r: number; g: number; b: number } | undefined;
   textOnDarkRgb?: { r: number; g: number; b: number } | undefined;
+  textOnLight?: string | undefined;
+  textOnDark?: string | undefined;
+  noticeBgHex?: string | undefined;
   onGoPalette?: (() => void) | undefined;
   anchorId?: string;
 };
 
-function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, selectedDarkY, onSelect, onSelectShade, textOnLightRgb, textOnDarkRgb, anchorId }: RowShadesProps) {
+function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, selectedDarkY, onSelect, onSelectShade, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark, noticeBgHex, anchorId }: RowShadesProps) {
   const baseRgb = hexToRgb(baseHex);
   // Prefer live text-on-dark token if provided; fall back to near-white
   const whiteLike = textOnDarkRgb ?? NEAR_WHITE_RGB;
@@ -571,12 +573,7 @@ function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, 
           )}
           {bandIdx === 0 && tooClose && (
             <div className={styles.noticeInline}>
-              {(() => {
-                const yDkr = selectedDarkerY != null ? parseFloat(selectedDarkerY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
-                const yDrk = selectedDarkY != null ? parseFloat(selectedDarkY.toFixed(Y_DISPLAY_DECIMALS)) : undefined;
-                const diff = (yDkr != null && yDrk != null) ? (yDrk - yDkr) : undefined;
-                return `These colors appear too similar. Pick ones further apart.`;
-              })()}
+              These colors appear too similar. Pick ones further apart.
             </div>
           )}
           {bandIdx !== 0 && (
@@ -855,6 +852,17 @@ export function LuminanceTestStrips({
     }
     if (out.textOnLight || out.textOnDark) onTokensAutoAdjusted(out);
   }, [adjustedNotice, onTokensAutoAdjusted, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark]);
+
+  // Compute notice background from warning-light variation for consistent notice styling
+  const noticeBgHex = React.useMemo(() => {
+    const warningVariations = (palette.warning as any)?.variations;
+    if (Array.isArray(warningVariations)) {
+      const lightVar = warningVariations.find((v: any) => v.step === 'light');
+      if (lightVar?.hex) return lightVar.hex;
+    }
+    return undefined;
+  }, [palette.warning]);
+
   return (
     <section className={styles.testStripsSection}>
       <div className={styles.sectionHeader}>
@@ -884,6 +892,9 @@ export function LuminanceTestStrips({
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-primary`}
           onGoPalette={onGoPalette}
         />
@@ -898,6 +909,9 @@ export function LuminanceTestStrips({
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-primary-shades`}
           onGoPalette={onGoPalette}
         />
@@ -912,6 +926,9 @@ export function LuminanceTestStrips({
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-secondary`}
           onGoPalette={onGoPalette}
         />
@@ -926,6 +943,9 @@ export function LuminanceTestStrips({
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-secondary-shades`}
           onGoPalette={onGoPalette}
         />
@@ -940,6 +960,9 @@ export function LuminanceTestStrips({
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-tertiary`}
           onGoPalette={onGoPalette}
         />
@@ -954,6 +977,9 @@ export function LuminanceTestStrips({
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-tertiary-shades`}
           onGoPalette={onGoPalette}
         />
@@ -968,6 +994,9 @@ export function LuminanceTestStrips({
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-accent`}
           onGoPalette={onGoPalette}
         />
@@ -982,6 +1011,9 @@ export function LuminanceTestStrips({
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-accent-shades`}
           onGoPalette={onGoPalette}
         />
@@ -996,6 +1028,9 @@ export function LuminanceTestStrips({
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-error`}
           onGoPalette={onGoPalette}
         />
@@ -1010,6 +1045,9 @@ export function LuminanceTestStrips({
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-error-shades`}
           onGoPalette={onGoPalette}
         />
@@ -1024,6 +1062,9 @@ export function LuminanceTestStrips({
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-warning`}
           onGoPalette={onGoPalette}
         />
@@ -1038,6 +1079,9 @@ export function LuminanceTestStrips({
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-warning-shades`}
           onGoPalette={onGoPalette}
         />
@@ -1052,6 +1096,9 @@ export function LuminanceTestStrips({
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-success`}
           onGoPalette={onGoPalette}
         />
@@ -1066,6 +1113,9 @@ export function LuminanceTestStrips({
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
           {...(textOnDarkRgb ? { textOnDarkRgb } : {})}
+          textOnLight={textOnLight}
+          textOnDark={textOnDark}
+          noticeBgHex={noticeBgHex}
           anchorId={`${anchorPrefix}luminance-success-shades`}
           onGoPalette={onGoPalette}
         />

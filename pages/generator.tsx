@@ -100,7 +100,7 @@ import ColorPaletteGeneratorDarkDemo from '../assets/images/color-palette-genera
 import ColorPaletteGeneratorPaletteTabDemo from '../assets/images/color-palette-generator-palette-tab.png';
 import ColorPaletteGeneratorAdjustTabFirstColor from '../assets/images/color-palette-generator-adjust-tab-first-color.png';
 import ColorPaletteGeneratorStartingColors from '../assets/images/color-palette-generator-starting-colors.png';
-import { applyPaletteToCSSVariables, exportCoreFrameworkCSSFromCurrent } from '../helpers/themeRuntime';
+import { applyPaletteToCSSVariables, exportCoreFrameworkCSSFromCurrent, chooseForeground } from '../helpers/themeRuntime';
 
 import includeEditorChromeStylesPhp from '../inc/fse-editor-chrome-styles.php?raw';
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup';
@@ -216,7 +216,7 @@ const GeneratorPage = () => {
   });
   const generatePaletteMutation = useGeneratePalette();
   const [activeTab, setActiveTab] = useState<'instructions' | 'ai' | 'manual' | 'palette' | 'adjust' | 'export' | 'demo' | 'landing'>('instructions');
-  const savedManualJsonRef = useRef<string>('');
+  const [savedManualJson, setSavedManualJson] = useState<string>('');
   const [demoScheme, setDemoScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const [themeName, setThemeName] = useState<string>('');
   // Export variation mode: 6 (rotate P/S/T; Accent fixed) or 24 (rotate P/S/T/Accent)
@@ -1429,11 +1429,11 @@ const GeneratorPage = () => {
   const isManualDirty = useMemo(() => {
     try {
       const current = JSON.stringify(manualForm.values);
-      return !!(savedManualJsonRef.current && current !== savedManualJsonRef.current);
+      return !!(savedManualJson && current !== savedManualJson);
     } catch {
       return false;
     }
-  }, [manualForm.values]);
+  }, [manualForm.values, savedManualJson]);
 
   // Warn on page unload only when there are unsaved changes
   useEffect(() => {
@@ -1468,7 +1468,7 @@ const GeneratorPage = () => {
         ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
         ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
         ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
-      });
+      }, { textOnLight, textOnDark });
     } catch { }
   }, [palette, exactSelections]);
 
@@ -1797,7 +1797,7 @@ const GeneratorPage = () => {
       if ((nextValues as any).textOnDark) setTextOnDark((nextValues as any).textOnDark);
       if ((nextValues as any).textOnLight) setTextOnLight((nextValues as any).textOnLight);
       // Track the last saved snapshot for unsaved-changes warning
-      try { savedManualJsonRef.current = JSON.stringify({ ...nextValues }); } catch { savedManualJsonRef.current = raw; }
+      try { setSavedManualJson(JSON.stringify({ ...nextValues })); } catch { setSavedManualJson(raw); }
       const tn = localStorage.getItem('gl_theme_name');
       const manualName = typeof nextValues.themeName === 'string' ? nextValues.themeName.trim() : '';
       const chosenName = manualName || (tn || '');
@@ -1896,9 +1896,8 @@ const GeneratorPage = () => {
       const setTriplet = (prefix: 'notice' | 'error' | 'success', baseHex?: string) => {
         if (!baseHex) return;
         const { r, g, b } = hexToRgb(baseHex);
-        const Y = luminance(r, g, b);
-        // Choose fg based on bg lightness; use user-configured near-black/near-white equivalents
-        const fgHex = Y > 0.5 ? textOnLight : textOnDark;
+        // Choose fg based on contrast ratio comparison (same algorithm as ensureAAAContrast)
+        const fgHex = chooseForeground(baseHex, textOnLight, textOnDark);
         // Border: blend towards fg for visibility
         const borderHex = (() => {
           const { h, s, l } = rgbToHslNorm(r, g, b);
@@ -1972,24 +1971,24 @@ const GeneratorPage = () => {
                 <div className={styles.instructionsContent}>
                   <h2 className={styles.sectionTitle}>Instructions</h2>
                   <p><strong>This application generates Color Palettes for WordPress.</strong></p>
-                  <p>This tool creates a professional color set for your website and checks contrast so text stays easy to read. It plugs into WordPress “Theme Variations”, so you can switch complete looks in one click.
+                  <p>Create a professional color set for your website, with proper contrast so text stays easy to read. It plugs into WordPress “Theme Variations”, so you can switch complete looks in one click.
                   </p>
                   <ul className="u-list-circle">
-                    <li>It adjusts every color you enter, to ensure proper contrast and readability. WCAG AAA contrast or better. Only colors meeting WCAG AAA contrast get output.</li>
+                    <li>Adjust every color you enter, to ensure proper contrast and readability. WCAG AAA contrast or better. Only colors meeting WCAG AAA contrast get output.</li>
                     <li>You will have <b>3 basic colors, and an accent color</b> (primary, secondary, tertiary, accent).</li>
                     <li>You will have <b>2 tints and 2 shades</b> of each color, to use on your website. (lighter, light, dark, darker)</li>
-                    <li>Also, you will have three message colors (notice, error, success), for light mode and dark mode.</li>
-                    <li>The Palette will have light mode and dark mode, using <em>your colors</em> not colors made up by some algorithm. Even if the main theme doesn't have dark mode.</li>
-                    <li>You will now have <b>named color variables</b> assigned to blocks. Change the <em>values</em> of color variables, in one place, to change your site colors; very little work. Most themes use <b>color numbers</b> embedded in your pages; to change site colors, you would have to edit every Block on every page where you set a color; a <em>lot</em> of work. (Most, but not all, blocks will use your color palette.)</li>
+                    <li>Also, you will have three message colors (notice, error, success).</li>
+                    <li>The Palette will have light mode and dark mode, using <em>your colors</em> not colors made up by some algorithm. This will work even if the main theme doesn't have dark mode (many themes do not).</li>
+                    <li>You will now have <b>named color variables</b> assigned to blocks. Change the <em>values</em> of color variables, in one place, to change your site colors; very little work. Most themes use <b>color numbers</b> embedded in your pages; to change site colors, you would have to edit every Block on every page where you set a color; a <em>lot</em> of work. (Most blocks, but not all, will use your color palette.)</li>
                     <li>Change the site colors by changing the color palette. No editing your pages to change the colors, for blocks that use your color palette.</li>
                   </ul>
 
                   <h3 className={styles.sectionTitle}>Checklist:</h3>
                   <ul className="u-list-circle">
                     <li>1. Set your Starting Colors</li>
-                    <li>2. Adjust tints and shades</li>
-                    <li>3. View Palette selections</li>
-                    <li>4. Demo Palette (check light mode and dark mode)</li>
+                    <li>2. Adjust tints and shades, picking your favorite from those shown</li>
+                    <li>3. View all Palette selections together</li>
+                    <li>4. Demo Palette (check light mode and dark mode, on website elements)</li>
                     <li>5. Export, and copy to WordPress</li>
                   </ul>
 
@@ -2007,6 +2006,7 @@ const GeneratorPage = () => {
                     src={ColorPaletteGeneratorStartingColors}
                     alt="Color Palette Generator Starting Colors"
                     className={styles.instructionsImage}
+                    style={{ maxWidth: '800px' }}
                   />
                   <h3 className={styles.sectionTitle}>In the Adjust tab:</h3>
                   <ul className="u-list-circle">
@@ -2253,7 +2253,7 @@ const GeneratorPage = () => {
                           localStorage.setItem('gl_theme_semantic_success_hex', manualForm.values.success || '');
                           localStorage.setItem('gl_palette_exact_selections', JSON.stringify(exactSelections));
                           localStorage.setItem('gl_palette_luminance_selections', JSON.stringify(selections));
-                          savedManualJsonRef.current = JSON.stringify({ ...manualForm.values });
+                          setSavedManualJson(JSON.stringify({ ...manualForm.values }));
                           applyPaletteToCSSVariables({
                             primary: { hex: manualForm.values.primary },
                             secondary: { hex: manualForm.values.secondary },
@@ -2267,7 +2267,7 @@ const GeneratorPage = () => {
                             ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
                             ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
                             ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
-                          });
+                          }, { textOnLight, textOnDark });
                           toast.success('All colors and settings saved');
                         } catch (e) {
                           toast.error('Failed to save');
@@ -2323,73 +2323,31 @@ const GeneratorPage = () => {
                       <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
                         <div>
                           <p className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
-                            Import the schema and version from your child theme's theme.json (to ensure exported files match it), and load the theme name from style.css.
-                            Only theme.json and style.css are read; other files are ignored and never uploaded.
+                            Select your theme's theme.json to import its schema and version (ensuring exported files match), then optionally select style.css to load the theme name.
                           </p>
                           <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <Button variant="outline" wrap onClick={handlePickThemeFolder} style={{ marginTop: 'var(--spacing-2)' }}>Import theme folder</Button>
-                            {showStyleCssPrompt && (
-                              <Button
-                                variant="outline"
-                                wrap
-                                onClick={() => styleCssInputRef.current?.click()}
-                                style={{ marginTop: 'var(--spacing-2)', background: 'var(--accent)', color: 'var(--accent-foreground)' }}
-                              >
-                                Select style.css
-                              </Button>
-                            )}
-                            <Button variant="outline" wrap onClick={() => setShowDiagnostics(v => !v)} style={{ marginTop: 'var(--spacing-2)' }}>
+                            <Button variant="outline" wrap onClick={handlePickThemeFolder}>Select theme.json</Button>
+                            <Button
+                              variant="outline"
+                              wrap
+                              onClick={() => styleCssInputRef.current?.click()}
+                            >
+                              Select style.css
+                            </Button>
+                            <Button variant="outline" wrap onClick={() => setShowDiagnostics(v => !v)}>
                               {showDiagnostics ? 'Hide diagnostics' : 'Show diagnostics'}
                             </Button>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)', marginTop: 'var(--spacing-2)' }}>
                             <div className={styles.formHelp} style={{ fontSize: 'var(--cf-text-s)' }}>
-                              <div>
-                                <strong>File:</strong>{' '}
-                                {(() => {
-                                  try {
-                                    const raw0 = (importDetails as any)?.file || (typeof localStorage !== 'undefined' ? (localStorage.getItem('gl_theme_input_path') || '') : '');
-                                    const p = String(raw0 || '').replace(/\\/g, '/');
-                                    if (!p) return '(unknown)';
-                                    // Prefer wp-content/themes/<folder>
-                                    const mWp = p.match(/wp-content\/themes\/([^/]+)\/([^/]+)$/i);
-                                    if (mWp) {
-                                      const folder = String(mWp[1] || '');
-                                      const file = String(mWp[2] || '');
-                                      return /^(theme\.json)$/i.test(file) ? folder : `${folder}/${file}`;
-                                    }
-                                    // Prefer themes/<folder>
-                                    const mThemes = p.match(/themes\/([^/]+)\/([^/]+)$/i);
-                                    if (mThemes) {
-                                      const folder = String(mThemes[1] || '');
-                                      const file = String(mThemes[2] || '');
-                                      return /^(theme\.json)$/i.test(file) ? folder : `${folder}/${file}`;
-                                    }
-                                    // General: split into folder + filename
-                                    const parts = p.split('/').filter(Boolean);
-                                    if (parts.length >= 2) {
-                                      const file = parts.pop()!;
-                                      const folder = parts.pop()!;
-                                      return /^(theme\.json)$/i.test(file) ? folder : `${folder}/${file}`;
-                                    }
-                                    return '(unknown)';
-                                  } catch { return '(unknown)'; }
-                                })()}
-                              </div>
+                              <div><strong>Theme name:</strong> {importDetails?.title || themeName || '(not loaded)'}</div>
                               {showDiagnostics && (
                                 <div style={{ marginTop: 6, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: '12px', background: 'var(--muted)', padding: '8px', borderRadius: 6 }}>
                                   <div><strong>Diagnostics</strong></div>
-                                  <div>method: {diagnostics.method || '(unknown)'}</div>
-                                  <div>rawStartingPath: {diagnostics.rawStartingPath || '(none)'}</div>
-                                  <div>folderFromPicker: {diagnostics.folderFromPicker || '(n/a)'}</div>
-                                  <div>themeJsonRel: {diagnostics.themeJsonRel || '(n/a)'}</div>
-                                  <div>styleCssRelTried: {diagnostics.styleCssRelTried || '(n/a)'}</div>
-                                  <div>styleCssFound: {String(diagnostics.styleCssFound ?? false)}</div>
-                                  <div>importDetails.file: {String((importDetails as any)?.file || '(none)')}</div>
-                                  <div>gl_theme_input_path: {String((typeof localStorage !== 'undefined' && localStorage.getItem('gl_theme_input_path')) || '(none)')}</div>
+                                  <div>theme.json: {diagnostics.themeJsonRel || (importDetails as any)?.file || '(not loaded)'}</div>
+                                  <div>style.css: {diagnostics.styleCssFound ? 'loaded' : '(not loaded)'}</div>
                                 </div>
                               )}
-                              <div><strong>Theme name:</strong> {importDetails?.title || '(not loaded from style.css)'}</div>
                               {Array.isArray(importDetails?.warnings) && (importDetails!.warnings as string[]).length > 0 && (
                                 <div style={{ marginTop: 6 }}>
                                   {(importDetails!.warnings as string[]).map((w, i) => (
@@ -2582,7 +2540,7 @@ const GeneratorPage = () => {
                               if (themeConfig) localStorage.setItem('gl_imported_theme_json', JSON.stringify(themeConfig));
                               if (importDetails) localStorage.setItem('gl_import_details', JSON.stringify(importDetails));
                               // Update last-saved snapshot
-                              try { savedManualJsonRef.current = JSON.stringify({ ...manualForm.values }); } catch { }
+                              try { setSavedManualJson(JSON.stringify({ ...manualForm.values })); } catch { }
                               // Apply runtime overrides to CSS variables
                               try {
                                 applyPaletteToCSSVariables({
@@ -2598,7 +2556,7 @@ const GeneratorPage = () => {
                                   ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
                                   ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
                                   ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
-                                });
+                                }, { textOnLight, textOnDark });
                               } catch { }
                               toast.success('Theme name, colors, and settings saved');
                             } catch { }
@@ -2649,7 +2607,7 @@ const GeneratorPage = () => {
                                 ...(exactSelections?.error?.light?.hex && { errorLight: exactSelections.error.light.hex }),
                                 ...(exactSelections?.warning?.light?.hex && { warningLight: exactSelections.warning.light.hex }),
                                 ...(exactSelections?.success?.light?.hex && { successLight: exactSelections.success.light.hex }),
-                              });
+                              }, { textOnLight, textOnDark });
                             } catch { }
                             toast.success('Reset to defaults');
                           }}

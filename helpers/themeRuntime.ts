@@ -20,6 +20,29 @@ function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }): nu
   return 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
 }
 
+// Fallback near-black/near-white when user values are invalid
+const NEAR_BLACK_FALLBACK = '#1B2227';
+const NEAR_WHITE_FALLBACK = '#FAF7F2';
+
+// Choose best text color for a given background based on contrast ratio
+// Compares contrast of both text options and returns the one with better contrast
+// Falls back to NEAR_BLACK/NEAR_WHITE when textOnLight/textOnDark are invalid
+export function chooseForeground(bgHex: string, textOnLight: string, textOnDark: string): string {
+  const bgRgb = hexToRgb(bgHex);
+  if (!bgRgb) return NEAR_BLACK_FALLBACK; // fallback to dark text
+  // Validate and fallback for text colors
+  const tolRgb = hexToRgb(textOnLight) || hexToRgb(NEAR_BLACK_FALLBACK)!;
+  const todRgb = hexToRgb(textOnDark) || hexToRgb(NEAR_WHITE_FALLBACK)!;
+  const effectiveTol = hexToRgb(textOnLight) ? textOnLight : NEAR_BLACK_FALLBACK;
+  const effectiveTod = hexToRgb(textOnDark) ? textOnDark : NEAR_WHITE_FALLBACK;
+  const bgY = relativeLuminance(bgRgb);
+  const tolY = relativeLuminance(tolRgb);
+  const todY = relativeLuminance(todRgb);
+  const contrastWithLight = (Math.max(bgY, tolY) + 0.05) / (Math.min(bgY, tolY) + 0.05);
+  const contrastWithDark = (Math.max(bgY, todY) + 0.05) / (Math.min(bgY, todY) + 0.05);
+  return contrastWithLight >= contrastWithDark ? effectiveTol : effectiveTod;
+}
+
 // Contrast ratio
 function contrastRatio(fg: string, bg: string): number | null {
   const a = hexToRgb(fg);
@@ -108,6 +131,9 @@ export function applyPaletteToCSSVariables(p: Palette, variations?: {
   errorLight?: string;
   warningLight?: string;
   successLight?: string;
+}, textColors?: {
+  textOnLight?: string;
+  textOnDark?: string;
 }) {
   const root = document.documentElement.style;
   // Core brand
@@ -137,19 +163,23 @@ export function applyPaletteToCSSVariables(p: Palette, variations?: {
   }
 
   // Status message backgrounds use lighter variations
+  // Choose foreground based on background luminance for proper contrast
+  const tol = textColors?.textOnLight || '#000000';
+  const tod = textColors?.textOnDark || '#FFFFFF';
   if (variations?.errorLight) {
     root.setProperty('--error-bg', variations.errorLight);
-    root.setProperty('--error-fg', '#000000');
+    root.setProperty('--error-fg', chooseForeground(variations.errorLight, tol, tod));
   }
   if (variations?.warningLight) {
     root.setProperty('--warning-bg', variations.warningLight);
     root.setProperty('--notice-bg', variations.warningLight);
-    root.setProperty('--warning-fg', '#000000');
-    root.setProperty('--notice-fg', '#000000');
+    const fg = chooseForeground(variations.warningLight, tol, tod);
+    root.setProperty('--warning-fg', fg);
+    root.setProperty('--notice-fg', fg);
   }
   if (variations?.successLight) {
     root.setProperty('--success-bg', variations.successLight);
-    root.setProperty('--success-fg', '#000000');
+    root.setProperty('--success-fg', chooseForeground(variations.successLight, tol, tod));
   }
 }
 

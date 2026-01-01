@@ -151,6 +151,68 @@ Create a custom link in your main menu and add the CSS class `js-theme-toggle`. 
 
 ---
 
+## Notice/Message Styling (Palette-Aware)
+
+To display informational messages using the current palette colors, use the `.noticeInline` CSS class from the component's module CSS.
+
+### CSS Variables (Use These)
+
+The app dynamically sets these variables on `:root` based on the generated palette:
+
+| Variable | Purpose |
+|----------|---------|
+| `--notice-bg` | Background color (from warning-light variation) |
+| `--notice-fg` | Foreground/text color (auto-calculated for contrast) |
+| `--notice-border` | Border color (derived from bg) |
+
+### Usage
+
+1. **In a component with CSS modules**, add to the module CSS:
+
+```css
+.noticeInline {
+  background: var(--notice-bg);
+  color: var(--notice-fg);
+  border: 1px solid var(--notice-border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-size: var(--cf-text-s);
+  margin: 4px 0;
+}
+```
+
+2. **In JSX**, use the class:
+
+```tsx
+<div className={styles.noticeInline}>
+  Your message here.
+</div>
+```
+
+### Do NOT Use
+
+These legacy/duplicate variables exist but should be avoided/deprecated:
+
+- `--warning-bg`, `--warning-fg`, `--warning-border` — duplicates of notice
+- `--cf-notice`, `--notice` — base color only, no bg/fg/border
+- Inline styles with hardcoded colors or `noticeBgHex` props
+
+### Where Variables Are Set
+
+`generator.tsx` sets `--notice-bg`, `--notice-fg`, `--notice-border` (and error/success equivalents) in a `useEffect` that runs when `paletteWithVariations` changes. See the `setTriplet()` helper around line 1896.
+
+### Text Color Selection Algorithm
+
+The `ensureAAAContrast` function (`helpers/ensureAAAContrast.tsx`) uses **actual contrast ratio calculations** against `NEAR_BLACK` and `NEAR_WHITE`, not a simple luminance threshold. This is the correct algorithm for choosing text color.
+
+The `chooseForeground` function (`helpers/themeRuntime.ts`) applies the same contrast-ratio-based approach but uses the user's `textOnLight`/`textOnDark` values. When those values are invalid (not yet loaded, or user is modifying them in the Starting Colors tab), it falls back to `NEAR_BLACK`/`NEAR_WHITE`.
+
+**Why contrast ratio, not luminance threshold?**
+
+A simple `Y > 0.5` luminance check fails for mid-tone backgrounds (e.g., yellow `#C3BA3C` with Y ≈ 0.48). Contrast ratio comparison correctly picks the text color that provides better readability regardless of where the background falls on the luminance scale.
+
+---
+
 ## Troubleshooting (Dev)
 
 - Port busy: run `npm run dev -- --port 5174` and open http://localhost:5174

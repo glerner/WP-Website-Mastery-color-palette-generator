@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
 import { Input } from './Input';
-import { Badge } from './Badge';
 import { Skeleton } from './Skeleton';
 import { PaletteWithVariations } from '../helpers/types';
 import styles from './PreviewSection.module.css';
@@ -44,20 +43,60 @@ export const PreviewSection = ({ palette: _palette, isLoading, scheme }: Preview
           <h3 className={styles.previewCardTitle}>Example Component</h3>
           <p className={styles.previewText}>
             This is some sample text to demonstrate text color on the background.
-            The quick brown fox jumps over the lazy dog.
+            The quick brown fox <a href="#" className={styles.inlineLink}>jumps over</a> the lazy dog.
           </p>
+
+          {/* Info cards with primary, secondary, tertiary backgrounds */}
+          <div className={styles.infoCardRow}>
+            <div className={styles.infoCardPrimary}>
+              <strong>Primary</strong>
+              <span>Text on primary background</span>
+            </div>
+            <div className={styles.infoCardSecondary}>
+              <strong>Secondary</strong>
+              <span>Text on secondary background</span>
+            </div>
+            <div className={styles.infoCardTertiary}>
+              <strong>Tertiary</strong>
+              <span>Text on tertiary background</span>
+            </div>
+          </div>
+
+          {/* Dark-background info cards (light in dark mode) */}
+          <div className={styles.infoCardRow}>
+            <div className={styles.infoCardPrimaryDark}>
+              <strong>Primary Dark</strong>
+              <span>Swaps to light in dark mode</span>
+            </div>
+            <div className={styles.infoCardSecondaryDark}>
+              <strong>Secondary Dark</strong>
+              <span>Swaps to light in dark mode</span>
+            </div>
+            <div className={styles.infoCardTertiaryDark}>
+              <strong>Tertiary Dark</strong>
+              <span>Swaps to light in dark mode</span>
+            </div>
+          </div>
           <div className={styles.formGroup}>
             <label>Email Address</label>
             <Input placeholder="you@example.com" />
           </div>
-          <div className={styles.buttonGroup}>
+          {/* All buttons on same row with responsive wrap */}
+          <div className={styles.allButtonsRow}>
             <Button>Primary Action</Button>
             <Button>Secondary</Button>
+            <Button>Tertiary</Button>
+            <button className={styles.accentButtonFlat}>Accent Flat</button>
+            <button className={styles.accentButtonStyled}>Accent Styled</button>
           </div>
-          <div className={styles.badgeGroup}>
-            <Badge>New</Badge>
-            <Badge>Default</Badge>
-          </div>
+
+          {/* Menu items - all on same row */}
+          <nav className={styles.menuRow}>
+            <a href="#" className={styles.accentMenuItemDark}>Accent dark-darker hover</a>
+            <a href="#" className={styles.accentMenuItemDark}>Accent dark-darker hover</a>
+            <a href="#" className={styles.accentMenuItemLight}>light-dark background hover</a>
+            <a href="#" className={styles.accentMenuItemLight}>light-dark background hover</a>
+          </nav>
         </div>
         {/* Alternating color list example */}
         <div className={styles.listBlock}>

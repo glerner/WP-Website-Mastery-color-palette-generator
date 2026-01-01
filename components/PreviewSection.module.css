@@ -86,7 +86,7 @@
 }
 
 .formGroup input {
-  background-color: var(--surface) !important;
+  background-color: light-dark(#f5f5f5, #2a2a2a) !important;
   border-color: var(--border) !important;
   color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
 }
@@ -103,6 +103,24 @@
   opacity: 1;
 }
 
+/* All buttons on same row with responsive wrap */
+.allButtonsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  position: relative;
+  z-index: 2;
+}
+
+/* Menu items all on same row */
+.menuRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+
 .buttonGroup {
   display: flex;
   gap: var(--spacing-3);
@@ -111,31 +129,44 @@
   z-index: 2;
 }
 
-/* Button styles via group descendants */
-.buttonGroup > *:first-child {
+/* Button styles via allButtonsRow descendants */
+.allButtonsRow>*:first-child {
   background-color: var(--primary) !important;
   color: var(--primary-foreground) !important;
   border-color: var(--primary) !important;
 }
 
-.buttonGroup>*:first-child:hover {
+.allButtonsRow>*:first-child:hover {
   background-color: light-dark(color-mix(in oklab, var(--primary) 88%, white),
       color-mix(in oklab, var(--primary) 88%, black)) !important;
   border-color: currentColor !important;
   color: var(--primary-foreground) !important;
 }
 
-.buttonGroup>*:nth-child(2) {
+.allButtonsRow>*:nth-child(2) {
   background-color: light-dark(var(--ldp-secondary-light), var(--ldp-secondary-dark)) !important;
   color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
   border-color: light-dark(var(--ldp-secondary-light), var(--ldp-secondary-dark)) !important;
 }
 
-.buttonGroup>*:nth-child(2):hover {
+.allButtonsRow>*:nth-child(2):hover {
   background-color: light-dark(color-mix(in oklab, var(--ldp-secondary-light) 92%, white),
       color-mix(in oklab, var(--ldp-secondary-dark) 85%, black)) !important;
   border-color: currentColor !important;
   color: light-dark(var(--text-on-light), var(--text-on-dark)) !important;
+}
+
+.allButtonsRow>*:nth-child(3) {
+  background-color: light-dark(var(--ldp-tertiary-light), var(--ldp-tertiary-dark)) !important;
+  color: light-dark(var(--ldp-tertiary-light-text), var(--ldp-tertiary-dark-text)) !important;
+  border-color: light-dark(var(--ldp-tertiary-light), var(--ldp-tertiary-dark)) !important;
+}
+
+.allButtonsRow>*:nth-child(3):hover {
+  background-color: light-dark(color-mix(in oklab, var(--ldp-tertiary-light) 92%, white),
+      color-mix(in oklab, var(--ldp-tertiary-dark) 85%, black)) !important;
+  border-color: currentColor !important;
+  color: light-dark(var(--ldp-tertiary-light-text), var(--ldp-tertiary-dark-text)) !important;
 }
 
 /* Remove overlay/text wrappers by relying on button content directly */
@@ -191,4 +222,163 @@
 /* Spacing for list block replacing inline style */
 .listBlock {
   margin-top: var(--spacing-6);
+}
+
+/* Inline link styling - accent-darker for text-on-light paragraphs */
+.inlineLink {
+  color: light-dark(var(--ldp-accent-darker), var(--ldp-accent-lighter));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inlineLink:hover {
+  color: light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+}
+
+/* Info card row */
+.infoCardRow {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  flex-wrap: wrap;
+}
+
+/* Base info card styles */
+.infoCardRow>div {
+  flex: 1;
+  min-width: 120px;
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+/* Light-background info cards (use light variations in light mode, dark in dark mode) */
+.infoCardPrimary {
+  background-color: light-dark(var(--ldp-primary-light), var(--ldp-primary-dark));
+  color: light-dark(var(--ldp-primary-light-text), var(--ldp-primary-dark-text));
+}
+
+.infoCardSecondary {
+  background-color: light-dark(var(--ldp-secondary-light), var(--ldp-secondary-dark));
+  color: light-dark(var(--ldp-secondary-light-text), var(--ldp-secondary-dark-text));
+}
+
+.infoCardTertiary {
+  background-color: light-dark(var(--ldp-tertiary-light), var(--ldp-tertiary-dark));
+  color: light-dark(var(--ldp-tertiary-light-text), var(--ldp-tertiary-dark-text));
+}
+
+/* Dark-background info cards (use dark variations in light mode, light in dark mode) */
+.infoCardPrimaryDark {
+  background-color: light-dark(var(--ldp-primary-dark), var(--ldp-primary-light));
+  color: light-dark(var(--ldp-primary-dark-text), var(--ldp-primary-light-text));
+}
+
+.infoCardSecondaryDark {
+  background-color: light-dark(var(--ldp-secondary-dark), var(--ldp-secondary-light));
+  color: light-dark(var(--ldp-secondary-dark-text), var(--ldp-secondary-light-text));
+}
+
+.infoCardTertiaryDark {
+  background-color: light-dark(var(--ldp-tertiary-dark), var(--ldp-tertiary-light));
+  color: light-dark(var(--ldp-tertiary-dark-text), var(--ldp-tertiary-light-text));
+}
+
+/* Accent button group */
+.accentButtonGroup {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+/* Accent flat button - light bg in light mode */
+.accentButtonFlat {
+  background-color: light-dark(var(--ldp-accent-light), var(--ldp-accent-dark));
+  color: light-dark(var(--ldp-accent-light-text), var(--ldp-accent-dark-text));
+  border: none;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--cf-text-s);
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Hover: swap to dark bg (light stays light-ish via darker shade) */
+.accentButtonFlat:hover {
+  background-color: light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+  color: light-dark(var(--ldp-accent-dark-text), var(--ldp-accent-light-text));
+}
+
+/* Accent styled button (with shadow/border) - light bg in light mode */
+.accentButtonStyled {
+  background-color: light-dark(var(--ldp-accent-light), var(--ldp-accent-dark));
+  color: light-dark(var(--ldp-accent-light-text), var(--ldp-accent-dark-text));
+  border: 1px solid light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--cf-text-s);
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Hover: swap to dark bg */
+.accentButtonStyled:hover {
+  background-color: light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+  color: light-dark(var(--ldp-accent-dark-text), var(--ldp-accent-light-text));
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Accent menus - dark background version */
+.accentMenuDark {
+  display: flex;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-4);
+}
+
+.accentMenuItemDark {
+  background-color: light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+  color: light-dark(var(--ldp-accent-dark-text), var(--ldp-accent-light-text));
+  border: 1px solid light-dark(var(--ldp-tertiary-dark), var(--ldp-tertiary-light));
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: var(--cf-text-s);
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Hover: stay dark, go darker */
+.accentMenuItemDark:hover {
+  background-color: light-dark(var(--ldp-accent-darker), var(--ldp-accent-lighter));
+  color: light-dark(var(--ldp-accent-darker-text), var(--ldp-accent-lighter-text));
+}
+
+/* Accent menus - light background version */
+.accentMenuLight {
+  display: flex;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-4);
+}
+
+.accentMenuItemLight {
+  background-color: light-dark(var(--ldp-accent-light), var(--ldp-accent-dark));
+  color: light-dark(var(--ldp-accent-light-text), var(--ldp-accent-dark-text));
+  border: 1px solid light-dark(var(--ldp-tertiary-light), var(--ldp-tertiary-dark));
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: var(--cf-text-s);
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Hover: swap to dark bg for good contrast */
+.accentMenuItemLight:hover {
+  background-color: light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+  color: light-dark(var(--ldp-accent-dark-text), var(--ldp-accent-light-text));
 }

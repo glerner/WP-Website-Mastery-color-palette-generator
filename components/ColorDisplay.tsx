@@ -5,6 +5,7 @@ import { PaletteWithVariations } from '../helpers/types';
 import { ensureAAAContrast } from '../helpers/ensureAAAContrast';
 import { NEAR_WHITE_HEX, NEAR_BLACK_HEX, NEAR_BLACK_RGB, NEAR_WHITE_RGB, AAA_MIN, AA_SMALL_MIN, RECOMMENDED_TINT_Y_GAP, RECOMMENDED_SHADE_Y_GAP, RECOMMENDED_SHADE_Y_GAP_TOLERANCE } from '../helpers/config';
 import { hexToRgb, getContrastRatio, luminance } from '../helpers/colorUtils';
+import { chooseForeground } from '../helpers/themeRuntime';
 import styles from './ColorDisplay.module.css';
 
 type Band = 'lighter' | 'light' | 'dark' | 'darker';
@@ -124,14 +125,7 @@ const ColorCard = ({ color, name, onVariationClick, textOnLight, textOnDark, sho
       </div>
       <div className={styles.variationsContainer}>
         {gaps.tintGap != null && gaps.tintGap < Math.round(RECOMMENDED_TINT_Y_GAP * 1000) / 1000 && (
-          <div style={{
-            margin: '4px 0',
-            padding: '6px 8px',
-            borderRadius: '8px',
-            background: 'var(--surface-strong, #fef3c7)',
-            color: 'var(--foreground, #7a5d00)',
-            border: '1px solid var(--border, #f59e0b)'
-          }}>
+          <div className={styles.noticeInline}>
             {name} lighter vs light gap {gaps.tintGap.toFixed(3)} is below the recommended minimum {RECOMMENDED_TINT_Y_GAP.toFixed(3)}.
           </div>
         )}
@@ -146,14 +140,7 @@ const ColorCard = ({ color, name, onVariationClick, textOnLight, textOnDark, sho
           />
         ))}
         {gaps.shadeGap != null && gaps.shadeGap < (RECOMMENDED_SHADE_Y_GAP - RECOMMENDED_SHADE_Y_GAP_TOLERANCE) && (
-          <div style={{
-            margin: '4px 0',
-            padding: '6px 8px',
-            borderRadius: '8px',
-            background: 'var(--surface-strong, #fef3c7)',
-            color: 'var(--foreground, #7a5d00)',
-            border: '1px solid var(--border, #f59e0b)'
-          }}>
+          <div className={styles.noticeInline}>
             {name} dark vs darker gap {gaps.shadeGap.toFixed(3)} is below the recommended minimum {RECOMMENDED_SHADE_Y_GAP.toFixed(3)}.
           </div>
         )}
