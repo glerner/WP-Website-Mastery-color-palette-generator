@@ -32,6 +32,7 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+*.code-workspace
 
 # Tests/coverage
 coverage/

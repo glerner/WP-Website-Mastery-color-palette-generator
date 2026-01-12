@@ -11,6 +11,7 @@ This tool creates a professional color set for your website and checks contrast 
 - 3 semantic colors (error, notice/warning, success) light and dark variants
 - Automatically adjusts color contrast, only colors meeting WCAG AAA contrast get output.
 - You select your preferred tints-shades from those that match WCAG AAA contrast.
+- "Test hover" buttons let you verify that your selected tints/shades have enough visible difference for hover states.
 
 ## What you get
 - **Better readability**: Consistent high-contrast text color (text-on-light and text-on-dark) for accessibility; if you use only these text colors, you will have WCAG AAA contrast.
@@ -19,6 +20,7 @@ This tool creates a professional color set for your website and checks contrast 
 - **Multiple Theme Variations**: You pick the combination of colors (which one is the site's primary color, which one is the secondary color, etc.) that you prefer, by *previewing* them on your site. Your choice of 6 variations (with the accent color set), or 24 variations (primary, secondary, tertiary and accent can all be seen in each position).
 - **Added Light-Dark Mode**: Add a companion plugin, and your website has a light and dark mode toggle. Both light mode and dark mode use colors from your Palette (not calculated colors like many light-dark plugins assign).
 - **Works with the Block Editor**: and also works in some page builders. With other page builders, you may have to paste the color numbers into the builder.
+- **Color wheel visualization**: See all your colors on a hue wheel to ensure they're visually distinct. Colors too close in hue can look muddy together; aim for at least 30° hue difference, or vary saturation enough that colors are clearly distinguishable.
 
 ### Do you want the main color to be the blue, the green, or the blue-green?
 - Generates all the combinations of the 3 basic colors (primary, secondary, tertiary), plus optionally accent, with the tints and shades.
@@ -45,7 +47,7 @@ This tool creates a professional color set for your website and checks contrast 
 1) **Upload** your theme’s `theme.json` (or choose the Twenty Twenty‑Five option).
 2) **Pick your two text colors**: one for light backgrounds (Text on Light), one for dark backgrounds (Text on Dark).
 3) **Adjust your brand colors**: Primary, Secondary, Tertiary, Accent. The tool keeps contrast high for readability.
-4) **Fine Tune the Tints and Shades**: Pick from among the tints and shade that have excellent color contrast. Consider the gap between white and lighter, between lighter and light, between dark and darker, and between darker and black. Since you will likely use similar selections for similar colors, the index of each selection is saved for you.
+4) **Fine Tune the Tints and Shades**: Pick from among the tints and shades that have excellent color contrast. Use the "Test hover" buttons to verify that your selected colors have enough visible difference for hover states. Consider the gap between white and lighter, between lighter and light, between dark and darker, and between darker and black. Since you will likely use similar selections for similar colors, the index of each selection is saved for you.
 4) **Export**: You’ll get a folder with multiple Theme Variation files and one utilities CSS. The utilities CSS file has classes for you to paste into your existing style.css file.
 5) **Dark mode**: Your pages will use the colors you picked for your palette; if you specified "Primary Light" for an element in light mode, then your dark mode will have "Primary Dark"; if you specified an element uses "Secondary Darker" in light mode, then your dark mode will show "Secondary Lighter".
 6) **Future Palettes**: You can use this tool to generate new palettes for your website. All the elements on your page where you picked a background or text color using this Palette Generator, will use the colors from your new palette, automatically. Instead of colors being hard-coded to a color number, they are now set to use a color variable; this means that if you change a color in your palette, all the elements on your page will use the new color. (Note: that is *if* the element follows your palette; not all plugins and blocks do.)
@@ -145,10 +147,10 @@ For developer setup and advanced details, see: `docs/technical-details.md`.
 #color-palette #wcag-contrast #wcag-aaa #theme-colors #wp-theme-variations
 
 The WPWM Color Palette Generator focuses on creating a functional color palette system with AI assistance and WordPress theme integration. The core functionality includes
-* AI-Assisted Color Generation
-  * Questionnaire for gathering business/brand context
-  * AI generation of color palettes that will look good for this business with these clients
-  * Return of Primary, Secondary, Tertiary, and Accent colors with hex values and names
+* AI-Assisted Color Generation (AI tab, future enhancement)
+  * Questionnaire for gathering business/brand context (industry, target audience, brand personality)
+  * AI generation of color palettes tailored to your business and clients
+  * Returns Primary, Secondary, Tertiary, and Accent colors with hex values and names
 * Manual Color Management
   * Manual entry of the four core colors, and automatic fill-in any missing colors (using a selection from a list of common color harmonies)
   * Automatic generation of color tints/shades (not calling them "variations" since also using "WordPress Theme Variations").
@@ -159,9 +161,10 @@ The WPWM Color Palette Generator focuses on creating a functional color palette 
   * Addition of utility colors (error, notice, success)
   * Neutral color variations
 * Display and Preview
-  * Visual display of the complete color palette
-  * Sample content preview with demo text
-  * Preview of different color combinations
+  * Visual display of the complete color palette (View Palette tab)
+  * Sample content preview with demo text, buttons, and menu items (Demo Palette tab)
+  * Preview of button and menu hover states to verify color contrast
+  * Preview of different color combinations in light and dark modes
 * WordPress Integration
   * Export of color palettes as theme.json Theme Variations
   * Export of multiple theme variations (change the order of the generated colors)
@@ -196,22 +199,22 @@ npm run preview
 
 # Environment and Configuration
 
-Configuration is centralized in `helpers/config.ts`. Non-secret UI tuning can be overridden via `.env.local` using `NEXT_PUBLIC_` variables.
+Configuration is centralized in `helpers/config.ts`. Non-secret UI tuning can be overridden via `.env.local` using `VITE_` variables (this is a Vite app).
 
 Examples (create `./.env.local`):
 
 ```bash
 # Accessibility thresholds (safe for client)
-NEXT_PUBLIC_AAA_MIN_CONTRAST=7.05
-NEXT_PUBLIC_AA_SMALL_MIN_CONTRAST=4.5
+VITE_AAA_MIN_CONTRAST=7.05
+VITE_AA_SMALL_MIN_CONTRAST=4.5
 
 # Generation targets (safe for client)
-NEXT_PUBLIC_TINT_TARGET_COUNT=10
-NEXT_PUBLIC_SHADE_TARGET_COUNT=10
-NEXT_PUBLIC_LIGHTER_MIN_Y=0.50
+VITE_TINT_TARGET_COUNT=10
+VITE_SHADE_TARGET_COUNT=10
+VITE_LIGHTER_MIN_Y=0.50
 ```
 
-__Important__: Do NOT put secret API keys in `NEXT_PUBLIC_*` variables; they are exposed to the browser.
+__Important__: Do NOT put secret API keys in `VITE_*` variables; they are exposed to the browser.
 
 ---
 
@@ -437,4 +440,4 @@ Browsers that fully support `color-scheme` and `light-dark()` will seamlessly ho
 * __Type errors__: check recent edits in `helpers/ensureAAAContrast.tsx`, `helpers/colorUtils.tsx`, and `helpers/config.ts` for consistent imports/exports.
 
 ## Copyright
-Copyright (c) AZ WP Website Consulting LLC, 2025
+Copyright (c) AZ WP Website Consulting LLC, 2025-2026

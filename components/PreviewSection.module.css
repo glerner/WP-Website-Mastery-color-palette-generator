@@ -8,8 +8,8 @@
 .previewContainer {
   background-color: var(--background);
   color: var(--foreground);
-  padding: var(--spacing-8);
-  border-radius: var(--radius-lg);
+  padding: 0;
+  border-radius: 0;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -27,11 +27,11 @@
 }
 
 .previewCard {
-  background-color: var(--card);
-  padding: var(--spacing-6);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
   position: relative;
   overflow: hidden;
   z-index: 2;
@@ -70,6 +70,75 @@
   margin: 0 0 var(--spacing-6);
   position: relative;
   z-index: 2;
+}
+
+/* Primary section band */
+.primaryBand {
+  margin: 0 0 var(--spacing-6);
+  border-radius: var(--radius-md);
+  background-color: light-dark(var(--ldp-primary-light), var(--ldp-primary-dark));
+  color: light-dark(var(--ldp-primary-light-text), var(--ldp-primary-dark-text));
+  border: 1px solid var(--border);
+}
+
+.primaryBandInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  flex-wrap: wrap;
+}
+
+.primaryBandKicker {
+  font-size: var(--cf-text-s);
+  opacity: 0.9;
+}
+
+.primaryBandTitle {
+  font-size: var(--cf-text-l);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.primaryBandText {
+  font-size: var(--cf-text-m);
+  margin-top: 6px;
+  max-width: 52ch;
+}
+
+.primaryBandCtas {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.accentCtaButton {
+  appearance: none;
+  border: 1px solid light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+  background-color: light-dark(var(--ldp-accent-light), var(--ldp-accent-dark));
+  color: light-dark(var(--ldp-accent-light-text), var(--ldp-accent-dark-text));
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--cf-text-s);
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.accentCtaButton:hover {
+  background-color: light-dark(var(--ldp-accent-dark), var(--ldp-accent-light));
+  color: light-dark(var(--ldp-accent-dark-text), var(--ldp-accent-light-text));
+}
+
+/* Secondary as dividers */
+.sectionRule {
+  border: none;
+  height: 2px;
+  background: light-dark(var(--ldp-secondary-dark), var(--ldp-secondary-light));
+  border-radius: 999px;
+  margin: 0 0 var(--spacing-6);
+  opacity: 0.9;
 }
 
 .formGroup {
@@ -202,9 +271,9 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 /* .exampleList li padding now comes from global ul li, ol li styles */
@@ -224,6 +293,37 @@
   margin-top: var(--spacing-6);
 }
 
+.statusMessages {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-6);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: 0;
+  border: none;
+}
+
+.statusError {
+  background: light-dark(var(--ldp-error-light), var(--ldp-error-dark));
+  color: light-dark(var(--text-on-light), var(--text-on-dark));
+}
+
+.statusNotice {
+  background: light-dark(var(--ldp-notice-light), var(--ldp-notice-dark));
+  color: light-dark(var(--text-on-light), var(--text-on-dark));
+}
+
+.statusSuccess {
+  background: light-dark(var(--ldp-success-light), var(--ldp-success-dark));
+  color: light-dark(var(--text-on-light), var(--text-on-dark));
+}
+
 /* Inline link styling - accent-darker for text-on-light paragraphs */
 .inlineLink {
   color: light-dark(var(--ldp-accent-darker), var(--ldp-accent-lighter));
@@ -241,6 +341,46 @@
   gap: var(--spacing-3);
   margin-bottom: var(--spacing-4);
   flex-wrap: wrap;
+}
+
+/* Tertiary testimonial */
+.testimonial {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-md);
+  background-color: light-dark(var(--ldp-tertiary-lighter), var(--ldp-tertiary-darker));
+  color: light-dark(var(--ldp-tertiary-lighter-text), var(--ldp-tertiary-darker-text));
+  border: 1px solid var(--border);
+}
+
+.testimonialQuote {
+  font-size: var(--cf-text-m);
+  line-height: 1.6;
+}
+
+.testimonialAuthor {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-3);
+}
+
+.avatarCircle {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: light-dark(var(--ldp-secondary-light), var(--ldp-secondary-dark));
+  border: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.authorName {
+  font-weight: 700;
+}
+
+.authorTitle {
+  font-size: var(--cf-text-s);
+  opacity: 0.9;
 }
 
 /* Base info card styles */

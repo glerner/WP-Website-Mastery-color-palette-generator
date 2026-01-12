@@ -77,6 +77,8 @@ type RowProps = {
   showDiagnostics?: boolean | undefined;
   selectedLighterIndex?: number | undefined;
   selectedLightIndex?: number | undefined;
+  selectedLightHex?: string | undefined;
+  selectedLighterHex?: string | undefined;
   onSelect: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', index: number) => void;
   onSelectTint?: ((colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', pick: SwatchPick) => void) | undefined;
   textOnLightRgb?: { r: number; g: number; b: number } | undefined;
@@ -88,7 +90,7 @@ type RowProps = {
   anchorId?: string;
 };
 
-function RowTints({ name, baseHex, colorKey, showDiagnostics, selectedLighterIndex, selectedLightIndex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark, noticeBgHex, onGoPalette, anchorId }: RowProps) {
+function RowTints({ name, baseHex, colorKey, showDiagnostics, selectedLighterIndex, selectedLightIndex, selectedLightHex, selectedLighterHex, onSelect, onSelectTint, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark, noticeBgHex, onGoPalette, anchorId }: RowProps) {
   const baseRgb = hexToRgb(baseHex);
   // Prefer live text-on-light token if provided; fall back to near-black
   const blackLike = textOnLightRgb ?? NEAR_BLACK_RGB;
@@ -335,6 +337,23 @@ function RowTints({ name, baseHex, colorKey, showDiagnostics, selectedLighterInd
           const gap = yL - yLt;
           return `Gap between lighter→light: ${gap.toFixed(3)} (min: ${RECOMMENDED_TINT_Y_GAP.toFixed(3)})`;
         })() : 'Click your favorite to select it'}
+        {selectedLightHex && selectedLighterHex && (
+          <button
+            className={styles.hoverTestButton}
+            style={{
+              backgroundColor: selectedLighterHex,
+              color: textOnLight || '#000',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = selectedLightHex;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = selectedLighterHex;
+            }}
+          >
+            Test hover
+          </button>
+        )}
         {onGoPalette && (
           <Button size="sm" variant="secondary" style={{ marginLeft: 12 }} onClick={onGoPalette}>
             Return to Palette tab
@@ -409,6 +428,8 @@ type RowShadesProps = {
   showDiagnostics?: boolean | undefined;
   selectedDarkerY?: number | undefined; // we will still honor both selections mapping into same 10-strip
   selectedDarkY?: number | undefined;
+  selectedDarkHex?: string | undefined;
+  selectedDarkerHex?: string | undefined;
   onSelect: (colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', y: number) => void;
   onSelectShade?: ((colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', pick: SwatchPick) => void) | undefined;
   textOnLightRgb?: { r: number; g: number; b: number } | undefined;
@@ -420,7 +441,7 @@ type RowShadesProps = {
   anchorId?: string;
 };
 
-function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, selectedDarkY, onSelect, onSelectShade, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark, noticeBgHex, anchorId }: RowShadesProps) {
+function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, selectedDarkY, selectedDarkHex, selectedDarkerHex, onSelect, onSelectShade, textOnLightRgb, textOnDarkRgb, textOnLight, textOnDark, noticeBgHex, anchorId }: RowShadesProps) {
   const baseRgb = hexToRgb(baseHex);
   // Prefer live text-on-dark token if provided; fall back to near-white
   const whiteLike = textOnDarkRgb ?? NEAR_WHITE_RGB;
@@ -579,6 +600,23 @@ function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, 
           {bandIdx !== 0 && (
             <div className={`${styles.rowTitle} cf-font-600`}>
               {name}-{band.label}: {showDiagnostics ? `Gap between ${band.gapLabel}: ${band.gapCalc()} (min: ${band.minGap.toFixed(3)})` : 'Click your favorite to select it'}
+              {selectedDarkHex && selectedDarkerHex && (
+                <button
+                  className={styles.hoverTestButton}
+                  style={{
+                    backgroundColor: selectedDarkHex,
+                    color: textOnDark || '#fff',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = selectedDarkerHex;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = selectedDarkHex;
+                  }}
+                >
+                  Test hover
+                </button>
+              )}
             </div>
           )}
           <div className={styles.stripGrid}>
@@ -657,6 +695,7 @@ function RowShades({ name, baseHex, colorKey, showDiagnostics, selectedDarkerY, 
 export function LuminanceTestStrips({
   palette,
   selections,
+  exactSelections,
   onSelectTintIndex,
   onSelectShadeY,
   onSelectTint,
@@ -676,6 +715,12 @@ export function LuminanceTestStrips({
     lightY?: number;
     darkerY?: number;
     darkY?: number
+  }>>;
+  exactSelections?: Partial<Record<ColorType | SemanticColorType, {
+    lighter?: { hex?: string };
+    light?: { hex?: string };
+    dark?: { hex?: string };
+    darker?: { hex?: string };
   }>>;
   onSelectTintIndex: (colorKey: ColorType | SemanticColorType, kind: 'lighter' | 'light', index: number) => void;
   onSelectShadeY: (colorKey: ColorType | SemanticColorType, kind: 'darker' | 'dark', y: number) => void;
@@ -888,6 +933,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.primary?.lighterIndex}
           selectedLightIndex={selections.primary?.lightIndex}
+          selectedLightHex={exactSelections?.primary?.light?.hex}
+          selectedLighterHex={exactSelections?.primary?.lighter?.hex}
           onSelect={onSelectTintIndex}
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -905,6 +952,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.primary?.darkerY}
           selectedDarkY={selections.primary?.darkY}
+          selectedDarkHex={exactSelections?.primary?.dark?.hex}
+          selectedDarkerHex={exactSelections?.primary?.darker?.hex}
           onSelect={onSelectShadeY}
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -922,6 +971,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.secondary?.lighterIndex}
           selectedLightIndex={selections.secondary?.lightIndex}
+          selectedLightHex={exactSelections?.secondary?.light?.hex}
+          selectedLighterHex={exactSelections?.secondary?.lighter?.hex}
           onSelect={onSelectTintIndex}
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -939,6 +990,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.secondary?.darkerY}
           selectedDarkY={selections.secondary?.darkY}
+          selectedDarkHex={exactSelections?.secondary?.dark?.hex}
+          selectedDarkerHex={exactSelections?.secondary?.darker?.hex}
           onSelect={onSelectShadeY}
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -956,6 +1009,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.tertiary?.lighterIndex}
           selectedLightIndex={selections.tertiary?.lightIndex}
+          selectedLightHex={exactSelections?.tertiary?.light?.hex}
+          selectedLighterHex={exactSelections?.tertiary?.lighter?.hex}
           onSelect={onSelectTintIndex}
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -973,6 +1028,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.tertiary?.darkerY}
           selectedDarkY={selections.tertiary?.darkY}
+          selectedDarkHex={exactSelections?.tertiary?.dark?.hex}
+          selectedDarkerHex={exactSelections?.tertiary?.darker?.hex}
           onSelect={onSelectShadeY}
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -990,6 +1047,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.accent?.lighterIndex}
           selectedLightIndex={selections.accent?.lightIndex}
+          selectedLightHex={exactSelections?.accent?.light?.hex}
+          selectedLighterHex={exactSelections?.accent?.lighter?.hex}
           onSelect={onSelectTintIndex}
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -1007,6 +1066,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.accent?.darkerY}
           selectedDarkY={selections.accent?.darkY}
+          selectedDarkHex={exactSelections?.accent?.dark?.hex}
+          selectedDarkerHex={exactSelections?.accent?.darker?.hex}
           onSelect={onSelectShadeY}
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -1024,6 +1085,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.error?.lighterIndex}
           selectedLightIndex={selections.error?.lightIndex}
+          selectedLightHex={exactSelections?.error?.light?.hex}
+          selectedLighterHex={exactSelections?.error?.lighter?.hex}
           onSelect={onSelectTintIndex}
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -1041,6 +1104,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.error?.darkerY}
           selectedDarkY={selections.error?.darkY}
+          selectedDarkHex={exactSelections?.error?.dark?.hex}
+          selectedDarkerHex={exactSelections?.error?.darker?.hex}
           onSelect={onSelectShadeY}
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -1058,6 +1123,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.warning?.lighterIndex}
           selectedLightIndex={selections.warning?.lightIndex}
+          selectedLightHex={exactSelections?.warning?.light?.hex}
+          selectedLighterHex={exactSelections?.warning?.lighter?.hex}
           onSelect={onSelectTintIndex}
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -1075,6 +1142,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.warning?.darkerY}
           selectedDarkY={selections.warning?.darkY}
+          selectedDarkHex={exactSelections?.warning?.dark?.hex}
+          selectedDarkerHex={exactSelections?.warning?.darker?.hex}
           onSelect={onSelectShadeY}
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -1092,6 +1161,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedLighterIndex={selections.success?.lighterIndex}
           selectedLightIndex={selections.success?.lightIndex}
+          selectedLightHex={exactSelections?.success?.light?.hex}
+          selectedLighterHex={exactSelections?.success?.lighter?.hex}
           onSelect={onSelectTintIndex}
           onSelectTint={onSelectTint}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}
@@ -1109,6 +1180,8 @@ export function LuminanceTestStrips({
           showDiagnostics={showDiagnostics}
           selectedDarkerY={selections.success?.darkerY}
           selectedDarkY={selections.success?.darkY}
+          selectedDarkHex={exactSelections?.success?.dark?.hex}
+          selectedDarkerHex={exactSelections?.success?.darker?.hex}
           onSelect={onSelectShadeY}
           onSelectShade={onSelectShade}
           {...(textOnLightRgb ? { textOnLightRgb } : {})}

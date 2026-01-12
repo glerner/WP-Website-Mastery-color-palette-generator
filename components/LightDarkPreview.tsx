@@ -9,10 +9,15 @@ type Props = {
   textOnDark: string; // hex
   scheme?: 'auto' | 'light' | 'dark';
   onSchemeChange?: (s: 'auto' | 'light' | 'dark') => void;
+  semanticBandSelection?: {
+    error: { light: 'lighter' | 'light' | 'dark' | 'darker'; dark: 'lighter' | 'light' | 'dark' | 'darker' };
+    warning: { light: 'lighter' | 'light' | 'dark' | 'darker'; dark: 'lighter' | 'light' | 'dark' | 'darker' };
+    success: { light: 'lighter' | 'light' | 'dark' | 'darker'; dark: 'lighter' | 'light' | 'dark' | 'darker' };
+  };
   children?: React.ReactNode;
 };
 
-export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOnDark, scheme: schemeProp, onSchemeChange, children }) => {
+export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOnDark, scheme: schemeProp, onSchemeChange, semanticBandSelection, children }) => {
   const [internalScheme, setInternalScheme] = useState<'auto' | 'light' | 'dark'>('auto');
   const scheme = schemeProp ?? internalScheme;
   const setScheme = (s: 'auto' | 'light' | 'dark') => {
@@ -46,6 +51,19 @@ export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOn
     const accentDarker = findStep('accent', 'darker') || palette.accent.hex;
     const accentLighter = findStep('accent', 'lighter') || palette.accent.hex;
 
+    const SEMANTIC_DEFAULTS = {
+      error: { light: 'light' as const, dark: 'dark' as const },
+      warning: { light: 'light' as const, dark: 'dark' as const },
+      success: { light: 'light' as const, dark: 'dark' as const },
+    };
+    const sem = semanticBandSelection ?? SEMANTIC_DEFAULTS;
+    const errorLight = findStep('error', sem.error.light) || palette.error.hex;
+    const errorDark = findStep('error', sem.error.dark) || palette.error.hex;
+    const noticeLight = findStep('warning', sem.warning.light) || palette.warning.hex;
+    const noticeDark = findStep('warning', sem.warning.dark) || palette.warning.hex;
+    const successLight = findStep('success', sem.success.light) || palette.success.hex;
+    const successDark = findStep('success', sem.success.dark) || palette.success.hex;
+
     // Calculate text colors for each background color
     const primaryLightText = ensureAAAContrast(primaryLight).textColor;
     const primaryDarkText = ensureAAAContrast(primaryDark).textColor;
@@ -63,6 +81,13 @@ export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOn
     const accentDarkText = ensureAAAContrast(accentDark).textColor;
     const accentDarkerText = ensureAAAContrast(accentDarker).textColor;
     const accentLighterText = ensureAAAContrast(accentLighter).textColor;
+
+    const errorLightText = ensureAAAContrast(errorLight).textColor;
+    const errorDarkText = ensureAAAContrast(errorDark).textColor;
+    const noticeLightText = ensureAAAContrast(noticeLight).textColor;
+    const noticeDarkText = ensureAAAContrast(noticeDark).textColor;
+    const successLightText = ensureAAAContrast(successLight).textColor;
+    const successDarkText = ensureAAAContrast(successDark).textColor;
 
     return {
       // Global text variables from generator state
@@ -104,8 +129,24 @@ export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOn
       ['--ldp-accent-darker-text' as any]: accentDarkerText,
       ['--ldp-accent-lighter' as any]: accentLighter,
       ['--ldp-accent-lighter-text' as any]: accentLighterText,
+
+      // Semantic colors (follow Palette tab semantic band selections)
+      ['--ldp-error-light' as any]: errorLight,
+      ['--ldp-error-light-text' as any]: errorLightText,
+      ['--ldp-error-dark' as any]: errorDark,
+      ['--ldp-error-dark-text' as any]: errorDarkText,
+
+      ['--ldp-notice-light' as any]: noticeLight,
+      ['--ldp-notice-light-text' as any]: noticeLightText,
+      ['--ldp-notice-dark' as any]: noticeDark,
+      ['--ldp-notice-dark-text' as any]: noticeDarkText,
+
+      ['--ldp-success-light' as any]: successLight,
+      ['--ldp-success-light-text' as any]: successLightText,
+      ['--ldp-success-dark' as any]: successDark,
+      ['--ldp-success-dark-text' as any]: successDarkText,
     } as React.CSSProperties;
-  }, [palette, textOnLight, textOnDark]);
+  }, [palette, semanticBandSelection, textOnLight, textOnDark]);
 
   const containerStyle = useMemo(() => {
     const base: React.CSSProperties = {

@@ -46,18 +46,36 @@ export const PreviewSection = ({ palette: _palette, isLoading, scheme }: Preview
             The quick brown fox <a href="#" className={styles.inlineLink}>jumps over</a> the lazy dog.
           </p>
 
+          {/* Primary section band (common WP site pattern) */}
+          <div className={styles.primaryBand}>
+            <div className={styles.primaryBandInner}>
+              <div>
+                <div className={styles.primaryBandKicker}>Featured section</div>
+                <div className={styles.primaryBandTitle}>Build trust with clear, readable colors</div>
+                <div className={styles.primaryBandText}>
+                  Use Primary for section backgrounds and Accent for links and calls to action.
+                </div>
+              </div>
+              <div className={styles.primaryBandCtas}>
+                <button type="button" className={styles.accentCtaButton}>Get started</button>
+              </div>
+            </div>
+          </div>
+
+          <hr className={styles.sectionRule} />
+
           {/* Info cards with primary, secondary, tertiary backgrounds */}
           <div className={styles.infoCardRow}>
             <div className={styles.infoCardPrimary}>
-              <strong>Primary</strong>
+              <strong>Primary Light</strong>
               <span>Text on primary background</span>
             </div>
             <div className={styles.infoCardSecondary}>
-              <strong>Secondary</strong>
+              <strong>Secondary Light</strong>
               <span>Text on secondary background</span>
             </div>
             <div className={styles.infoCardTertiary}>
-              <strong>Tertiary</strong>
+              <strong>Tertiary Light</strong>
               <span>Text on tertiary background</span>
             </div>
           </div>
@@ -97,6 +115,20 @@ export const PreviewSection = ({ palette: _palette, isLoading, scheme }: Preview
             <a href="#" className={styles.accentMenuItemLight}>light-dark background hover</a>
             <a href="#" className={styles.accentMenuItemLight}>light-dark background hover</a>
           </nav>
+
+          {/* Tertiary testimonial (tertiary color used sparingly) */}
+          <div className={styles.testimonial}>
+            <div className={styles.testimonialQuote}>
+              “We switched to a contrast-checked palette and immediately got fewer complaints about readability.”
+            </div>
+            <div className={styles.testimonialAuthor}>
+              <div className={styles.avatarCircle} aria-hidden="true" />
+              <div>
+                <div className={styles.authorName}>Alex Rivera</div>
+                <div className={styles.authorTitle}>Site Owner</div>
+              </div>
+            </div>
+          </div>
         </div>
         {/* Alternating color list example */}
         <div className={styles.listBlock}>
@@ -107,6 +139,18 @@ export const PreviewSection = ({ palette: _palette, isLoading, scheme }: Preview
             <li>Third item</li>
             <li>Fourth item</li>
           </ul>
+        </div>
+
+        <div className={styles.statusMessages} aria-label="Status messages demo">
+          <div className={[styles.status, styles.statusError].join(' ')} role="alert">
+            <strong>Error:</strong> Something went wrong. Please try again.
+          </div>
+          <div className={[styles.status, styles.statusNotice].join(' ')} role="status">
+            <strong>Notice:</strong> Unsaved changes. Don’t forget to save.
+          </div>
+          <div className={[styles.status, styles.statusSuccess].join(' ')} role="status">
+            <strong>Success:</strong> Your settings have been saved.
+          </div>
         </div>
       </div>
     </section>

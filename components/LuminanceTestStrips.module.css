@@ -195,3 +195,15 @@
     display: none;
   }
 }
+
+/* Hover test button - uses inline style for dynamic colors */
+.hoverTestButton {
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  font-size: var(--cf-text-s);
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  margin-left: 12px;
+}

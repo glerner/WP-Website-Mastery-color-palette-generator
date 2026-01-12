@@ -4,8 +4,8 @@
   background: var(--background);
   color: var(--foreground);
   /* Avoid margin-collapsing so the background actually paints */
-  padding: var(--spacing-4) var(--spacing-4) 0;
-  border-radius: var(--radius-lg);
+  padding: 2px;
+  border-radius: 0;
 }
 
 .sectionTitle {
@@ -15,10 +15,8 @@
 }
 
 .sectionSubtitle {
-  color: light-dark(
-    color-mix(in oklab, var(--text-on-light) 75%, transparent),
-    color-mix(in oklab, var(--text-on-dark) 75%, transparent)
-  );
+  color: light-dark(color-mix(in oklab, var(--text-on-light) 75%, transparent),
+      color-mix(in oklab, var(--text-on-dark) 75%, transparent));
   margin-bottom: var(--spacing-3);
 }
 
@@ -27,11 +25,13 @@
   gap: var(--spacing-2);
   background: light-dark(var(--ldp-accent-lighter), var(--ldp-accent-darker));
   color: light-dark(var(--text-on-light), var(--text-on-dark));
-  padding: 4px 8px; /* extra horizontal padding so rightmost button never touches edge */
+  padding: 4px 8px;
+  /* extra horizontal padding so rightmost button never touches edge */
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-4);
   box-shadow: 0 0 0 1px var(--border) inset;
-  width: fit-content; /* ensure container wraps content width exactly */
+  width: fit-content;
+  /* ensure container wraps content width exactly */
 }
 
 .previewButton {
@@ -51,10 +51,10 @@
 }
 
 .previewWrapper {
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-8);
-  background: var(--card);
-  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 /* Full-width band that previews the container background/foreground via light-dark() */
@@ -73,7 +73,7 @@
 }
 
 /* Space between multiple grids when stacking */
-.previewGrid + .previewGrid {
+.previewGrid+.previewGrid {
   margin-top: var(--spacing-4);
 }
 
@@ -95,10 +95,12 @@
   .previewWrapper {
     padding: var(--spacing-3);
   }
+
   .previewGrid {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: var(--spacing-2);
   }
+
   .swatch {
     font-size: var(--cf-text-s);
   }

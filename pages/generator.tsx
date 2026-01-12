@@ -2012,6 +2012,7 @@ const GeneratorPage = () => {
                   <ul className="u-list-circle">
                     <li>Select your preferred tints and shades from among those that have excellent contrast (and are visibly different).</li>
                     <li><b>Click on your preference of color swatches</b> to select it.</li>
+                    <li><b>Test hover difference:</b> Use the "Test hover" buttons next to each row header to check that your selected colors have enough visible difference for hover states. If the hover change is too subtle, pick colors that are further apart in luminance.</li>
                     <li>Your selections for each row are saved locally, since you will tend to use about the same selection even as you change hues.</li>
                   </ul>
                   <img
@@ -3203,6 +3204,7 @@ const GeneratorPage = () => {
                 <LuminanceTestStrips
                   palette={paletteWithVariations}
                   selections={selections}
+                  exactSelections={exactSelections}
                   anchorPrefix="d-"
                   showDiagnostics={showDiagnostics}
                   onTokensAutoAdjusted={(update) => {
@@ -3517,24 +3519,13 @@ const GeneratorPage = () => {
                   textOnDark={textOnDark}
                   scheme={demoScheme}
                   onSchemeChange={setDemoScheme}
+                  semanticBandSelection={semanticBandSelection}
                 >
                   <PreviewSection
                     palette={paletteWithVariations}
                     isLoading={generatePaletteMutation.isPending}
                     scheme={demoScheme}
                   />
-                  {/* Status messages demo */}
-                  <div className={styles.statusMessages} aria-label="Status messages demo">
-                    <div className={[styles.status, styles.statusError].join(' ')} role="alert">
-                      <strong>Error:</strong> Something went wrong. Please try again.
-                    </div>
-                    <div className={[styles.status, styles.statusWarning].join(' ')} role="status">
-                      <strong>Notice:</strong> Unsaved changes. Don’t forget to save.
-                    </div>
-                    <div className={[styles.status, styles.statusSuccess].join(' ')} role="status">
-                      <strong>Success:</strong> Your settings have been saved.
-                    </div>
-                  </div>
                 </LightDarkPreview>
               </TabsContent>
               {/* Landing Page Tab */}

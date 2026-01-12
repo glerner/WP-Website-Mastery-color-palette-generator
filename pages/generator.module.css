@@ -645,42 +645,6 @@ img {
   }
 }
 
-/* Demo status messages */
-.statusMessages {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--cf-space-s, 12px);
-  margin-top: var(--cf-space-m, 16px);
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  gap: var(--cf-space-xs, 8px);
-  padding: var(--cf-space-s, 12px) var(--cf-space-m, 16px);
-  border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--border);
-  font-size: var(--cf-text-m);
-}
-
-.statusError {
-  background: var(--error-bg, #fee2e2);
-  color: var(--error-fg, #991b1b);
-  border-color: var(--error-border, #fecaca);
-}
-
-.statusWarning {
-  background: var(--notice-bg, var(--warning-bg, #fff7ed));
-  color: var(--notice-fg, var(--warning-fg, #9a3412));
-  border-color: var(--notice-border, var(--warning-border, #fdba74));
-}
-
-.statusSuccess {
-  background: var(--success-bg, #ecfdf5);
-  color: var(--success-fg, #065f46);
-  border-color: var(--success-border, #a7f3d0);
-}
-
 /* Inline contrast hint for Manual tab warnings */
 .contrastHint {
   display: inline-block;
