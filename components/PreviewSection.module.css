@@ -311,17 +311,17 @@
 
 .statusError {
   background: light-dark(var(--ldp-error-light), var(--ldp-error-dark));
-  color: light-dark(var(--text-on-light), var(--text-on-dark));
+  color: light-dark(var(--ldp-error-light-status-text), var(--ldp-error-dark-status-text));
 }
 
 .statusNotice {
   background: light-dark(var(--ldp-notice-light), var(--ldp-notice-dark));
-  color: light-dark(var(--text-on-light), var(--text-on-dark));
+  color: light-dark(var(--ldp-notice-light-status-text), var(--ldp-notice-dark-status-text));
 }
 
 .statusSuccess {
   background: light-dark(var(--ldp-success-light), var(--ldp-success-dark));
-  color: light-dark(var(--text-on-light), var(--text-on-dark));
+  color: light-dark(var(--ldp-success-light-status-text), var(--ldp-success-dark-status-text));
 }
 
 /* Inline link styling - accent-darker for text-on-light paragraphs */

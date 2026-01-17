@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import styles from './LightDarkPreview.module.css';
 import type { PaletteWithVariations } from '../helpers/types';
 import { ensureAAAContrast } from '../helpers/ensureAAAContrast';
+import { chooseForeground } from '../helpers/themeRuntime';
 
 type Props = {
   palette: PaletteWithVariations;
@@ -89,6 +90,13 @@ export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOn
     const successLightText = ensureAAAContrast(successLight).textColor;
     const successDarkText = ensureAAAContrast(successDark).textColor;
 
+    const errorLightStatusText = chooseForeground(errorLight, textOnLight, textOnDark);
+    const errorDarkStatusText = chooseForeground(errorDark, textOnLight, textOnDark);
+    const noticeLightStatusText = chooseForeground(noticeLight, textOnLight, textOnDark);
+    const noticeDarkStatusText = chooseForeground(noticeDark, textOnLight, textOnDark);
+    const successLightStatusText = chooseForeground(successLight, textOnLight, textOnDark);
+    const successDarkStatusText = chooseForeground(successDark, textOnLight, textOnDark);
+
     return {
       // Global text variables from generator state
       ['--text-on-light' as any]: textOnLight,
@@ -133,18 +141,24 @@ export const LightDarkPreview: React.FC<Props> = ({ palette, textOnLight, textOn
       // Semantic colors (follow Palette tab semantic band selections)
       ['--ldp-error-light' as any]: errorLight,
       ['--ldp-error-light-text' as any]: errorLightText,
+      ['--ldp-error-light-status-text' as any]: errorLightStatusText,
       ['--ldp-error-dark' as any]: errorDark,
       ['--ldp-error-dark-text' as any]: errorDarkText,
+      ['--ldp-error-dark-status-text' as any]: errorDarkStatusText,
 
       ['--ldp-notice-light' as any]: noticeLight,
       ['--ldp-notice-light-text' as any]: noticeLightText,
+      ['--ldp-notice-light-status-text' as any]: noticeLightStatusText,
       ['--ldp-notice-dark' as any]: noticeDark,
       ['--ldp-notice-dark-text' as any]: noticeDarkText,
+      ['--ldp-notice-dark-status-text' as any]: noticeDarkStatusText,
 
       ['--ldp-success-light' as any]: successLight,
       ['--ldp-success-light-text' as any]: successLightText,
+      ['--ldp-success-light-status-text' as any]: successLightStatusText,
       ['--ldp-success-dark' as any]: successDark,
       ['--ldp-success-dark-text' as any]: successDarkText,
+      ['--ldp-success-dark-status-text' as any]: successDarkStatusText,
     } as React.CSSProperties;
   }, [palette, semanticBandSelection, textOnLight, textOnDark]);
 

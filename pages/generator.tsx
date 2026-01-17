@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
 import { Button } from '../components/Button';
 import { Textarea } from '../components/Textarea';
 import { Input } from '../components/Input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/Dialog';
 import {
   Form,
   FormControl,
@@ -85,6 +86,214 @@ function scrollAdjustTo(targetId: string) {
   setTimeout(doScroll, tick);
 }
 
+type ManualColorKeys = 'themeName' | 'textOnDark' | 'textOnLight' | 'primary' | 'secondary' | 'tertiary' | 'accent' | 'error' | 'warning' | 'success';
+type PaletteRoleKeys = Exclude<ManualColorKeys, 'themeName'>;
+
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x));
+}
+
+function linearToSrgb(x: number) {
+  const v = x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+  return Math.round(clamp01(v) * 255);
+}
+
+function parseCssNumber(s: string): number | undefined {
+  const n = Number(String(s).trim());
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function parseAlphaUnit(s: string | undefined): number | undefined {
+  if (s == null) return undefined;
+  const t = String(s).trim();
+  if (!t) return undefined;
+  if (t.endsWith('%')) {
+    const n = parseCssNumber(t.slice(0, -1));
+    if (n == null) return undefined;
+    return clamp01(n / 100);
+  }
+  const n = parseCssNumber(t);
+  if (n == null) return undefined;
+  return clamp01(n);
+}
+
+function normalizeHexTokenToHex6(token: string): string | undefined {
+  const t = String(token).trim();
+  if (!t) return undefined;
+  const m = t.match(/^#?([0-9a-fA-F]{3,8})$/);
+  if (!m) return undefined;
+  const raw = m[1]!.toLowerCase();
+  if (raw.length === 3) {
+    const r = raw[0]!, g = raw[1]!, b = raw[2]!;
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  if (raw.length === 4) {
+    const r = raw[0]!, g = raw[1]!, b = raw[2]!;
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  if (raw.length === 6) return `#${raw}`;
+  if (raw.length === 8) return `#${raw.slice(0, 6)}`;
+  return undefined;
+}
+
+function parseRgbCssToHex(css: string): string | undefined {
+  // Supports rgb(R,G,B), rgba(R,G,B,A), and CSS4 rgb(R G B / A)
+  const t = String(css).trim();
+  const m = t.match(/^(rgba?|RGBa?)\((.*)\)$/i);
+  if (!m) return undefined;
+  const inner = m[2] ?? '';
+  const parts = inner
+    .replace(/\s*\/\s*/g, ',')
+    .split(/[,\s]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (parts.length < 3) return undefined;
+
+  const readCh = (v: string): number | undefined => {
+    if (v.endsWith('%')) {
+      const n = parseCssNumber(v.slice(0, -1));
+      if (n == null) return undefined;
+      return Math.round(clamp01(n / 100) * 255);
+    }
+    const n = parseCssNumber(v);
+    if (n == null) return undefined;
+    return Math.round(Math.max(0, Math.min(255, n)));
+  };
+  const r = readCh(parts[0]!);
+  const g = readCh(parts[1]!);
+  const b = readCh(parts[2]!);
+  if (r == null || g == null || b == null) return undefined;
+  return rgbToHex(r, g, b);
+}
+
+function parseHslCssToHex(css: string): string | undefined {
+  // Supports hsl(H,S%,L%), hsla(H,S%,L%,A), and CSS4 hsl(H S% L% / A)
+  const t = String(css).trim();
+  const m = t.match(/^(hsla?|HSLa?)\((.*)\)$/i);
+  if (!m) return undefined;
+  const inner = m[2] ?? '';
+  const parts = inner
+    .replace(/\s*\/\s*/g, ',')
+    .split(/[,\s]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (parts.length < 3) return undefined;
+  const hRaw = parts[0]!;
+  const sRaw = parts[1]!;
+  const lRaw = parts[2]!;
+  const h = parseCssNumber(hRaw.replace(/deg$/i, ''));
+  if (h == null) return undefined;
+  if (!sRaw.endsWith('%') || !lRaw.endsWith('%')) return undefined;
+  const sPct = parseCssNumber(sRaw.slice(0, -1));
+  const lPct = parseCssNumber(lRaw.slice(0, -1));
+  if (sPct == null || lPct == null) return undefined;
+  const s = clamp01(sPct / 100);
+  const l = clamp01(lPct / 100);
+  const rgb = hslNormToRgb(((h % 360) + 360) % 360, s, l);
+  return rgbToHex(rgb.r, rgb.g, rgb.b);
+}
+
+function oklchToHex(css: string): string | undefined {
+  // Supports oklch(L C H) and oklch(L C H / A)
+  const t = String(css).trim();
+  const m = t.match(/^oklch\((.*)\)$/i);
+  if (!m) return undefined;
+  const inner = (m[1] ?? '').trim();
+  if (!inner) return undefined;
+  const cleaned = inner.replace(/\s*\/\s*/g, ' / ');
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  if (parts.length < 3) return undefined;
+
+  const Lraw = parts[0]!;
+  const Craw = parts[1]!;
+  const Hraw = parts[2]!;
+  const slashIdx = parts.findIndex((p) => p === '/');
+  const Araw = slashIdx >= 0 ? parts[slashIdx + 1] : undefined;
+
+  const L = (() => {
+    if (Lraw.endsWith('%')) {
+      const n = parseCssNumber(Lraw.slice(0, -1));
+      if (n == null) return undefined;
+      return clamp01(n / 100);
+    }
+    const n = parseCssNumber(Lraw);
+    if (n == null) return undefined;
+    return clamp01(n);
+  })();
+  const C = parseCssNumber(Craw);
+  const H = parseCssNumber(Hraw.replace(/deg$/i, ''));
+  if (L == null || C == null || H == null) return undefined;
+
+  // alpha parsed but intentionally ignored for now
+  void parseAlphaUnit(Araw);
+
+  // OKLCH -> OKLab
+  const hRad = (H * Math.PI) / 180;
+  const a = C * Math.cos(hRad);
+  const b = C * Math.sin(hRad);
+
+  // OKLab -> linear sRGB
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l3 = l_ * l_ * l_;
+  const m3 = m_ * m_ * m_;
+  const s3 = s_ * s_ * s_;
+
+  let rLin = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+  let gLin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+  let bLin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+
+  // Clip out-of-gamut by simple clamping
+  rLin = clamp01(rLin);
+  gLin = clamp01(gLin);
+  bLin = clamp01(bLin);
+
+  const r = linearToSrgb(rLin);
+  const g = linearToSrgb(gLin);
+  const bb = linearToSrgb(bLin);
+  return rgbToHex(r, g, bb);
+}
+
+function extractCoolorsHexList(text: string): string[] {
+  const src = String(text || '');
+  const m = src.match(/coolors\.co\/(?:palette\/)?([0-9a-fA-F]{6}(?:-[0-9a-fA-F]{6})+)/);
+  if (!m) return [];
+  const list = (m[1] || '').split('-').map((x) => normalizeHexTokenToHex6(x)).filter(Boolean) as string[];
+  return list;
+}
+
+function extractColorHexesFromText(text: string): string[] {
+  const src = String(text || '');
+  const out: string[] = [];
+  const push = (hex: string | undefined) => {
+    if (!hex) return;
+    if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
+    out.push(hex.toUpperCase());
+  };
+
+  extractCoolorsHexList(src).forEach((h) => push(h));
+
+  const hexTokens = src.match(/#?[0-9a-fA-F]{3,8}\b/g) || [];
+  hexTokens.forEach((t) => push(normalizeHexTokenToHex6(t)));
+
+  const fnTokens = src.match(/(?:rgba?|hsla?|oklch)\([^\)]*\)/gi) || [];
+  fnTokens.forEach((t) => {
+    push(parseRgbCssToHex(t) || parseHslCssToHex(t) || oklchToHex(t));
+  });
+
+  // Dedupe in original order
+  const seen = new Set<string>();
+  const dedup: string[] = [];
+  for (const h of out) {
+    const k = h.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    dedup.push(h);
+  }
+  return dedup;
+}
+
 import { useGeneratePalette } from '../helpers/useGeneratePalette';
 import { generateAnalogousComplementaryPalette } from '../helpers/colorHarmony';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -157,6 +366,7 @@ const manualFormSchema = z.object({
   error: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color').optional(),
   warning: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color').optional(),
   success: z.string().regex(/^#[0-9a-f]{6}$/i, 'Invalid hex color').optional(),
+  fontFamilies: z.array(z.string().min(1)).optional().default([]),
 });
 
 const initialPalette: Palette = {
@@ -1260,8 +1470,134 @@ const GeneratorPage = () => {
       error: palette.error.hex,
       warning: palette.warning.hex,
       success: palette.success.hex,
+      fontFamilies: [],
     },
   });
+
+  const [ioDialogOpen, setIoDialogOpen] = useState(false);
+  const [ioDialogMode, setIoDialogMode] = useState<'import' | 'export'>('import');
+  const [ioText, setIoText] = useState('');
+
+  const buildWpwmPaletteV1Json = useCallback(() => {
+    const optHex = (hex: unknown) => (typeof hex === 'string' && /^#[0-9a-f]{6}$/i.test(hex) ? hex : undefined);
+    const payload = {
+      format: 'wpwm-palette/v1',
+      themeName: (manualForm.values.themeName || themeName || '').trim(),
+      colors: {
+        textOnDark: manualForm.values.textOnDark,
+        textOnLight: manualForm.values.textOnLight,
+        primary: manualForm.values.primary,
+        secondary: manualForm.values.secondary,
+        tertiary: manualForm.values.tertiary,
+        accent: manualForm.values.accent,
+        ...(optHex(manualForm.values.error) ? { error: optHex(manualForm.values.error) } : {}),
+        ...(optHex(manualForm.values.warning) ? { warning: optHex(manualForm.values.warning) } : {}),
+        ...(optHex(manualForm.values.success) ? { success: optHex(manualForm.values.success) } : {}),
+      },
+      fontFamilies: Array.isArray((manualForm.values as any).fontFamilies) ? (manualForm.values as any).fontFamilies : [],
+    };
+    return JSON.stringify(payload, null, 2);
+  }, [manualForm.values, themeName]);
+
+  const applyImportedManualValues = useCallback((next: Partial<Record<string, unknown>>) => {
+    const merged: any = { ...manualForm.values };
+    (['themeName', 'textOnDark', 'textOnLight', 'primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
+      const v = (next as any)[k];
+      if (k === 'themeName') {
+        if (typeof v === 'string') merged.themeName = v;
+        return;
+      }
+      if (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) merged[k] = v;
+    });
+    if (Array.isArray((next as any).fontFamilies)) {
+      merged.fontFamilies = (next as any).fontFamilies.filter((x: any) => typeof x === 'string' && String(x).trim().length > 0).map((x: any) => String(x).trim());
+    }
+    manualForm.setValues(merged);
+    if (typeof merged.themeName === 'string') setThemeName(merged.themeName);
+    if (typeof merged.textOnDark === 'string') setTextOnDark(merged.textOnDark);
+    if (typeof merged.textOnLight === 'string') setTextOnLight(merged.textOnLight);
+    setPalette((prev) => ({
+      ...prev,
+      primary: { ...prev.primary, hex: merged.primary || prev.primary.hex },
+      secondary: { ...prev.secondary, hex: merged.secondary || prev.secondary.hex },
+      tertiary: { ...prev.tertiary, hex: merged.tertiary || prev.tertiary.hex },
+      accent: { ...prev.accent, hex: merged.accent || prev.accent.hex },
+      error: { ...(prev.error || initialPalette.error), hex: merged.error || prev.error.hex },
+      warning: { ...(prev.warning || initialPalette.warning), hex: merged.warning || prev.warning.hex },
+      success: { ...(prev.success || initialPalette.success), hex: merged.success || prev.success.hex },
+    } as any));
+  }, [manualForm, setPalette, setThemeName, setTextOnDark, setTextOnLight]);
+
+  const tryImportFromText = useCallback(() => {
+    const raw = String(ioText || '').trim();
+    if (!raw) {
+      toast.error('Paste something to import');
+      return;
+    }
+
+    // 1) Try JSON
+    try {
+      const parsed: any = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.format === 'wpwm-palette/v1' && parsed.colors && typeof parsed.colors === 'object') {
+          const colorsObj: any = parsed.colors;
+          const cleanColors: any = {};
+          (['textOnDark', 'textOnLight', 'primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'] as const).forEach((k) => {
+            const v = colorsObj?.[k];
+            if (typeof v !== 'string') return;
+            if (!/^#[0-9a-f]{6}$/i.test(v)) return;
+            cleanColors[k] = v;
+          });
+          const next: any = {
+            themeName: typeof parsed.themeName === 'string' ? parsed.themeName : '',
+            ...cleanColors,
+            fontFamilies: Array.isArray(parsed.fontFamilies) ? parsed.fontFamilies : [],
+          };
+          const validated = manualFormSchema.partial().safeParse(next);
+          if (validated.success) {
+            applyImportedManualValues(validated.data as any);
+            toast.success('Imported palette JSON');
+            setIoDialogOpen(false);
+            return;
+          }
+        }
+
+        // Legacy: localStorage-like shape (gl_palette_manual_colors)
+        const legacyKeys = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success', 'textOnDark', 'textOnLight', 'themeName'];
+        const hasAny = legacyKeys.some((k) => typeof parsed[k] === 'string');
+        if (hasAny) {
+          const validated = manualFormSchema.partial().safeParse(parsed);
+          if (validated.success) {
+            applyImportedManualValues(validated.data as any);
+            toast.success('Imported manual colors JSON');
+            setIoDialogOpen(false);
+            return;
+          }
+        }
+      }
+    } catch {
+      // not json
+    }
+
+    // 2) Smart paste tokens
+    const hexes = extractColorHexesFromText(raw);
+    if (!hexes.length) {
+      toast.error('No colors found (try hex, hsl/oklch/rgb, or a Coolors URL)');
+      return;
+    }
+
+    const roleOrder: Array<Exclude<PaletteRoleKeys, 'textOnDark' | 'textOnLight'>> = ['primary', 'secondary', 'tertiary', 'accent', 'error', 'warning', 'success'];
+    const next: any = {};
+    for (let i = 0; i < roleOrder.length && i < hexes.length; i++) {
+      const k = roleOrder[i];
+      const v = hexes[i];
+      if (!k || !v) continue;
+      next[k] = v;
+    }
+    applyImportedManualValues(next);
+    toast.success(`Imported ${Math.min(hexes.length, roleOrder.length)} colors`);
+    setIoDialogOpen(false);
+  }, [applyImportedManualValues, ioText]);
 
   // Update manual colors and live palette when user edits
   const handleManualColorChange = useCallback((colorType: ColorType | SemanticColorType, hex: string) => {
@@ -2592,6 +2928,7 @@ const GeneratorPage = () => {
                               error: initialPalette.error.hex,
                               warning: initialPalette.warning.hex,
                               success: initialPalette.success.hex,
+                              fontFamilies: [],
                             });
                             // Re-apply defaults to CSS variables
                             try {
@@ -3345,6 +3682,28 @@ const GeneratorPage = () => {
                                 Download .zip file
                               </Button>
                             </div>
+                            <div style={{ marginTop: 'var(--spacing-3)', display: 'flex', gap: 'var(--spacing-2)', flexWrap: 'wrap' }}>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setIoDialogMode('import');
+                                  setIoText('');
+                                  setIoDialogOpen(true);
+                                }}
+                              >
+                                Import colors (paste)
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setIoDialogMode('export');
+                                  setIoText(buildWpwmPaletteV1Json());
+                                  setIoDialogOpen(true);
+                                }}
+                              >
+                                Export manual colors JSON
+                              </Button>
+                            </div>
                           </>
                         );
                       })()}
@@ -3533,6 +3892,58 @@ const GeneratorPage = () => {
                 <IndexPage />
               </TabsContent>
             </Tabs>
+
+            <Dialog open={ioDialogOpen} onOpenChange={setIoDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {ioDialogMode === 'import' ? 'Import Colors' : 'Export Manual Colors JSON'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {ioDialogMode === 'import'
+                      ? 'Paste a Coolors URL, CSS variables, HEX/HSL/OKLCH/RGB list, or a saved JSON export.'
+                      : 'Copy/paste this JSON into a file so you can re-import later.'}
+                  </DialogDescription>
+                </DialogHeader>
+                <Textarea
+                  rows={12}
+                  value={ioText}
+                  onChange={(e) => setIoText(e.target.value)}
+                  spellCheck={false}
+                  style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
+                />
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(ioText);
+                        toast.success('Copied');
+                      } catch {
+                        toast.error('Copy failed');
+                      }
+                    }}
+                  >
+                    Copy
+                  </Button>
+                  {ioDialogMode === 'import' ? (
+                    <Button
+                      onClick={tryImportFromText}
+                      style={{ background: accentDarkHex, color: textOnDark, borderColor: accentDarkHex }}
+                    >
+                      Import
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => setIoDialogOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
